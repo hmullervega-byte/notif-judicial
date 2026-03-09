@@ -747,7 +747,11 @@
     </div>
     <div class="field-row" style="margin-bottom:0">
       <div class="field-label">Hora</div>
-      <input type="time" id="hora-input" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none; padding:2px 0;">
+      <div style="display:flex; align-items:center; gap:4px;">
+        <input type="number" id="hora-hh" min="0" max="23" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:18px; font-weight:600; width:44px; outline:none; padding:2px 0; -moz-appearance:textfield;" oninput="if(this.value>23)this.value=23; if(this.value<0)this.value=0;">
+        <span style="color:var(--text); font-family:var(--mono); font-size:18px; font-weight:600;">:</span>
+        <input type="number" id="hora-mm" min="0" max="59" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:18px; font-weight:600; width:44px; outline:none; padding:2px 0; -moz-appearance:textfield;" oninput="if(this.value>59)this.value=59; if(this.value<0)this.value=0;">
+      </div>
     </div>
   </div>
 
@@ -1034,13 +1038,12 @@ function updateBNSection() {
 }
 
 function setDefaultFechaHora() {
-  // Hora local Chile (no UTC)
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const fecha = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const hora  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   document.getElementById('fecha-input').value = fecha;
-  document.getElementById('hora-input').value  = hora;
+  document.getElementById('hora-hh').value = now.getHours();
+  document.getElementById('hora-mm').value = pad(now.getMinutes());
 }
 
 function resetSelections() {
@@ -1065,7 +1068,8 @@ async function enviarResultado() {
 
   const obs   = document.getElementById('obs-input').value.trim();
   const fecha = document.getElementById('fecha-input').value;
-  const hora  = document.getElementById('hora-input').value;
+  const pad   = n => String(n).padStart(2, '0');
+  const hora  = pad(document.getElementById('hora-hh').value) + ':' + pad(document.getElementById('hora-mm').value);
 
   const payload = {
     id_hex: state.idHex,
