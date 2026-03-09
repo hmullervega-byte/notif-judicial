@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Notif Judicial · Terreno</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --success: #2ecc71;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --text: #e8eaf2;
+    --text2: #8b90a8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .btn-config {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex: 1; flex-direction: column; padding: 20px 16px; }
+  .screen.active { display: flex; }
+
+  /* ── CONFIG SCREEN ── */
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 16px;
+  }
+  .config-card h2 {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .config-card p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .input-group { margin-bottom: 16px; }
+  .input-group label {
+    display: block;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .input-group input, .input-group textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus, .input-group textarea:focus {
+    border-color: var(--accent);
+  }
+  .input-group textarea { resize: vertical; min-height: 80px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-success {
+    background: var(--success);
+    color: #fff;
+  }
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn + .btn { margin-top: 10px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── SCAN SCREEN ── */
+  .scan-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 20px 0;
+  }
+  .scan-icon {
+    width: 120px;
+    height: 120px;
+    border: 3px solid var(--accent);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    background: var(--surface);
+    position: relative;
+  }
+  .scan-icon::before, .scan-icon::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--accent2);
+    border-style: solid;
+  }
+  .scan-icon::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .scan-icon::after { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+  .scan-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── CAMERA ── */
+  #camera-container {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #camera-container.active { display: flex; }
+  #video {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 0;
+  }
+  #canvas { display: none; }
+  .camera-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px;
+    height: 220px;
+    border: 2px solid rgba(79,142,247,0.8);
+    border-radius: 16px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .camera-overlay::before, .camera-overlay::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .camera-overlay::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .camera-overlay::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+  .camera-hint {
+    position: absolute;
+    bottom: 60px;
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.8;
+  }
+  .btn-close-camera {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── CAUSA CARD ── */
+  .causa-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+  .field-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .field-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .field-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .field-value.small { font-size: 13px; font-weight: 400; }
+  .field-value.highlight { color: var(--accent); font-family: var(--mono); }
+  .piezas-box {
+    background: var(--surface2);
+    border: 1px solid var(--accent2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .piezas-box .field-label { color: var(--accent2); }
+  .piezas-box .field-value { font-size: 13px; color: #c9b8ff; line-height: 1.5; }
+
+  /* ── RESULTADO SCREEN ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text2);
+    margin: 20px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .codes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .codes-grid.single { grid-template-columns: 1fr; }
+
+  .code-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .code-btn:active { transform: scale(0.97); }
+  .code-btn.selected {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.12);
+  }
+  .code-btn.selected-p {
+    border-color: var(--accent2);
+    background: rgba(124,92,191,0.12);
+  }
+  .code-btn.selected-c {
+    border-color: var(--warning);
+    background: rgba(243,156,18,0.1);
+  }
+  .code-tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .code-btn.selected-p .code-tag { color: var(--accent2); }
+  .code-btn.selected-c .code-tag { color: var(--warning); }
+  .code-desc {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.3;
+  }
+  .code-btn.selected .code-desc,
+  .code-btn.selected-p .code-desc,
+  .code-btn.selected-c .code-desc { color: var(--text); }
+
+  /* ── OBSERVACION ── */
+  .obs-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 4px;
+  }
+  .obs-box textarea {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    min-height: 80px;
+  }
+  .obs-box textarea::placeholder { color: var(--text2); }
+
+  /* ── CONFIRMACION ── */
+  .confirm-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .confirm-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(46,204,113,0.15);
+    border: 2px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+  .confirm-icon.error {
+    background: rgba(231,76,60,0.15);
+    border-color: var(--danger);
+  }
+  .confirm-title {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--success);
+  }
+  .confirm-title.error { color: var(--danger); }
+  .confirm-detail {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+    max-width: 280px;
+  }
+  .confirm-codes {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--surface);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: var(--mono);
+    z-index: 300;
+    transition: transform 0.3s;
+    white-space: nowrap;
+    max-width: 90vw;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── LOADING ── */
+  .loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .loading.active { display: flex; }
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── MISC ── */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-bn { background: rgba(231,76,60,0.2); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); }
+  .tag-ok { background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid rgba(46,204,113,0.3); }
+  .bottom-actions { margin-top: auto; padding-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="header-title">⚖ Notif Judicial</div>
+    <div class="header-sub">Módulo Terreno</div>
+  </div>
+  <button class="btn-config" onclick="showScreen('config')" title="Configuración">⚙</button>
+</header>
+
+<!-- CAMERA -->
+<div id="camera-container">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div class="camera-overlay"></div>
+  <div class="camera-hint">Apunta el QR del formulario impreso</div>
+  <button class="btn-close-camera" onclick="stopCamera()">✕</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: CONFIG                          -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-config">
+  <div class="config-card">
+    <h2>⚙ Configuración</h2>
+    <p>Ingresa el token de Dropbox. Solo se hace una vez — queda guardado en este dispositivo.</p>
+    <div class="input-group">
+      <label>Token Dropbox</label>
+      <input type="password" id="token-input" placeholder="sl.Ab..." autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn btn-primary" onclick="saveToken()">Guardar y continuar →</button>
+    <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: SCAN                            -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen active" id="screen-scan">
+  <div class="scan-hero">
+    <div class="scan-icon">📷</div>
+    <div>
+      <div class="scan-label">Escanear código QR</div>
+      <div style="font-size:12px; color:var(--text2); text-align:center; margin-top:6px;">Del formulario físico impreso</div>
+    </div>
+    <button class="btn btn-primary" style="width:220px;" onclick="startCamera()">
+      Escanear QR
+    </button>
+  </div>
+  <div class="loading" id="loading-causa">
+    <div class="spinner"></div>
+    Cargando datos de causa...
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: CAUSA                           -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-causa">
+  <div class="causa-id">
+    <span style="color:var(--text2)">ID:</span>
+    <span id="causa-id-display" style="color:var(--accent)">—</span>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">ROL</div>
+    <div class="field-value highlight" id="c-rol">—</div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">Tribunal</div>
+    <div class="field-value small" id="c-tribunal">—</div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">Demandado</div>
+    <div class="field-value" id="c-demandado">—</div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">RUT</div>
+    <div class="field-value small" id="c-rut">—</div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">Dirección</div>
+    <div class="field-value" id="c-direccion">—</div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-label">Estudio / Mandante</div>
+    <div class="field-value small" id="c-estudio">—</div>
+  </div>
+
+  <div class="piezas-box">
+    <div class="field-label">Piezas a notificar</div>
+    <div class="field-value" id="c-piezas">—</div>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="btn btn-primary" onclick="showScreen('resultado')">Registrar resultado →</button>
+    <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: RESULTADO                       -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-resultado">
+
+  <div class="section-title">Tipo de resultado</div>
+  <div class="codes-grid single" id="tipo-grid">
+    <button class="code-btn" data-group="tipo" data-code="BN" onclick="selectCode(this)">
+      <span class="code-tag">BN</span>
+      <span class="code-desc">Búsqueda Negativa — No se pudo notificar</span>
+    </button>
+    <button class="code-btn" data-group="tipo" data-code="NP" onclick="selectCode(this)">
+      <span class="code-tag">NP</span>
+      <span class="code-desc">Notificación Personal — Notificado directamente</span>
+    </button>
+  </div>
+
+  <!-- SUB-SECCIONES BN -->
+  <div id="seccion-bn" style="display:none">
+
+    <div class="section-title">¿Problema con la dirección?</div>
+    <div class="codes-grid">
+      <button class="code-btn" data-group="C" data-code="C01" onclick="selectCode(this)">
+        <span class="code-tag">C01</span>
+        <span class="code-desc">Inmueble desocupado</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C02" onclick="selectCode(this)">
+        <span class="code-tag">C02</span>
+        <span class="code-desc">No existe la calle</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C03" onclick="selectCode(this)">
+        <span class="code-tag">C03</span>
+        <span class="code-desc">No existe numeración</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C04" onclick="selectCode(this)">
+        <span class="code-tag">C04</span>
+        <span class="code-desc">Falta N° depto / torre</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C05" onclick="selectCode(this)">
+        <span class="code-tag">C05</span>
+        <span class="code-desc">Falta torre</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C06" onclick="selectCode(this)">
+        <span class="code-tag">C06</span>
+        <span class="code-desc">Inmueble en construcción</span>
+      </button>
+      <button class="code-btn" data-group="C" data-code="C07" onclick="selectCode(this)">
+        <span class="code-tag">C07</span>
+        <span class="code-desc">Dirección de otra ciudad</span>
+      </button>
+    </div>
+
+    <div class="section-title">¿Quién informó? (si aplica)</div>
+    <div class="codes-grid">
+      <button class="code-btn" data-group="P" data-code="P01" onclick="selectCode(this)">
+        <span class="code-tag">P01</span>
+        <span class="code-desc">Vecino — femenino</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P02" onclick="selectCode(this)">
+        <span class="code-tag">P02</span>
+        <span class="code-desc">Vecino — masculino</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P03" onclick="selectCode(this)">
+        <span class="code-tag">P03</span>
+        <span class="code-desc">Del domicilio — femenino</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P04" onclick="selectCode(this)">
+        <span class="code-tag">P04</span>
+        <span class="code-desc">Del domicilio — masculino</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P05" onclick="selectCode(this)">
+        <span class="code-tag">P05</span>
+        <span class="code-desc">Trab. del lugar</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P06" onclick="selectCode(this)">
+        <span class="code-tag">P06</span>
+        <span class="code-desc">Conserje de turno</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P07" onclick="selectCode(this)">
+        <span class="code-tag">P07</span>
+        <span class="code-desc">Arrendatario</span>
+      </button>
+      <button class="code-btn" data-group="P" data-code="P08" onclick="selectCode(this)">
+        <span class="code-tag">P08</span>
+        <span class="code-desc">Del domicilio (nombre)</span>
+      </button>
+    </div>
+
+    <div class="section-title">¿Qué informó?</div>
+    <div class="codes-grid">
+      <button class="code-btn" data-group="I" data-code="I01" onclick="selectCode(this)">
+        <span class="code-tag">I01</span>
+        <span class="code-desc">No conoce al demandado</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I02" onclick="selectCode(this)">
+        <span class="code-tag">I02</span>
+        <span class="code-desc">No vive / no trabaja</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I03" onclick="selectCode(this)">
+        <span class="code-tag">I03</span>
+        <span class="code-desc">Se mudó (tiempo)</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I04" onclick="selectCode(this)">
+        <span class="code-tag">I04</span>
+        <span class="code-desc">Informante no conoce</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I05" onclick="selectCode(this)">
+        <span class="code-tag">I05</span>
+        <span class="code-desc">Nuevo residente / arrend.</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I06" onclick="selectCode(this)">
+        <span class="code-tag">I06</span>
+        <span class="code-desc">Conserje revisa registros</span>
+      </button>
+      <button class="code-btn" data-group="I" data-code="I07" onclick="selectCode(this)">
+        <span class="code-tag">I07</span>
+        <span class="code-desc">Conserje llama citófono</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- OBSERVACIONES -->
+  <div class="section-title">Observaciones (opcional)</div>
+  <div class="obs-box">
+    <textarea id="obs-input" placeholder="Detalles adicionales, nombre del informante, etc."></textarea>
+  </div>
+
+  <div class="bottom-actions">
+    <div class="loading" id="loading-envio">
+      <div class="spinner"></div>
+      Enviando resultado...
+    </div>
+    <button class="btn btn-success" id="btn-enviar" onclick="enviarResultado()">
+      ✓ Enviar resultado
+    </button>
+    <button class="btn btn-secondary" onclick="showScreen('causa')" style="margin-top:10px">← Volver a causa</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: CONFIRMACION                    -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-confirm">
+  <div class="confirm-hero">
+    <div class="confirm-icon" id="confirm-icon">✓</div>
+    <div class="confirm-title" id="confirm-title">Resultado enviado</div>
+    <div class="confirm-codes" id="confirm-codes">—</div>
+    <div class="confirm-detail" id="confirm-detail">—</div>
+    <button class="btn btn-primary" style="width:220px; margin-top:8px;" onclick="resetApp()">
+      Nueva causa →
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<script>
+// ── ESTADO ──────────────────────────────
+let state = {
+  token: localStorage.getItem('dbx_token') || '',
+  idHex: null,
+  causaData: null,
+  selections: { tipo: null, P: null, I: null, C: null },
+  videoStream: null,
+  scanActive: false
+};
+
+// ── INIT ─────────────────────────────────
+window.onload = () => {
+  if (!state.token) {
+    showScreen('config');
+  } else {
+    showScreen('scan');
+  }
+};
+
+// ── NAVEGACIÓN ───────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  // Mostrar sección BN solo si aplica
+  if (name === 'resultado') {
+    updateBNSection();
+  }
+}
+
+// ── CONFIG ───────────────────────────────
+function saveToken() {
+  const val = document.getElementById('token-input').value.trim();
+  if (!val) { showToast('Ingresa el token'); return; }
+  state.token = val;
+  localStorage.setItem('dbx_token', val);
+  showToast('Token guardado ✓');
+  showScreen('scan');
+}
+
+// ── QR CAMERA ────────────────────────────
+async function startCamera() {
+  if (!state.token) { showScreen('config'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    state.videoStream = stream;
+    state.scanActive = true;
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    document.getElementById('camera-container').classList.add('active');
+    requestAnimationFrame(scanFrame);
+  } catch(e) {
+    showToast('No se pudo acceder a la cámara');
+  }
+}
+
+function stopCamera() {
+  state.scanActive = false;
+  if (state.videoStream) {
+    state.videoStream.getTracks().forEach(t => t.stop());
+    state.videoStream = null;
+  }
+  document.getElementById('camera-container').classList.remove('active');
+}
+
+function scanFrame() {
+  if (!state.scanActive) return;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    requestAnimationFrame(scanFrame);
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data && code.data.length === 16) {
+    stopCamera();
+    loadCausa(code.data);
+  } else {
+    requestAnimationFrame(scanFrame);
+  }
+}
+
+// ── DROPBOX ──────────────────────────────
+async function dbxGet(path) {
+  const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + state.token,
+      'Dropbox-API-Arg': JSON.stringify({ path })
+    }
+  });
+  if (!res.ok) throw new Error('DBX GET ' + res.status);
+  return await res.json();
+}
+
+async function dbxPut(path, data) {
+  const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + state.token,
+      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', autorename: false }),
+      'Content-Type': 'application/octet-stream'
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('DBX PUT ' + res.status);
+  return await res.json();
+}
+
+// ── CARGAR CAUSA ─────────────────────────
+async function loadCausa(idHex) {
+  state.idHex = idHex;
+  document.getElementById('loading-causa').classList.add('active');
+  showScreen('scan');
+  try {
+    const causas = await dbxGet('/causas.json');
+    document.getElementById('loading-causa').classList.remove('active');
+    if (!causas[idHex]) {
+      showToast('⚠ Causa no encontrada: ' + idHex);
+      return;
+    }
+    state.causaData = causas[idHex];
+    fillCausa(idHex, causas[idHex]);
+    resetSelections();
+    showScreen('causa');
+  } catch(e) {
+    document.getElementById('loading-causa').classList.remove('active');
+    showToast('Error al cargar causas. Verifica conexión.');
+    console.error(e);
+  }
+}
+
+function fillCausa(idHex, c) {
+  document.getElementById('causa-id-display').textContent = idHex;
+  document.getElementById('c-rol').textContent = c.rol || '—';
+  document.getElementById('c-tribunal').textContent = c.tribunal || '—';
+  document.getElementById('c-demandado').textContent = c.demandado || '—';
+  document.getElementById('c-rut').textContent = c.rut || '—';
+  document.getElementById('c-direccion').textContent = c.direccion || '—';
+  document.getElementById('c-estudio').textContent = c.estudio || '—';
+  document.getElementById('c-piezas').textContent = c.piezas || '—';
+}
+
+// ── SELECCIÓN DE CÓDIGOS ─────────────────
+function selectCode(btn) {
+  const group = btn.dataset.group;
+  const code = btn.dataset.code;
+
+  // Toggle si ya estaba seleccionado
+  if (state.selections[group] === code) {
+    state.selections[group] = null;
+    btn.classList.remove('selected', 'selected-p', 'selected-c');
+  } else {
+    // Deseleccionar anterior del mismo grupo
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(b => {
+      b.classList.remove('selected', 'selected-p', 'selected-c');
+    });
+    state.selections[group] = code;
+    if (group === 'P') btn.classList.add('selected-p');
+    else if (group === 'C') btn.classList.add('selected-c');
+    else btn.classList.add('selected');
+  }
+
+  if (group === 'tipo') updateBNSection();
+}
+
+function updateBNSection() {
+  const seccion = document.getElementById('seccion-bn');
+  seccion.style.display = (state.selections.tipo === 'BN') ? 'block' : 'none';
+}
+
+function resetSelections() {
+  state.selections = { tipo: null, P: null, I: null, C: null };
+  document.querySelectorAll('.code-btn').forEach(b => {
+    b.classList.remove('selected', 'selected-p', 'selected-c');
+  });
+  document.getElementById('obs-input').value = '';
+}
+
+// ── ENVIAR RESULTADO ─────────────────────
+async function enviarResultado() {
+  if (!state.selections.tipo) {
+    showToast('Selecciona el tipo de resultado');
+    return;
+  }
+
+  const codigos = [state.selections.tipo];
+  if (state.selections.C) codigos.push(state.selections.C);
+  if (state.selections.P) codigos.push(state.selections.P);
+  if (state.selections.I) codigos.push(state.selections.I);
+
+  const obs = document.getElementById('obs-input').value.trim();
+
+  const payload = {
+    id_hex: state.idHex,
+    timestamp: new Date().toISOString(),
+    resultado: state.selections.tipo,
+    codigos: codigos,
+    observacion: obs || null,
+    causa: {
+      rol: state.causaData?.rol,
+      demandado: state.causaData?.demandado
+    }
+  };
+
+  document.getElementById('loading-envio').classList.add('active');
+  document.getElementById('btn-enviar').disabled = true;
+
+  try {
+    await dbxPut('/resultados/' + state.idHex + '.json', payload);
+    document.getElementById('loading-envio').classList.remove('active');
+    document.getElementById('btn-enviar').disabled = false;
+    showConfirm(true, codigos, state.causaData);
+  } catch(e) {
+    document.getElementById('loading-envio').classList.remove('active');
+    document.getElementById('btn-enviar').disabled = false;
+    showConfirm(false, codigos, state.causaData, e.message);
+  }
+}
+
+// ── CONFIRMACIÓN ─────────────────────────
+function showConfirm(ok, codigos, causa, errMsg) {
+  const icon = document.getElementById('confirm-icon');
+  const title = document.getElementById('confirm-title');
+  const codesEl = document.getElementById('confirm-codes');
+  const detail = document.getElementById('confirm-detail');
+
+  if (ok) {
+    icon.textContent = '✓';
+    icon.className = 'confirm-icon';
+    title.textContent = 'Resultado registrado';
+    title.className = 'confirm-title';
+    codesEl.textContent = codigos.join(' · ');
+    detail.textContent = causa?.rol + ' · ' + causa?.demandado;
+  } else {
+    icon.textContent = '✕';
+    icon.className = 'confirm-icon error';
+    title.textContent = 'Error al enviar';
+    title.className = 'confirm-title error';
+    codesEl.textContent = codigos.join(' · ');
+    detail.textContent = 'Verifica tu conexión a internet. ' + (errMsg || '');
+  }
+  showScreen('confirm');
+}
+
+function resetApp() {
+  state.idHex = null;
+  state.causaData = null;
+  resetSelections();
+  showScreen('scan');
+}
+
+// ── TOAST ────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
