@@ -813,7 +813,15 @@ async function startCamera() {
     const video = document.getElementById('video');
     video.srcObject = stream;
     document.getElementById('camera-container').classList.add('active');
-    requestAnimationFrame(scanFrame);
+
+    // Usar BarcodeDetector nativo si está disponible (Android Chrome)
+    if ('BarcodeDetector' in window) {
+      state.detector = new BarcodeDetector({ formats: ['qr_code'] });
+      scanNative();
+    } else {
+      // Fallback: jsQR
+      requestAnimationFrame(scanJsQR);
+    }
   } catch(e) {
     showToast('No se pudo acceder a la cámara');
   }
@@ -828,12 +836,33 @@ function stopCamera() {
   document.getElementById('camera-container').classList.remove('active');
 }
 
-function scanFrame() {
+// ── Escáner nativo (BarcodeDetector) ──
+async function scanNative() {
+  if (!state.scanActive) return;
+  const video = document.getElementById('video');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    try {
+      const codes = await state.detector.detect(video);
+      if (codes.length > 0) {
+        const id = codes[0].rawValue.trim().toUpperCase();
+        if (id.length === 16 && /^[0-9A-F]+$/.test(id)) {
+          stopCamera();
+          loadCausa(id);
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+  if (state.scanActive) setTimeout(scanNative, 200);
+}
+
+// ── Escáner fallback (jsQR) ──
+function scanJsQR() {
   if (!state.scanActive) return;
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-    requestAnimationFrame(scanFrame);
+    requestAnimationFrame(scanJsQR);
     return;
   }
   canvas.width = video.videoWidth;
@@ -841,22 +870,16 @@ function scanFrame() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  // Intentar con y sin inversión
-  let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
-
+  const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
   if (code && code.data) {
     const id = code.data.trim().toUpperCase();
     if (id.length === 16 && /^[0-9A-F]+$/.test(id)) {
       stopCamera();
       loadCausa(id);
       return;
-    } else {
-      // QR leído pero formato inesperado — mostrar lo que leyó
-      document.querySelector('.camera-hint').textContent = 'Leído: ' + code.data.trim().substring(0,20);
     }
   }
-  requestAnimationFrame(scanFrame);
+  requestAnimationFrame(scanJsQR);
 }
 
 // ── DROPBOX ──────────────────────────────
