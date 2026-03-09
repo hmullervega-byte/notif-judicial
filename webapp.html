@@ -520,6 +520,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- MODAL: YA ENVIADO -->
+<div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:400; align-items:center; justify-content:center; padding:24px;">
+  <div style="background:var(--surface); border:1px solid var(--warning); border-radius:16px; padding:28px; max-width:320px; width:100%; text-align:center;">
+    <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
+    <div style="font-family:var(--mono); font-size:14px; font-weight:600; color:var(--warning); margin-bottom:10px;">Esta causa ya tiene resultado</div>
+    <div style="font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:24px;">Se registró un resultado anteriormente para este formulario. ¿Deseas modificarlo?</div>
+    <button class="btn btn-danger" onclick="modalConfirmar()" style="margin-bottom:10px;">Sí, modificar resultado</button>
+    <button class="btn btn-secondary" onclick="modalCancelar()">Cancelar — escanear otro</button>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════ -->
 <!-- SCREEN: CONFIG                          -->
 <!-- ═══════════════════════════════════════ -->
@@ -727,6 +738,19 @@
     </div>
   </div>
 
+  <!-- FECHA Y HORA -->
+  <div class="section-title">Fecha y hora de la diligencia</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">
+    <div class="field-row" style="margin-bottom:0">
+      <div class="field-label">Fecha</div>
+      <input type="date" id="fecha-input" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none; padding:2px 0;">
+    </div>
+    <div class="field-row" style="margin-bottom:0">
+      <div class="field-label">Hora</div>
+      <input type="time" id="hora-input" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none; padding:2px 0;">
+    </div>
+  </div>
+
   <!-- OBSERVACIONES -->
   <div class="section-title">Observaciones (opcional)</div>
   <div class="obs-box">
@@ -788,6 +812,7 @@ function showScreen(name) {
   // Mostrar sección BN solo si aplica
   if (name === 'resultado') {
     updateBNSection();
+    setDefaultFechaHora();
   }
 }
 
@@ -924,12 +949,49 @@ async function loadCausa(idHex) {
     state.causaData = causas[idHex];
     fillCausa(idHex, causas[idHex]);
     resetSelections();
-    showScreen('causa');
+
+    // Verificar si ya tiene resultado enviado
+    const yaEnviado = await dbxCheckExists('/resultados/' + idHex + '.json');
+    if (yaEnviado) {
+      showModalYaEnviado(idHex);
+    } else {
+      showScreen('causa');
+    }
   } catch(e) {
     document.getElementById('loading-causa').classList.remove('active');
     showToast('Error al cargar causas. Verifica conexión.');
     console.error(e);
   }
+}
+
+async function dbxCheckExists(path) {
+  try {
+    const res = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + state.token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ path })
+    });
+    return res.ok;
+  } catch(e) {
+    return false;
+  }
+}
+
+function showModalYaEnviado(idHex) {
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function modalConfirmar() {
+  document.getElementById('modal-overlay').style.display = 'none';
+  showScreen('causa');
+}
+
+function modalCancelar() {
+  document.getElementById('modal-overlay').style.display = 'none';
+  showScreen('scan');
 }
 
 function fillCausa(idHex, c) {
@@ -971,6 +1033,16 @@ function updateBNSection() {
   seccion.style.display = (state.selections.tipo === 'BN') ? 'block' : 'none';
 }
 
+function setDefaultFechaHora() {
+  // Hora local Chile (no UTC)
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const fecha = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const hora  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('fecha-input').value = fecha;
+  document.getElementById('hora-input').value  = hora;
+}
+
 function resetSelections() {
   state.selections = { tipo: null, P: null, I: null, C: null };
   document.querySelectorAll('.code-btn').forEach(b => {
@@ -991,11 +1063,15 @@ async function enviarResultado() {
   if (state.selections.P) codigos.push(state.selections.P);
   if (state.selections.I) codigos.push(state.selections.I);
 
-  const obs = document.getElementById('obs-input').value.trim();
+  const obs   = document.getElementById('obs-input').value.trim();
+  const fecha = document.getElementById('fecha-input').value;
+  const hora  = document.getElementById('hora-input').value;
 
   const payload = {
     id_hex: state.idHex,
     timestamp: new Date().toISOString(),
+    fecha_diligencia: fecha,       // YYYY-MM-DD hora local
+    hora_diligencia: hora,         // HH:MM hora local
     resultado: state.selections.tipo,
     codigos: codigos,
     observacion: obs || null,
