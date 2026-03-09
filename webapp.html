@@ -841,13 +841,22 @@ function scanFrame() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-  if (code && code.data && code.data.length === 16) {
-    stopCamera();
-    loadCausa(code.data);
-  } else {
-    requestAnimationFrame(scanFrame);
+
+  // Intentar con y sin inversión
+  let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
+
+  if (code && code.data) {
+    const id = code.data.trim().toUpperCase();
+    if (id.length === 16 && /^[0-9A-F]+$/.test(id)) {
+      stopCamera();
+      loadCausa(id);
+      return;
+    } else {
+      // QR leído pero formato inesperado — mostrar lo que leyó
+      document.querySelector('.camera-hint').textContent = 'Leído: ' + code.data.trim().substring(0,20);
+    }
   }
+  requestAnimationFrame(scanFrame);
 }
 
 // ── DROPBOX ──────────────────────────────
