@@ -1030,14 +1030,15 @@ async function loadCausa(idHex) {
   document.getElementById('loading-causa').classList.add('active');
   showScreen('scan');
   try {
-    const causas = await dbxGet('/causas.json');
+    const causasArr = await dbxGet('/causas.json');
     document.getElementById('loading-causa').classList.remove('active');
-    if (!causas[idHex]) {
+    const causaData = causasArr.find(c => c.id_hex === idHex);
+    if (!causaData) {
       showToast('⚠ Causa no encontrada: ' + idHex);
       return;
     }
-    state.causaData = causas[idHex];
-    fillCausa(idHex, causas[idHex]);
+    state.causaData = causaData;
+    fillCausa(idHex, causaData);
     resetSelections();
 
     // Verificar si ya tiene resultado enviado
