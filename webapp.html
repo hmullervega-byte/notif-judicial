@@ -658,19 +658,11 @@
       </button>
       <button class="code-btn" data-family="1" data-code="D03" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D03</span>
-        <span class="code-desc">Calle no existe en Antofagasta</span>
-      </button>
-      <button class="code-btn" data-family="1" data-code="D04" onclick="selectD(this)">
-        <span class="code-tag" style="color:var(--warning)">D04</span>
-        <span class="code-desc">Calle existe pero en otra ciudad →</span>
+        <span class="code-desc">Calle no existe · <em style="color:var(--text2);font-style:normal">sin hora · sin GEO</em></span>
       </button>
       <button class="code-btn" data-family="1" data-code="D05" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D05</span>
         <span class="code-desc">Villa, falta número de casa</span>
-      </button>
-      <button class="code-btn" data-family="1" data-code="D06" onclick="selectD(this)">
-        <span class="code-tag" style="color:var(--warning)">D06</span>
-        <span class="code-desc">Falta N° de casa o depto →</span>
       </button>
       <button class="code-btn" data-family="1" data-code="D07" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D07</span>
@@ -686,7 +678,15 @@
       </button>
       <button class="code-btn" data-family="1" data-code="D10" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D10</span>
-        <span class="code-desc">Falta torre y N° departamento</span>
+        <span class="code-desc">Conserje sin información</span>
+      </button>
+      <button class="code-btn" data-family="1" data-code="D10b" onclick="selectD(this)">
+        <span class="code-tag" style="color:var(--warning)">D10b</span>
+        <span class="code-desc">Conserje con info adicional →</span>
+      </button>
+      <button class="code-btn" data-family="1" data-code="D10c" onclick="selectD(this)">
+        <span class="code-tag" style="color:var(--warning)">D10c</span>
+        <span class="code-desc">Conserje consulta registros, no figura →</span>
       </button>
       <button class="code-btn" data-family="1" data-code="D11" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D11</span>
@@ -694,16 +694,16 @@
       </button>
     </div>
 
-    <!-- Campo texto D04: ciudad -->
-    <div id="campo-D04" style="display:none" class="obs-box" style="margin-top:8px">
-      <div class="field-label" style="margin-bottom:6px">Ciudad donde existe la calle</div>
-      <input type="text" id="texto-D04" placeholder="Ej: Calama, Santiago..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo texto D10b: info adicional del conserje -->
+    <div id="campo-D10b" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Información adicional del conserje</div>
+      <input type="text" id="texto-D10b" placeholder="Ej: el demandado se fue hace un mes" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
 
-    <!-- Campo texto D06: tipo (casa/departamento) -->
-    <div id="campo-D06" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Especificar: casa o departamento</div>
-      <input type="text" id="texto-D06" placeholder="Ej: casa, departamento..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo texto D10c: qué falta en la dirección -->
+    <div id="campo-D10c" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">¿Qué falta en la dirección?</div>
+      <input type="text" id="texto-D10c" placeholder="Ej: la nomenclatura de la torre" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
 
     <!-- FAMILIA 2: PERSONA INFORMA -->
@@ -742,7 +742,7 @@
       </button>
       <button class="code-btn" data-group="Q" data-code="Q08" data-sexo="fm" onclick="selectQ(this)">
         <span class="code-tag" style="color:var(--accent2)">Q08</span>
-        <span class="code-desc">Trabajador/a del lugar</span>
+        <span class="code-desc">Trabajador/a del lugar →</span>
       </button>
       <button class="code-btn" data-group="Q" data-code="Q09" data-sexo="fm" onclick="selectQ(this)">
         <span class="code-tag" style="color:var(--accent2)">Q09</span>
@@ -754,6 +754,12 @@
     <div id="campo-Q04" style="display:none" class="obs-box">
       <div class="field-label" style="margin-bottom:6px">Nombre y/o parentesco del familiar</div>
       <input type="text" id="texto-Q04" placeholder="Ej: María González, madre..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    </div>
+
+    <!-- Campo texto Q08 (nombre/cargo, opcional) -->
+    <div id="campo-Q08" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Nombre o cargo (opcional — si no, "no quiso identificarse")</div>
+      <input type="text" id="texto-Q08" placeholder="Ej: guardia de seguridad, encargada de bodega..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
 
     <!-- SEXO -->
@@ -807,9 +813,13 @@
           <span class="code-tag" style="color:var(--accent)">R07</span>
           <span class="code-desc">Llamó al citófono, no vive allí</span>
         </button>
-        <button class="code-btn r-btn" data-group="R" data-code="R08" data-restrict="Q08" onclick="selectR(this)">
-          <span class="code-tag" style="color:var(--accent)">R08</span>
-          <span class="code-desc">No vive ni trabaja allí, no lo/la conoce</span>
+        <button class="code-btn r-btn" data-group="R" data-code="R08a" data-restrict="Q08" onclick="selectR(this)">
+          <span class="code-tag" style="color:var(--accent)">R08a</span>
+          <span class="code-desc">No trabaja allí ni lo/la conoce</span>
+        </button>
+        <button class="code-btn r-btn" data-group="R" data-code="R08b" data-restrict="Q08" onclick="selectR(this)">
+          <span class="code-tag" style="color:var(--accent)">R08b</span>
+          <span class="code-desc">Ya no trabaja allí + observación →</span>
         </button>
         <button class="code-btn r-btn" data-group="R" data-code="R09" data-restrict="Q03-Q04-Q05" onclick="selectR(this)">
           <span class="code-tag" style="color:var(--accent)">R09</span>
@@ -821,6 +831,12 @@
       <div id="campo-R04" style="display:none" class="obs-box">
         <div class="field-label" style="margin-bottom:6px">Ciudad de destino</div>
         <input type="text" id="texto-R04" placeholder="Ej: Calama, Santiago..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+
+      <!-- Campo texto R08b: observación adicional -->
+      <div id="campo-R08b" style="display:none" class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Observación adicional</div>
+        <input type="text" id="texto-R08b" placeholder="Ej: trabajó allí hasta marzo del año pasado" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
       </div>
 
       <!-- Campo texto R09: tiempo aprox -->
@@ -839,7 +855,7 @@
       <div class="field-label">Fecha</div>
       <input type="date" id="fecha-input" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none; padding:2px 0;">
     </div>
-    <div class="field-row" style="margin-bottom:0">
+    <div class="field-row" style="margin-bottom:0" id="hora-block">
       <div class="field-label">Hora</div>
       <div style="display:flex; align-items:center; gap:4px;">
         <input type="number" id="hora-hh" min="0" max="23" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:18px; font-weight:600; width:44px; outline:none; padding:2px 0; -moz-appearance:textfield;" oninput="if(this.value>23)this.value=23; if(this.value<0)this.value=0;">
@@ -1180,10 +1196,13 @@ function selectD(btn) {
     btn.classList.add('selected-c');
   }
   // Mostrar campos texto condicionales
-  ['D04','D06'].forEach(c => {
+  ['D10b','D10c'].forEach(c => {
     document.getElementById('campo-' + c).style.display =
       (state.selections.D === c) ? 'block' : 'none';
   });
+  // D03: ocultar hora (no aplica)
+  const horaBlock = document.getElementById('hora-block');
+  if (horaBlock) horaBlock.style.display = (state.selections.D === 'D03') ? 'none' : '';
   // Si selecciona Familia 1, limpiar Familia 2
   if (state.selections.D) resetFamilia2();
 }
@@ -1204,13 +1223,17 @@ function selectQ(btn) {
     if (state.selections.D) {
       state.selections.D = null;
       document.querySelectorAll('[data-family="1"]').forEach(b => b.classList.remove('selected-c'));
-      ['D04','D06'].forEach(c => document.getElementById('campo-' + c).style.display = 'none');
+      ['D10b','D10c'].forEach(c => document.getElementById('campo-' + c).style.display = 'none');
+      // Restaurar hora si estaba oculta por D03
+      const horaBlock = document.getElementById('hora-block');
+      if (horaBlock) horaBlock.style.display = '';
     }
     updateSexoSection(sexo);
     updateRSection(code);
   }
-  // Campo texto Q04
+  // Campos texto Q
   document.getElementById('campo-Q04').style.display = (state.selections.Q === 'Q04') ? 'block' : 'none';
+  document.getElementById('campo-Q08').style.display = (state.selections.Q === 'Q08') ? 'block' : 'none';
 }
 
 function updateSexoSection(sexo) {
@@ -1243,14 +1266,19 @@ function updateRSection(qCode) {
     b.classList.remove('selected');
     const restrict = b.dataset.restrict;
     let visible = false;
-    if (restrict === 'todos') visible = true;
+    if (restrict === 'todos')        visible = true;
     else if (restrict === 'menos-Q08') visible = (qCode !== 'Q08');
-    else if (restrict === 'Q01') visible = (qCode === 'Q01');
-    else if (restrict === 'Q08') visible = (qCode === 'Q08');
+    else if (restrict === 'Q01')     visible = (qCode === 'Q01');
+    else if (restrict === 'Q08')     visible = (qCode === 'Q08');
     else if (restrict === 'Q03-Q04-Q05') visible = ['Q03','Q04','Q05'].includes(qCode);
+    // Q09: solo R01-R05 (todos menos restricciones especiales)
+    if (qCode === 'Q09') {
+      visible = ['todos'].includes(restrict) || restrict === 'menos-Q08';
+      if (['Q01','Q08','Q03-Q04-Q05'].includes(restrict)) visible = false;
+    }
     b.style.display = visible ? 'block' : 'none';
   });
-  ['R04','R09'].forEach(c => document.getElementById('campo-' + c).style.display = 'none');
+  ['R04','R08b','R09'].forEach(c => document.getElementById('campo-' + c).style.display = 'none');
 }
 
 function selectR(btn) {
@@ -1264,14 +1292,16 @@ function selectR(btn) {
     btn.classList.add('selected');
   }
   // Campos texto condicionales
-  document.getElementById('campo-R04').style.display = (state.selections.R === 'R04') ? 'block' : 'none';
-  document.getElementById('campo-R09').style.display = (state.selections.R === 'R09') ? 'block' : 'none';
+  document.getElementById('campo-R04').style.display  = (state.selections.R === 'R04')  ? 'block' : 'none';
+  document.getElementById('campo-R08b').style.display = (state.selections.R === 'R08b') ? 'block' : 'none';
+  document.getElementById('campo-R09').style.display  = (state.selections.R === 'R09')  ? 'block' : 'none';
 }
 
 function hideFamilia2Sub() {
   document.getElementById('seccion-sexo').style.display = 'none';
   document.getElementById('seccion-R').style.display = 'none';
   document.getElementById('campo-Q04').style.display = 'none';
+  document.getElementById('campo-Q08').style.display = 'none';
   state.selections.sexo = null;
   state.selections.R = null;
 }
@@ -1303,13 +1333,16 @@ function resetSelections() {
   document.querySelectorAll('.code-btn').forEach(b => {
     b.classList.remove('selected', 'selected-p', 'selected-c');
   });
-  ['D04','D06','Q04','R04','R09'].forEach(c => {
+  ['D10b','D10c','Q04','Q08','R04','R08b','R09'].forEach(c => {
     const el = document.getElementById('campo-' + c);
     if (el) el.style.display = 'none';
   });
   document.getElementById('seccion-sexo').style.display = 'none';
   document.getElementById('seccion-R').style.display = 'none';
   document.getElementById('obs-input').value = '';
+  // Restaurar hora si estaba oculta por D03
+  const horaBlock = document.getElementById('hora-block');
+  if (horaBlock) horaBlock.style.display = '';
 }
 
 // ── ENVIAR RESULTADO ─────────────────────
@@ -1325,13 +1358,13 @@ async function enviarResultado() {
     // Familia 1
     if (state.selections.D) {
       codigos.push(state.selections.D);
-      if (state.selections.D === 'D04') {
-        const t = document.getElementById('texto-D04').value.trim();
-        if (t) codigos.push('D04:' + t);
+      if (state.selections.D === 'D10b') {
+        const t = document.getElementById('texto-D10b').value.trim();
+        if (t) codigos.push('D10b:' + t);
       }
-      if (state.selections.D === 'D06') {
-        const t = document.getElementById('texto-D06').value.trim();
-        if (t) codigos.push('D06:' + t);
+      if (state.selections.D === 'D10c') {
+        const t = document.getElementById('texto-D10c').value.trim();
+        if (t) codigos.push('D10c:' + t);
       }
     }
     // Familia 2
@@ -1341,12 +1374,20 @@ async function enviarResultado() {
         const t = document.getElementById('texto-Q04').value.trim();
         if (t) codigos.push('Q04:' + t);
       }
+      if (state.selections.Q === 'Q08') {
+        const t = document.getElementById('texto-Q08').value.trim();
+        if (t) codigos.push('Q08:' + t);  // Solo si tiene contenido
+      }
       if (state.selections.sexo) codigos.push('S' + state.selections.sexo);
       if (state.selections.R) {
         codigos.push(state.selections.R);
         if (state.selections.R === 'R04') {
           const t = document.getElementById('texto-R04').value.trim();
           if (t) codigos.push('R04:' + t);
+        }
+        if (state.selections.R === 'R08b') {
+          const t = document.getElementById('texto-R08b').value.trim();
+          if (t) codigos.push('R08b:' + t);
         }
         if (state.selections.R === 'R09') {
           const t = document.getElementById('texto-R09').value.trim();
@@ -1359,7 +1400,9 @@ async function enviarResultado() {
   const obs   = document.getElementById('obs-input').value.trim();
   const fecha = document.getElementById('fecha-input').value;
   const pad   = n => String(n).padStart(2, '0');
-  const hora  = pad(document.getElementById('hora-hh').value) + ':' + pad(document.getElementById('hora-mm').value);
+  // D03: hora vacía
+  const esD03 = state.selections.D === 'D03';
+  const hora  = esD03 ? '' : pad(document.getElementById('hora-hh').value) + ':' + pad(document.getElementById('hora-mm').value);
 
   const payload = {
     id_hex: state.idHex,
