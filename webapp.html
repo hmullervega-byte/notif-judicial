@@ -962,7 +962,7 @@ async function getAccessToken() {
 
 // ── QR CAMERA ────────────────────────────
 async function startCamera() {
-  if (!state.token) { showScreen('config'); return; }
+  if (!state.refreshToken || !state.appKey || !state.appSecret) { showScreen('config'); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
