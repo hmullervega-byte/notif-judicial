@@ -752,10 +752,6 @@
         <span class="code-tag" style="color:var(--accent2)">Q05</span>
         <span class="code-desc">Residente del domicilio</span>
       </button>
-      <button class="code-btn" data-group="Q" data-code="Q07" data-sexo="fm" onclick="selectQ(this)">
-        <span class="code-tag" style="color:var(--accent2)">Q07</span>
-        <span class="code-desc">Sin nombre + Residente</span>
-      </button>
       <button class="code-btn" data-group="Q" data-code="Q08" data-sexo="fm" onclick="selectQ(this)">
         <span class="code-tag" style="color:var(--accent2)">Q08</span>
         <span class="code-desc">Trabajador/a del lugar →</span>
@@ -805,10 +801,22 @@
       </div>
     </div>
 
+    <!-- Campo Q05: nombre opcional -->
+    <div id="campo-Q05" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Nombre del residente (opcional)</div>
+      <input type="text" id="texto-Q05-nombre" placeholder="Ej: Pedro Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    </div>
+
     <!-- Campo Q08: nombre/cargo (opcional) -->
     <div id="campo-Q08" style="display:none" class="obs-box">
       <div class="field-label" style="margin-bottom:6px">Nombre o cargo (opcional — si no, "no quiso identificarse")</div>
       <input type="text" id="texto-Q08" placeholder="Ej: guardia de seguridad, encargada de bodega..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    </div>
+
+    <!-- Campo Q09: nombre opcional -->
+    <div id="campo-Q09" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Nombre del arrendatario/a (opcional)</div>
+      <input type="text" id="texto-Q09-nombre" placeholder="Ej: Ana Rojas..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
   </div><!-- /seccion-quien -->
 
@@ -1409,7 +1417,9 @@ function selectQ(btn) {
   show('campo-Q01-met', code === 'Q01' && esBPNOT44);
   show('campo-Q02', code === 'Q02');
   show('campo-Q03', code === 'Q03');
+  show('campo-Q05', code === 'Q05');
   show('campo-Q08', code === 'Q08');
+  show('campo-Q09', code === 'Q09');
 
   // Sexo
   updateSexoSection(sexo);
@@ -1473,7 +1483,7 @@ function updateRSection(qCode) {
     else if (r === 'menos-Q08') v = qCode !== 'Q08';
     else if (r === 'Q01')       v = qCode === 'Q01';
     else if (r === 'Q08')       v = qCode === 'Q08';
-    else if (r === 'Q03-Q04-Q05') v = ['Q03','Q05'].includes(qCode); // Q04 eliminado
+    else if (r === 'Q03-Q04-Q05') v = ['Q03','Q05'].includes(qCode); // Q04/Q07 eliminados
     // Q09: solo R01-R05
     if (qCode === 'Q09') v = (r === 'todos' || r === 'menos-Q08');
     b.style.display = v ? 'block' : 'none';
@@ -1542,7 +1552,7 @@ function resetSubSelections() {
   document.querySelectorAll('[data-group="Q"]').forEach(b => b.classList.remove('selected-p'));
   document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"]').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.r-btn,.n44-btn').forEach(b => b.classList.remove('selected'));
-  ['campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q08',
+  ['campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
    'campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => show(c, false));
   show('seccion-sexo',      false);
   show('seccion-R',         false);
@@ -1561,7 +1571,7 @@ function setDefaultFechaHora() {
 function resetSelections() {
   state.selections = { tipo:null, D:null, Q:null, Q01met:null, sexo:null, R:null, BP:null, N44:null, N44sexo:null, citFecha:null, citHora:null };
   document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected','selected-p','selected-c'));
-  ['campo-D10b','campo-D10c','campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q08',
+  ['campo-D10b','campo-D10c','campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
    'campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => {
     const el = document.getElementById(c); if (el) el.style.display = 'none';
   });
@@ -1610,10 +1620,20 @@ async function enviarResultado() {
       if (p) codigos.push('Q03-parentesco:' + p);
       if (n) codigos.push('Q03-nombre:' + n);
     }
+    // Q05: nombre opcional
+    if (q === 'Q05') {
+      const n = document.getElementById('texto-Q05-nombre')?.value.trim();
+      if (n) codigos.push('Q05:' + n);
+    }
     // Q08: nombre/cargo
     if (q === 'Q08') {
       const v = document.getElementById('texto-Q08')?.value.trim();
       if (v) codigos.push('Q08:' + v);
+    }
+    // Q09: nombre opcional
+    if (q === 'Q09') {
+      const n = document.getElementById('texto-Q09-nombre')?.value.trim();
+      if (n) codigos.push('Q09:' + n);
     }
     // Sexo
     if (state.selections.sexo) codigos.push('S' + state.selections.sexo);
