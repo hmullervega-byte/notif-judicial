@@ -998,6 +998,7 @@
   </div><!-- /seccion-not44-cit -->
 
   <!-- FECHA Y HORA -->
+  <div id="seccion-fecha-hora">
   <div class="section-title">Fecha y hora de la diligencia</div>
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">
     <div class="field-row" style="margin-bottom:0">
@@ -1012,6 +1013,7 @@
         <input type="number" id="hora-mm" min="0" max="59" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:18px; font-weight:600; width:44px; outline:none; padding:2px 0; -moz-appearance:textfield;" oninput="if(this.value>59)this.value=59; if(this.value<0)this.value=0;">
       </div>
     </div>
+  </div>
   </div>
 
   <!-- OBSERVACIONES -->
@@ -1432,10 +1434,12 @@ function updateTipoSections() {
   if (t === 'RPP') {
     document.getElementById('rpprf-desc').textContent = 'Requerimiento PERSONAL: el demandado/a concurrió y firmó.';
     initCitHora();
+    show('seccion-fecha-hora', false);
   }
   if (t === 'RPF') {
     document.getElementById('rpprf-desc').textContent = 'Requerimiento FICTO: el demandado/a NO concurrió (llamado a viva voz).';
     initCitHora();
+    show('seccion-fecha-hora', false);
   }
 
   resetSubSelections();
@@ -1632,6 +1636,8 @@ function resetSubSelections() {
   show('seccion-R',         false);
   show('seccion-not44-n44', false);
   show('seccion-not44-cit', false);
+  show('seccion-fecha-hora', true);
+  show('hora-block',        true);
 }
 
 function initCitHora() {
@@ -1664,6 +1670,7 @@ function resetSelections() {
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
    'seccion-not44-n44','seccion-not44-cit'].forEach(c => show(c, false));
   show('hora-block', true);
+  show('seccion-fecha-hora', true);
   document.getElementById('obs-input').value = '';
 }
 
