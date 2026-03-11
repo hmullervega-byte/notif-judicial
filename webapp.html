@@ -807,10 +807,20 @@
       <input type="text" id="texto-Q05-nombre" placeholder="Ej: Pedro Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
 
-    <!-- Campo Q08: nombre/cargo (opcional) -->
-    <div id="campo-Q08" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Nombre o cargo (opcional — si no, "no quiso identificarse")</div>
-      <input type="text" id="texto-Q08" placeholder="Ej: guardia de seguridad, encargada de bodega..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo Q08: nombre, cargo y empresa (todos opcionales) -->
+    <div id="campo-Q08" style="display:none">
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Nombre (opcional)</div>
+        <input type="text" id="texto-Q08-nombre" placeholder="Ej: Juan Pérez..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Cargo (opcional — si vacío, "no quiso identificarse")</div>
+        <input type="text" id="texto-Q08-cargo" placeholder="Ej: guardia de seguridad, encargada de bodega..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Empresa (opcional — si vacío, "trabajador del lugar")</div>
+        <input type="text" id="texto-Q08-empresa" placeholder="Ej: Komatsu, Sodexo..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
     </div>
 
     <!-- Campo Q09: nombre opcional -->
@@ -1625,10 +1635,14 @@ async function enviarResultado() {
       const n = document.getElementById('texto-Q05-nombre')?.value.trim();
       if (n) codigos.push('Q05:' + n);
     }
-    // Q08: nombre/cargo
+    // Q08: nombre, cargo y empresa (todos opcionales)
     if (q === 'Q08') {
-      const v = document.getElementById('texto-Q08')?.value.trim();
-      if (v) codigos.push('Q08:' + v);
+      const n = document.getElementById('texto-Q08-nombre')?.value.trim();
+      const c = document.getElementById('texto-Q08-cargo')?.value.trim();
+      const e = document.getElementById('texto-Q08-empresa')?.value.trim();
+      if (n) codigos.push('Q08-nombre:' + n);
+      if (c) codigos.push('Q08-cargo:' + c);
+      if (e) codigos.push('Q08-empresa:' + e);
     }
     // Q09: nombre opcional
     if (q === 'Q09') {
