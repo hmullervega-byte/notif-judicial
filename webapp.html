@@ -939,20 +939,15 @@
       </button>
     </div>
 
-    <!-- N44-A: sexo + texto de quien recibió -->
+    <!-- N44-A: descripción + nombre (sin sexo — ya está en Q+Sexo del Paso 1) -->
     <div id="campos-N44-A" style="display:none">
-      <div style="font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:0.08em; margin:10px 0 6px;">Sexo de quien recibió</div>
-      <div class="codes-grid">
-        <button class="code-btn" data-group="n44sexo" data-code="SF" onclick="selectN44Sexo(this)">
-          <span class="code-tag" style="color:#e891c8">SF</span><span class="code-desc">Femenino</span>
-        </button>
-        <button class="code-btn" data-group="n44sexo" data-code="SM" onclick="selectN44Sexo(this)">
-          <span class="code-tag" style="color:#91b8e8">SM</span><span class="code-desc">Masculino</span>
-        </button>
-      </div>
       <div class="obs-box" style="margin-top:8px">
-        <div class="field-label" style="margin-bottom:6px">Descripción (parentesco/rol) — opcional</div>
-        <input type="text" id="texto-N44-A" placeholder="Ej: familiar de la demandada, hermana del demandado:Abigail Huayna" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+        <div class="field-label" style="margin-bottom:6px">Descripción / parentesco (opcional)</div>
+        <input type="text" id="texto-N44-A-desc" placeholder="Ej: familiar de la demandada, hermana del demandado..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Nombre (opcional)</div>
+        <input type="text" id="texto-N44-A-nombre" placeholder="Ej: Abigail Huayna..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
       </div>
     </div>
 
@@ -1744,11 +1739,17 @@ async function enviarResultado() {
     // N44
     const n44 = state.selections.N44;
     codigos.push(n44);
-    if (n44 === 'N44-A' || n44 === 'N44-C') {
-      if (state.selections.N44sexo) codigos.push(n44 + ':' + state.selections.N44sexo);
-      const idTxt = n44 === 'N44-A' ? 'texto-N44-A' : 'texto-N44-C';
-      const v = document.getElementById(idTxt).value.trim();
-      if (v) codigos.push(n44 + ':' + v);
+    if (n44 === 'N44-A') {
+      // Sexo ya está en Q+Sexo del Paso 1 — no se repite aquí
+      const desc   = document.getElementById('texto-N44-A-desc')?.value.trim();
+      const nombre = document.getElementById('texto-N44-A-nombre')?.value.trim();
+      if (desc && nombre) codigos.push('N44-A:' + desc + ':' + nombre);
+      else if (desc)      codigos.push('N44-A:' + desc);
+      // Si ambos vacíos: solo "N44-A" en el array
+    } else if (n44 === 'N44-C') {
+      if (state.selections.N44sexo) codigos.push('N44-C:' + state.selections.N44sexo);
+      const v = document.getElementById('texto-N44-C')?.value.trim();
+      if (v) codigos.push('N44-C:' + v);
     }
   }
 
