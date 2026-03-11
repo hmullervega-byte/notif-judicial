@@ -1415,14 +1415,16 @@ function selectTipo(btn) {
 
 function updateTipoSections() {
   const t = state.selections.tipo;
+  const esRPPRF = t === 'RPP' || t === 'RPF';
   show('seccion-bn',          t === 'BN');
   show('seccion-quien',       t === 'BN' || t === 'BP' || t === 'NOT44');
-  show('seccion-rpprf',       t === 'RPP' || t === 'RPF');
+  show('seccion-rpprf',       esRPPRF);
   show('seccion-not44-n44',   false);
   show('seccion-not44-cit',   false);
   show('seccion-sexo',        false);
   show('seccion-R',           false);
   show('hora-block',          true);
+  show('seccion-fecha-hora',  !esRPPRF);
 
   const lbl = document.getElementById('seccion-quien-label');
   if (lbl) {
@@ -1434,12 +1436,10 @@ function updateTipoSections() {
   if (t === 'RPP') {
     document.getElementById('rpprf-desc').textContent = 'Requerimiento PERSONAL: el demandado/a concurrió y firmó.';
     initCitHora();
-    show('seccion-fecha-hora', false);
   }
   if (t === 'RPF') {
     document.getElementById('rpprf-desc').textContent = 'Requerimiento FICTO: el demandado/a NO concurrió (llamado a viva voz).';
     initCitHora();
-    show('seccion-fecha-hora', false);
   }
 
   resetSubSelections();
