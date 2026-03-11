@@ -606,6 +606,11 @@
   </div>
 
   <div class="field-row">
+    <div class="field-label">Notificar a</div>
+    <div class="field-value highlight" id="c-notif-a">—</div>
+  </div>
+
+  <div class="field-row">
     <div class="field-label">Dirección</div>
     <div class="field-value" id="c-direccion">—</div>
   </div>
@@ -617,7 +622,15 @@
 
   <div class="piezas-box">
     <div class="field-label">Piezas a notificar</div>
-    <div class="field-value" id="c-piezas">—</div>
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <div class="field-value" id="c-piezas" style="flex:1; min-width:0;">—</div>
+      <button onclick="editarPiezas()" id="btn-editar-piezas" style="background:none; border:1px solid var(--accent2); color:var(--accent2); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--mono); cursor:pointer;">editar</button>
+    </div>
+    <div id="campo-piezas-edit" style="display:none; margin-top:8px;">
+      <textarea id="texto-piezas" rows="3" style="width:100%; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); font-family:var(--sans); font-size:13px; padding:8px; resize:vertical; box-sizing:border-box;"></textarea>
+      <button onclick="guardarPiezas()" style="margin-top:6px; background:var(--accent2); border:none; color:#000; border-radius:6px; padding:5px 14px; font-size:12px; font-family:var(--mono); cursor:pointer;">✓ Guardar</button>
+      <button onclick="cancelarPiezas()" style="margin-top:6px; margin-left:6px; background:none; border:1px solid var(--text2); color:var(--text2); border-radius:6px; padding:5px 14px; font-size:12px; font-family:var(--mono); cursor:pointer;">Cancelar</button>
+    </div>
   </div>
 
   <div class="bottom-actions">
@@ -1334,9 +1347,35 @@ function fillCausa(idHex, c) {
   document.getElementById('c-tribunal').textContent = c.tribunal || '—';
   document.getElementById('c-demandado').textContent = c.demandado || '—';
   document.getElementById('c-rut').textContent = c.rut || '—';
+  document.getElementById('c-notif-a').textContent = c.notif_a || '—';
   document.getElementById('c-direccion').textContent = c.direccion || '—';
   document.getElementById('c-estudio').textContent = c.estudio || '—';
   document.getElementById('c-piezas').textContent = c.piezas || '—';
+  // Resetear edición de piezas
+  document.getElementById('campo-piezas-edit').style.display = 'none';
+  document.getElementById('btn-editar-piezas').style.display = '';
+}
+
+function editarPiezas() {
+  const actual = document.getElementById('c-piezas').textContent;
+  document.getElementById('texto-piezas').value = actual === '—' ? '' : actual;
+  document.getElementById('campo-piezas-edit').style.display = 'block';
+  document.getElementById('btn-editar-piezas').style.display = 'none';
+  document.getElementById('texto-piezas').focus();
+}
+
+function guardarPiezas() {
+  const nuevo = document.getElementById('texto-piezas').value.trim();
+  document.getElementById('c-piezas').textContent = nuevo || '—';
+  // Actualizar también en causaData para que quede en el JSON
+  if (state.causaData) state.causaData.piezas = nuevo;
+  document.getElementById('campo-piezas-edit').style.display = 'none';
+  document.getElementById('btn-editar-piezas').style.display = '';
+}
+
+function cancelarPiezas() {
+  document.getElementById('campo-piezas-edit').style.display = 'none';
+  document.getElementById('btn-editar-piezas').style.display = '';
 }
 
 // ── SELECCIÓN DE TIPO ────────────────────
