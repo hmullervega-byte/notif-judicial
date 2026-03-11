@@ -1273,14 +1273,22 @@ async function loadCausa(idHex) {
     fillCausa(idHex, causaData);
     resetSelections();
 
-    // Verificar si ya tiene resultado
-    const yaEnviado = await dbxCheckExists('/resultados/' + idHex + '.json');
-    if (yaEnviado) {
-      // Intentar leer el resultado anterior
-      try {
-        const prev = await dbxGet('/resultados/' + idHex + '.json');
-        state.resultadoPrevio = prev.resultado || null;
-      } catch(e) { state.resultadoPrevio = null; }
+    // Verificar etapas existentes (orden: más avanzada primero)
+    const etapas = ['RPP','RPF','NOT44','BP','BN'];
+    let previo = null;
+    for (const etapa of etapas) {
+      const existe = await dbxCheckExists('/resultados/' + idHex + '_' + etapa + '.json');
+      if (existe) { previo = etapa; break; }
+    }
+
+    // Compatibilidad hacia atrás: archivo sin sufijo (esquema antiguo)
+    if (!previo) {
+      const legacy = await dbxCheckExists('/resultados/' + idHex + '.json');
+      if (legacy) previo = '?';
+    }
+
+    if (previo) {
+      state.resultadoPrevio = previo;
       showModalYaEnviado(idHex);
     } else {
       showScreen('causa');
@@ -1767,7 +1775,7 @@ async function enviarResultado() {
   document.getElementById('loading-envio').classList.add('active');
   document.getElementById('btn-enviar').disabled = true;
   try {
-    await dbxPut('/resultados/' + state.idHex + '.json', payload);
+    await dbxPut('/resultados/' + state.idHex + '_' + t + '.json', payload);
     document.getElementById('loading-envio').classList.remove('active');
     document.getElementById('btn-enviar').disabled = false;
     showConfirm(true, codigos, state.causaData);
