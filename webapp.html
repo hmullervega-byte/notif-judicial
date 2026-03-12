@@ -753,6 +753,10 @@
         <span class="code-tag" style="color:var(--accent2)">Q01</span>
         <span class="code-desc">Conserje</span>
       </button>
+      <button class="code-btn" data-group="Q" data-code="Q01b" data-sexo="fm" onclick="selectQ(this)">
+        <span class="code-tag" style="color:var(--accent2)">Q01b</span>
+        <span class="code-desc">Vecino/a del conjunto</span>
+      </button>
       <button class="code-btn" data-group="Q" data-code="Q02" data-sexo="ambos" onclick="selectQ(this)">
         <span class="code-tag" style="color:var(--accent2)">Q02</span>
         <span class="code-desc">Vecino/a del sector</span>
@@ -796,10 +800,22 @@
       </div>
     </div>
 
-    <!-- Campo Q02: nombre opcional (si vacío → "no dio su nombre") -->
-    <div id="campo-Q02" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Nombre del vecino/a (opcional — si vacío, "no dio su nombre")</div>
-      <input type="text" id="texto-Q02-nombre" placeholder="Ej: Juan Pérez..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo Q01b: nombre opcional -->
+    <div id="campo-Q01b" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Nombre del vecino/a del conjunto (opcional)</div>
+      <input type="text" id="texto-Q01b-nombre" placeholder="Ej: Carmen Díaz..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    </div>
+
+    <!-- Campo Q02: nombre + ubicación (ambos opcionales) -->
+    <div id="campo-Q02" style="display:none">
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Nombre del vecino/a (opcional — si vacío, "no dio su nombre")</div>
+        <input type="text" id="texto-Q02-nombre" placeholder="Ej: Juan Pérez..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">Ubicación (opcional)</div>
+        <input type="text" id="texto-Q02-ubicacion" placeholder='Ej: "de la casa 78", "del depto 301"' style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
     </div>
 
     <!-- Campo Q03: nombre + parentesco (absorbe Q04) -->
@@ -836,10 +852,23 @@
       </div>
     </div>
 
-    <!-- Campo Q09: nombre opcional -->
-    <div id="campo-Q09" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Nombre del arrendatario/a (opcional)</div>
-      <input type="text" id="texto-Q09-nombre" placeholder="Ej: Ana Rojas..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo Q09: selector a/b + nombre opcional -->
+    <div id="campo-Q09" style="display:none">
+      <div style="font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:0.08em; margin:10px 0 6px;">Tipo</div>
+      <div class="codes-grid">
+        <button class="code-btn" data-group="Q09sub" data-code="Q09a" onclick="selectQ09Sub(this)">
+          <span class="code-tag" style="color:var(--accent2)">Q09a</span>
+          <span class="code-desc">Arrendatario/a</span>
+        </button>
+        <button class="code-btn" data-group="Q09sub" data-code="Q09b" onclick="selectQ09Sub(this)">
+          <span class="code-tag" style="color:var(--accent2)">Q09b</span>
+          <span class="code-desc">Coarrendatario/a</span>
+        </button>
+      </div>
+      <div class="obs-box" style="margin-top:8px">
+        <div class="field-label" style="margin-bottom:6px">Nombre (opcional)</div>
+        <input type="text" id="texto-Q09-nombre" placeholder="Ej: Ana Rojas..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
     </div>
   </div><!-- /seccion-quien -->
 
@@ -967,6 +996,28 @@
         <input type="text" id="texto-N44-C" placeholder="Ej: Renato Maffet" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
       </div>
     </div>
+
+    <!-- Campo n44_entrega: OBLIGATORIO cuando Q01b fue quien confirmó -->
+    <div id="campo-n44-entrega" style="display:none">
+      <div class="obs-box" style="border-color:var(--warning)">
+        <div class="field-label" style="margin-bottom:6px; color:var(--warning)">¿Dónde se dejaron las copias? (obligatorio)</div>
+        <input type="text" id="texto-n44-entrega" placeholder='Ej: "puerta del departamento", "buzón de conserjería"' style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+    </div>
+
+    <!-- Piezas editables en NOT44 -->
+    <div class="piezas-box" style="margin-top:12px">
+      <div class="field-label">Piezas a notificar</div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div class="field-value" id="not44-piezas-display" style="flex:1; min-width:0;">—</div>
+        <button onclick="editarPiezasNot44()" id="btn-editar-piezas-not44" style="background:none; border:1px solid var(--accent2); color:var(--accent2); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--mono); cursor:pointer;">editar</button>
+      </div>
+      <div id="campo-piezas-not44-edit" style="display:none; margin-top:8px;">
+        <textarea id="texto-piezas-not44" rows="3" style="width:100%; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); font-family:var(--sans); font-size:13px; padding:8px; resize:vertical; box-sizing:border-box;"></textarea>
+        <button onclick="guardarPiezasNot44()" style="margin-top:6px; background:var(--accent2); border:none; color:#000; border-radius:6px; padding:5px 14px; font-size:12px; font-family:var(--mono); cursor:pointer;">✓ Guardar</button>
+        <button onclick="cancelarPiezasNot44()" style="margin-top:6px; margin-left:6px; background:none; border:1px solid var(--text2); color:var(--text2); border-radius:6px; padding:5px 14px; font-size:12px; font-family:var(--mono); cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
   </div><!-- /seccion-not44-n44 -->
 
   <!-- ── NOT44: aviso citación ── -->
@@ -1041,15 +1092,16 @@ let state = {
   causaData: null,
   resultadoPrevio: null,       // resultado registrado anteriormente (para modal)
   selections: {
-    tipo:    null,             // BN | BP | NOT44 | RPP | RPF
-    D:       null,             // D-codes (BN only)
-    Q:       null,             // Q01-Q09 (shared: BN/BP/NOT44)
-    Q01met:  null,             // 'registros' | 'citofono' (BP/NOT44 only)
-    sexo:    null,             // SF/SM/SA (shared)
-    R:       null,             // R-codes (BN only)
-    BP:      null,             // BP01/BP02 (inferido automáticamente)
-    N44:     null,             // N44-P/A/C
-    N44sexo: null,             // sexo de quien recibió copias
+    tipo:    null,
+    D:       null,
+    Q:       null,
+    Q01met:  null,
+    Q09sub:  null,             // 'Q09a' | 'Q09b'
+    sexo:    null,
+    R:       null,
+    BP:      null,
+    N44:     null,
+    N44sexo: null,
     citFecha: null,
     citHora:  null,
   },
@@ -1360,6 +1412,7 @@ function fillCausa(idHex, c) {
   document.getElementById('c-direccion').textContent = c.direccion || '—';
   document.getElementById('c-estudio').textContent = c.estudio || '—';
   document.getElementById('c-piezas').textContent = c.piezas || '—';
+  document.getElementById('not44-piezas-display').textContent = c.piezas || '—';
   // Resetear edición de piezas
   document.getElementById('campo-piezas-edit').style.display = 'none';
   document.getElementById('btn-editar-piezas').style.display = '';
@@ -1459,6 +1512,7 @@ function selectQ(btn) {
   document.querySelectorAll('[data-group="Q"]').forEach(b => b.classList.remove('selected-p'));
   state.selections.Q = code;
   state.selections.Q01met = null;
+  state.selections.Q09sub = null;
   btn.classList.add('selected-p');
 
   // Limpiar D si estaba activo (exclusión mutua BN)
@@ -1471,13 +1525,18 @@ function selectQ(btn) {
 
   // Campos contextuales según Q seleccionado
   const esBPNOT44 = ['BP','NOT44'].includes(state.selections.tipo);
-  show('campo-Q01', code === 'Q01' && esBPNOT44);
+  show('campo-Q01',  code === 'Q01' && esBPNOT44);
   show('campo-Q01-met', code === 'Q01' && esBPNOT44);
-  show('campo-Q02', code === 'Q02');
-  show('campo-Q03', code === 'Q03');
-  show('campo-Q05', code === 'Q05');
-  show('campo-Q08', code === 'Q08');
-  show('campo-Q09', code === 'Q09');
+  show('campo-Q01b', code === 'Q01b');
+  show('campo-Q02',  code === 'Q02');
+  show('campo-Q03',  code === 'Q03');
+  show('campo-Q05',  code === 'Q05');
+  show('campo-Q08',  code === 'Q08');
+  show('campo-Q09',  code === 'Q09');
+  // campo n44_entrega: visible en NOT44 si Q01b
+  if (state.selections.tipo === 'NOT44') {
+    show('campo-n44-entrega', code === 'Q01b');
+  }
 
   // Sexo
   updateSexoSection(sexo);
@@ -1488,8 +1547,21 @@ function selectQ(btn) {
     updateRSection(code);
   } else {
     show('seccion-R', false);
-    // Para NOT44: mostrar copias si ya había BP seleccionado
-    if (t === 'NOT44') show('seccion-not44-n44', true);
+    if (t === 'NOT44') {
+      show('seccion-not44-n44', true);
+      // Preseleccionar N44 según Q
+      const n44inf = inferirN44desdeQ(code);
+      if (n44inf) {
+        const btnN44 = document.querySelector(`.n44-btn[data-code="${n44inf}"]`);
+        if (btnN44) selectN44(btnN44);
+      } else {
+        // Q01b: limpiar preselección N44
+        state.selections.N44 = null;
+        document.querySelectorAll('.n44-btn').forEach(b => b.classList.remove('selected'));
+        show('campos-N44-A', false); show('campos-N44-C', false);
+        show('seccion-not44-cit', false);
+      }
+    }
   }
 
   // Reset downstream
@@ -1514,6 +1586,53 @@ function selectQ01Met(btn) {
     state.selections.Q01met = code;
     btn.classList.add('selected');
   }
+}
+
+function selectQ09Sub(btn) {
+  const code = btn.dataset.code;
+  if (state.selections.Q09sub === code) {
+    state.selections.Q09sub = null;
+    btn.classList.remove('selected');
+  } else {
+    document.querySelectorAll('[data-group="Q09sub"]').forEach(b => b.classList.remove('selected'));
+    state.selections.Q09sub = code;
+    btn.classList.add('selected');
+  }
+}
+
+// ── Piezas editables en NOT44 ──
+function editarPiezasNot44() {
+  const actual = document.getElementById('not44-piezas-display').textContent;
+  document.getElementById('texto-piezas-not44').value = actual === '—' ? '' : actual;
+  show('campo-piezas-not44-edit', true);
+  document.getElementById('btn-editar-piezas-not44').style.display = 'none';
+  document.getElementById('texto-piezas-not44').focus();
+}
+
+function guardarPiezasNot44() {
+  const v = document.getElementById('texto-piezas-not44').value.trim();
+  document.getElementById('not44-piezas-display').textContent = v || '—';
+  if (state.causaData) state.causaData.piezas = v; // prevalece sobre el de Marco
+  show('campo-piezas-not44-edit', false);
+  document.getElementById('btn-editar-piezas-not44').style.display = '';
+}
+
+function cancelarPiezasNot44() {
+  show('campo-piezas-not44-edit', false);
+  document.getElementById('btn-editar-piezas-not44').style.display = '';
+}
+
+// ── Inferencia método N44 desde Q seleccionado ──
+// Q01→N44-C, Q01b→sin preselección, Q02/Q06→N44-P, resto→N44-A
+function inferirN44desdeQ(q) {
+  const mapa = {
+    'Q01': 'N44-C',
+    'Q02': 'N44-P',
+    'Q03': 'N44-A', 'Q05': 'N44-A', 'Q08': 'N44-A',
+    'Q09': 'N44-A', 'Q09a': 'N44-A', 'Q09b': 'N44-A',
+    // Q01b: sin preselección
+  };
+  return mapa[q] || null;
 }
 
 function updateSexoSection(sexo) {
@@ -1592,16 +1711,17 @@ function selectN44Sexo(btn) {
 function resetSubSelections() {
   state.selections.Q    = null;
   state.selections.Q01met = null;
+  state.selections.Q09sub = null;
   state.selections.sexo = null;
   state.selections.R    = null;
   state.selections.BP   = null;
   state.selections.N44  = null;
   state.selections.N44sexo = null;
   document.querySelectorAll('[data-group="Q"]').forEach(b => b.classList.remove('selected-p'));
-  document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"]').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"],[data-group="Q09sub"]').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.r-btn,.n44-btn').forEach(b => b.classList.remove('selected'));
-  ['campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
-   'campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => show(c, false));
+  ['campo-Q01','campo-Q01-met','campo-Q01b','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
+   'campo-n44-entrega','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => show(c, false));
   show('seccion-sexo',      false);
   show('seccion-R',         false);
   show('seccion-not44-n44', false);
@@ -1618,10 +1738,10 @@ function setDefaultFechaHora() {
 }
 
 function resetSelections() {
-  state.selections = { tipo:null, D:null, Q:null, Q01met:null, sexo:null, R:null, BP:null, N44:null, N44sexo:null, citFecha:null, citHora:null };
+  state.selections = { tipo:null, D:null, Q:null, Q01met:null, Q09sub:null, sexo:null, R:null, BP:null, N44:null, N44sexo:null, citFecha:null, citHora:null };
   document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected','selected-p','selected-c'));
-  ['campo-D10b','campo-D10c','campo-Q01','campo-Q01-met','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
-   'campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => {
+  ['campo-D10b','campo-D10c','campo-Q01','campo-Q01-met','campo-Q01b','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
+   'campo-n44-entrega','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => {
     const el = document.getElementById(c); if (el) el.style.display = 'none';
   });
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
@@ -1657,10 +1777,17 @@ async function enviarResultado() {
       if (n) codigos.push('Q01:' + n);
       if (state.selections.Q01met) codigos.push('Q01-met:' + state.selections.Q01met);
     }
-    // Q02: nombre opcional
+    // Q01b: nombre opcional
+    if (q === 'Q01b') {
+      const n = document.getElementById('texto-Q01b-nombre')?.value.trim();
+      if (n) codigos.push('Q01b:' + n);
+    }
+    // Q02: nombre + ubicación opcionales
     if (q === 'Q02') {
       const n = document.getElementById('texto-Q02-nombre')?.value.trim();
+      const u = document.getElementById('texto-Q02-ubicacion')?.value.trim();
       if (n) codigos.push('Q02:' + n);
+      if (u) codigos.push('Q02-ubicacion:' + u);
     }
     // Q03: parentesco + nombre
     if (q === 'Q03') {
@@ -1683,10 +1810,15 @@ async function enviarResultado() {
       if (c) codigos.push('Q08-cargo:' + c);
       if (e) codigos.push('Q08-empresa:' + e);
     }
-    // Q09: nombre opcional
+    // Q09: emitir Q09a o Q09b según sub-selección; nombre opcional
     if (q === 'Q09') {
+      // Reemplazar Q09 en codigos por Q09sub si está seleccionado
+      if (state.selections.Q09sub) {
+        codigos[codigos.length - 1] = state.selections.Q09sub; // reemplaza el Q09 ya pusheado
+      }
       const n = document.getElementById('texto-Q09-nombre')?.value.trim();
-      if (n) codigos.push('Q09:' + n);
+      const qfinal = state.selections.Q09sub || 'Q09';
+      if (n) codigos.push(qfinal + ':' + n);
     }
     // Sexo
     if (state.selections.sexo) codigos.push('S' + state.selections.sexo);
@@ -1694,14 +1826,12 @@ async function enviarResultado() {
 
   // ── Inferir BP01/BP02 según Q ──
   const pushBPInferido = () => {
-    const q = state.selections.Q;
+    const q = state.selections.Q09sub || state.selections.Q;
     if (['Q03','Q05'].includes(q)) {
-      // BP01: familiar/residente
       codigos.push('BP01');
       const p = qParentesco();
       if (p) codigos.push('BP01:' + p);
     } else {
-      // BP02: confirma domicilio (todos los demás)
       codigos.push('BP02');
     }
   };
@@ -1734,18 +1864,22 @@ async function enviarResultado() {
   else if (t === 'NOT44') {
     if (!state.selections.Q)   { showToast('Selecciona quién confirmó (Paso 1)'); return; }
     if (!state.selections.N44) { showToast('Selecciona cómo quedaron las copias (Paso 2)'); return; }
+    // n44_entrega obligatorio si Q01b
+    if (state.selections.Q === 'Q01b') {
+      const entrega = document.getElementById('texto-n44-entrega')?.value.trim();
+      if (!entrega) { showToast('Indica dónde se dejaron las copias (obligatorio)'); return; }
+      codigos.push('n44_entrega:' + entrega);
+    }
     pushQ();
     pushBPInferido();
     // N44
     const n44 = state.selections.N44;
     codigos.push(n44);
     if (n44 === 'N44-A') {
-      // Sexo ya está en Q+Sexo del Paso 1 — no se repite aquí
       const desc   = document.getElementById('texto-N44-A-desc')?.value.trim();
       const nombre = document.getElementById('texto-N44-A-nombre')?.value.trim();
       if (desc && nombre) codigos.push('N44-A:' + desc + ':' + nombre);
       else if (desc)      codigos.push('N44-A:' + desc);
-      // Si ambos vacíos: solo "N44-A" en el array
     } else if (n44 === 'N44-C') {
       if (state.selections.N44sexo) codigos.push('N44-C:' + state.selections.N44sexo);
       const v = document.getElementById('texto-N44-C')?.value.trim();
@@ -1770,7 +1904,11 @@ async function enviarResultado() {
     resultado:        t,
     codigos:          codigos,
     observacion:      obs || null,
-    causa: { rol: state.causaData?.rol, demandado: state.causaData?.demandado }
+    causa: {
+      rol:      state.causaData?.rol,
+      demandado: state.causaData?.demandado,
+      piezas:   state.causaData?.piezas || null
+    }
   };
 
   document.getElementById('loading-envio').classList.add('active');
