@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingreso de Causas — Receptoría Judicial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+    --navy:    #0d1b2a;
+    --navy2:   #1b2d42;
+    --blue:    #1a56db;
+    --blue-lt: #3b82f6;
+    --accent:  #f59e0b;
+    --red:     #dc2626;
+    --green:   #16a34a;
+    --bg:      #f1f5f9;
+    --surface: #ffffff;
+    --border:  #cbd5e1;
+    --text:    #1e293b;
+    --muted:   #64748b;
+    --mono:    'IBM Plex Mono', monospace;
+    --sans:    'IBM Plex Sans', sans-serif;
+    --radius:  6px;
+    --shadow:  0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  header h1 span.badge {
+    background: var(--accent);
+    color: var(--navy);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: .06em;
+  }
+  #hdr-fecha {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--navy2);
+    color: #fff;
+    padding: .55rem 1rem;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card-header .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .card-body { padding: 1rem; }
+
+  /* ── FORM GRID ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem 1rem;
+  }
+  .form-grid .span2 { grid-column: 1 / -1; }
+  .form-grid .span1 { grid-column: span 1; }
+
+  /* ── FIELD ── */
+  .field { display: flex; flex-direction: column; gap: .25rem; }
+  .field label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+  }
+  .field label .req { color: var(--red); font-size: 13px; line-height: 1; }
+  .field label .col-ref {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #94a3b8;
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+
+  input, select, textarea {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    color: var(--text);
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: .45rem .6rem;
+    width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--blue-lt);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+  }
+  input.invalid, select.invalid, textarea.invalid {
+    border-color: var(--red);
+    background: #fef2f2;
+  }
+  input.valid, select.valid, textarea.valid {
+    border-color: var(--green);
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  select { cursor: pointer; }
+  input[readonly] {
+    background: #f8fafc;
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .error-msg {
+    font-size: 11px;
+    color: var(--red);
+    display: none;
+    margin-top: 2px;
+  }
+  .field.has-error .error-msg { display: block; }
+  .field.has-error input,
+  .field.has-error select,
+  .field.has-error textarea { border-color: var(--red); background: #fef2f2; }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1.5px dashed var(--border);
+    margin: .25rem 0;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 1.25rem; position: sticky; top: 72px; }
+
+  /* ── ID HEX ── */
+  .hex-display {
+    padding: .75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+  }
+  .hex-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hex-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--navy);
+    word-break: break-all;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+  }
+  .hex-value.empty { color: #cbd5e1; font-size: 14px; font-weight: 400; }
+  .hex-status {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+  }
+  .hex-status.ok { color: var(--green); }
+  .hex-status.pending { color: var(--muted); }
+
+  /* ── QR ── */
+  .qr-panel {
+    padding: .75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+  }
+  .qr-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    align-self: flex-start;
+  }
+  #qr-container {
+    width: 180px; height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  #qr-container canvas { border-radius: 4px; }
+  #qr-placeholder {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 12px;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  #qr-placeholder .icon { font-size: 32px; display: block; margin-bottom: .4rem; }
+
+  /* ── ACTIONS ── */
+  .actions {
+    padding: .75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .55rem 1rem;
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity .15s, transform .1s, box-shadow .15s;
+    text-decoration: none;
+    letter-spacing: .02em;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(26,86,219,.4);
+  }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary {
+    background: #f1f5f9;
+    color: var(--navy);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-danger {
+    background: #fff;
+    color: var(--red);
+    border: 1.5px solid #fca5a5;
+  }
+  .btn-danger:hover { background: #fef2f2; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--navy);
+    color: #fff;
+    padding: .75rem 1.25rem;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    max-width: 360px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: var(--red); }
+  #toast.success { background: var(--green); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar-wrap {
+    height: 3px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: .5rem 0 0;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 2px;
+    transition: width .3s;
+    width: 0%;
+  }
+
+  .completeness {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: .25rem;
+  }
+  .completeness .pct {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--blue);
+  }
+
+  /* ── STATUS FOOTER ── */
+  .form-status {
+    grid-column: 1 / -1;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: .5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 12px;
+    color: var(--muted);
+    box-shadow: var(--shadow);
+  }
+  .form-status .sep { color: var(--border); }
+
+  /* ── TIPO BADGE COLORS ── */
+  select[name="tipo_diligencia"] option { font-weight: 500; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 720px) {
+    .page { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .span2, .form-grid .span1 { grid-column: 1 / -1; }
+  }
+
+  /* ── PRINT ── (se usa hoja separada, solo preview) */
+  @media print { header, .sidebar, .form-status { display: none; } }
+    20%,60% { transform: translateX(-8px); }
+    40%,80% { transform: translateX(8px); }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <h1>
+    ⚖ Sistema Notif Judicial
+    <span class="badge">INGRESO</span>
+  </h1>
+  <span id="hdr-fecha"></span>
+</header>
+
+<!-- ═══════════════════ PAGE ═══════════════════ -->
+<div class="page">
+
+  <!-- ── COLUMNA PRINCIPAL ── -->
+  <div style="display:flex; flex-direction:column; gap:1.25rem;">
+
+    <!-- SECCIÓN 1: Identificación -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Identificación de la Causa</div>
+      <div class="card-body">
+        <div class="form-grid">
+
+          <div class="field span1" id="f-fecha">
+            <label>Fecha Solicitud <span class="req">*</span> <span class="col-ref">Col. L</span></label>
+            <input type="date" name="fecha_solicitud" id="fecha_solicitud">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-nsol">
+            <label>N° Solicitud <span class="req">*</span> <span class="col-ref">Col. P</span></label>
+            <input type="text" name="n_solicitud" id="n_solicitud" placeholder="Ej: 2024-001523" autocomplete="off">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-rol">
+            <label>ROL <span class="req">*</span> <span class="col-ref">Col. A</span></label>
+            <input type="text" name="rol" id="rol" placeholder="Ej: C-4521-2023" autocomplete="off" style="font-family:var(--mono); letter-spacing:.04em;">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-tribunal">
+            <label>Tribunal <span class="req">*</span> <span class="col-ref">Col. B</span></label>
+            <select name="tribunal" id="tribunal">
+              <option value="">— Seleccionar —</option>
+              <option value="1° Juzgado de Letras de Antofagasta">1° Juzgado de Letras</option>
+              <option value="2° Juzgado de Letras de Antofagasta">2° Juzgado de Letras</option>
+              <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
+              <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
+            </select>
+            <span class="error-msg">Seleccione un tribunal</span>
+          </div>
+
+          <div class="field span1" id="f-estudio">
+            <label>Estudio Jurídico <span class="req">*</span> <span class="col-ref">Col. O</span></label>
+            <input type="text" name="estudio" id="estudio" placeholder="Nombre del estudio" autocomplete="off">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-tipo">
+            <label>Tipo Diligencia <span class="req">*</span> <span class="col-ref">Col. I</span></label>
+            <select name="tipo_diligencia" id="tipo_diligencia">
+              <option value="">— Seleccionar —</option>
+              <option value="NOT44-EJE">NOT44-EJE — Art. 44 Ejecutivo</option>
+              <option value="NOT44-ORD">NOT44-ORD — Art. 44 Ordinario</option>
+              <option value="NOT-PERSONAL-EJE">NOT-PERSONAL-EJE — Personal Ejecutivo</option>
+              <option value="NOT-PERSONAL-ORD">NOT-PERSONAL-ORD — Personal Ordinario</option>
+              <option value="BN">BN — Búsqueda Negativa</option>
+              <option value="CEDULA">CÉDULA — Notificación por Cédula</option>
+              <option value="EMBARGO">EMBARGO</option>
+            </select>
+            <span class="error-msg">Seleccione el tipo de diligencia</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: Partes -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Partes del Juicio</div>
+      <div class="card-body">
+        <div class="form-grid">
+
+          <div class="field span1" id="f-demandante">
+            <label>Demandante <span class="req">*</span> <span class="col-ref">Col. C</span></label>
+            <input type="text" name="demandante" id="demandante" placeholder="Banco o institución" autocomplete="off">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-demandado">
+            <label>Demandado <span class="req">*</span> <span class="col-ref">Col. D</span></label>
+            <input type="text" name="demandado" id="demandado" placeholder="Nombre completo" autocomplete="off">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1" id="f-rut">
+            <label>RUT Demandado <span class="col-ref">Col. E</span></label>
+            <input type="text" name="rut" id="rut" placeholder="12.345.678-9" autocomplete="off" style="font-family:var(--mono);">
+            <span class="hint">Opcional — formato libre</span>
+          </div>
+
+          <div class="field span1" id="f-mandamiento">
+            <label>Monto Mandamiento <span class="col-ref">Col. H</span></label>
+            <input type="text" name="mandamiento" id="mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
+            <span class="hint">Opcional</span>
+          </div>
+
+          <div class="field span2" id="f-notificar_a">
+            <label>Notificar a <span class="req">*</span> <span class="col-ref">Col. K</span></label>
+            <textarea name="notificar_a" id="notificar_a" rows="2"
+              placeholder="Ej: BARBARA HENRIQUEZ CORNEJO, en su calidad de deudor principal"></textarea>
+            <span class="hint">⚠ Una fila por notificado. Si hay aval, use una fila separada.</span>
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: Domicilio -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Domicilio</div>
+      <div class="card-body">
+        <div class="form-grid">
+
+          <div class="field span2" id="f-direccion">
+            <label>Dirección <span class="req">*</span> <span class="col-ref">Col. F</span></label>
+            <input type="text" name="direccion" id="direccion"
+              placeholder="Ej: Av. O'Higgins 1234, dpto 502, Torre B" autocomplete="off">
+            <span class="error-msg">Campo obligatorio</span>
+          </div>
+
+          <div class="field span1">
+            <label>Ciudad <span class="col-ref">Col. G</span></label>
+            <input type="text" value="Antofagasta" readonly>
+            <span class="hint">Fijo — no editable</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: Datos adicionales -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Datos Adicionales</div>
+      <div class="card-body">
+        <div class="form-grid">
+
+          <div class="field span2" id="f-piezas">
+            <label>Piezas a Notificar <span class="col-ref">Col. J</span></label>
+            <textarea name="piezas" id="piezas" rows="2"
+              placeholder="Ej: Demanda, resolución de fecha 12/03/2026, mandamiento de ejecución"></textarea>
+          </div>
+
+          <div class="field span1">
+            <label>N° Pagaré <span class="col-ref">Col. U</span></label>
+            <input type="text" name="n_pagare" id="n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
+          </div>
+
+          <div class="field span1">
+            <label>Observación <span class="col-ref">Col. S</span></label>
+            <input type="text" name="observacion" id="observacion" placeholder="Opcional" autocomplete="off">
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /columna principal -->
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+
+    <!-- ID HEX -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>ID Hex</div>
+      <div class="hex-display">
+        <span class="hex-label">Identificador único</span>
+        <span class="hex-value empty" id="hex-display">— Completar campos —</span>
+        <div class="hex-status pending" id="hex-status">
+          ◌ Esperando campos obligatorios
+        </div>
+      </div>
+    </div>
+
+    <!-- QR -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Código QR</div>
+      <div class="qr-panel">
+        <span class="qr-label">Vista previa</span>
+        <div id="qr-container">
+          <div id="qr-placeholder">
+            <span class="icon">⬜</span>
+            Se genera al completar campos
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETITUD -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Completitud</div>
+      <div style="padding: .75rem 1rem;">
+        <div class="completeness">
+          <span>Campos obligatorios</span>
+          <span class="pct" id="pct-label">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div style="margin-top:.5rem; font-size:11px; color:var(--muted);" id="missing-fields">
+          Faltan campos por completar.
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCIONES -->
+    <div class="card">
+      <div class="card-header"><span class="dot"></span>Acciones</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-guardar" disabled>
+          💾 Guardar Causa
+        </button>
+        <button class="btn btn-secondary" id="btn-imprimir" disabled>
+          🖨 Imprimir Formulario
+        </button>
+        <hr style="border:none; border-top:1px solid var(--border); margin:.25rem 0;">
+        <button class="btn btn-danger" id="btn-limpiar">
+          🗑 Limpiar Formulario
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- STATUS BAR -->
+  <div class="form-status">
+    <span id="status-txt">📋 Formulario listo para ingresar datos.</span>
+    <span class="sep">|</span>
+    <span style="font-family:var(--mono); font-size:11px;">Ciudad: Antofagasta</span>
+    <span class="sep">|</span>
+    <span style="font-family:var(--mono); font-size:11px;" id="status-time"></span>
+  </div>
+
+</div><!-- /page -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ═══════════════════ JAVASCRIPT ═══════════════════ -->
+<script>
+'use strict';
+
+
+
+// ── CAMPOS OBLIGATORIOS (para validación y cálculo id_hex) ──
+const REQUIRED = ['fecha_solicitud','n_solicitud','rol','tribunal','tipo_diligencia',
+                  'demandante','demandado','notificar_a','direccion','estudio'];
+
+// ── CAMPOS DEL ID HEX: hash(ROL + Tribunal + Dirección + notif_a + N°Solicitud) ──
+const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
+
+let currentHex = null;
+let qrInstance = null;
+
+// ── FECHA HEADER Y DEFAULT ──
+function fmt(d) {
+  return d.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+}
+function fmtTime(d) {
+  return d.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+const hdrFecha = document.getElementById('hdr-fecha');
+const statusTime = document.getElementById('status-time');
+setInterval(() => {
+  const now = new Date();
+  hdrFecha.textContent = fmt(now);
+  statusTime.textContent = fmtTime(now);
+}, 1000);
+document.getElementById('hdr-fecha').textContent = fmt(new Date());
+
+// Set default fecha = hoy
+const fechaInput = document.getElementById('fecha_solicitud');
+fechaInput.value = new Date().toISOString().slice(0,10);
+
+// ── SHA-256 → 16 chars hex ──
+async function sha256hex16(str) {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(str));
+  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  return hex.slice(0,16).toUpperCase();
+}
+
+// ── VALOR DE CAMPO ──
+function val(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  return (el.value || '').trim();
+}
+
+// ── CALCULAR HEX ──
+async function recalcHex() {
+  const parts = HEX_FIELDS.map(val);
+  const allFilled = parts.every(p => p.length > 0);
+
+  const hexDisplay = document.getElementById('hex-display');
+  const hexStatus  = document.getElementById('hex-status');
+
+  if (!allFilled) {
+    hexDisplay.textContent = '— Completar campos —';
+    hexDisplay.className = 'hex-value empty';
+    hexStatus.textContent = '◌ Esperando campos obligatorios';
+    hexStatus.className = 'hex-status pending';
+    currentHex = null;
+    clearQR();
+    return;
+  }
+
+  const concat = parts.join('');
+  const hex = await sha256hex16(concat);
+  currentHex = hex;
+
+  hexDisplay.textContent = hex;
+  hexDisplay.className = 'hex-value';
+  hexStatus.innerHTML = '✓ Generado correctamente';
+  hexStatus.className = 'hex-status ok';
+
+  generateQR(hex);
+}
+
+// ── QR ──
+function clearQR() {
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '<div id="qr-placeholder"><span class="icon">⬜</span>Se genera al completar campos</div>';
+  qrInstance = null;
+  document.getElementById('btn-imprimir').disabled = true;
+}
+
+function generateQR(hex) {
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+  try {
+    qrInstance = new QRCode(container, {
+      text: hex,
+      width: 176,
+      height: 176,
+      colorDark: '#0d1b2a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    document.getElementById('btn-imprimir').disabled = false;
+  } catch(e) {
+    container.innerHTML = '<div style="color:red; font-size:12px; padding:1rem;">Error generando QR</div>';
+  }
+}
+
+// ── VALIDAR CAMPO ──
+function validateField(id) {
+  if (!REQUIRED.includes(id)) return true;
+  const v = val(id);
+  const wrapper = document.getElementById('f-' + id.replace('_','-'));
+  if (!wrapper) return true;
+  if (!v) {
+    wrapper.classList.add('has-error');
+    return false;
+  } else {
+    wrapper.classList.remove('has-error');
+    return true;
+  }
+}
+
+// ── COMPLETITUD ──
+function updateProgress() {
+  const filled = REQUIRED.filter(id => val(id).length > 0);
+  const pct = Math.round((filled.length / REQUIRED.length) * 100);
+
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('pct-label').textContent = pct + '%';
+
+  const missing = REQUIRED.filter(id => val(id).length === 0);
+  const labelMap = {
+    'fecha_solicitud':'Fecha Solicitud', 'n_solicitud':'N° Solicitud',
+    'rol':'ROL', 'tribunal':'Tribunal', 'tipo_diligencia':'Tipo Diligencia',
+    'demandante':'Demandante', 'demandado':'Demandado',
+    'notificar_a':'Notificar a', 'direccion':'Dirección', 'estudio':'Estudio Jurídico'
+  };
+  const missingEl = document.getElementById('missing-fields');
+  if (missing.length === 0) {
+    missingEl.textContent = '✓ Todos los campos obligatorios completados.';
+    missingEl.style.color = 'var(--green)';
+    document.getElementById('btn-guardar').disabled = false;
+  } else {
+    missingEl.textContent = 'Faltan: ' + missing.map(id => labelMap[id] || id).join(', ');
+    missingEl.style.color = 'var(--muted)';
+    document.getElementById('btn-guardar').disabled = true;
+  }
+}
+
+// ── LISTENERS ──
+let hexDebounce = null;
+function onFieldChange(id) {
+  if (REQUIRED.includes(id)) validateField(id);
+  updateProgress();
+  // recalcular hex solo si cambia un campo que lo afecta
+  if (HEX_FIELDS.includes(id)) {
+    clearTimeout(hexDebounce);
+    hexDebounce = setTimeout(recalcHex, 350);
+  }
+}
+
+// Bind all inputs
+document.querySelectorAll('input:not([readonly]), select, textarea').forEach(el => {
+  if (!el.name) return;
+  el.addEventListener('input',  () => onFieldChange(el.name));
+  el.addEventListener('change', () => onFieldChange(el.name));
+  el.addEventListener('blur',   () => {
+    if (REQUIRED.includes(el.name)) validateField(el.name);
+  });
+});
+
+// Init
+updateProgress();
+recalcHex();
+
+// ── GUARDAR ──
+document.getElementById('btn-guardar').addEventListener('click', async () => {
+  // Validar todos
+  let allOk = true;
+  REQUIRED.forEach(id => { if (!validateField(id)) allOk = false; });
+  if (!allOk || !currentHex) {
+    showToast('⚠ Completar todos los campos obligatorios', 'error');
+    return;
+  }
+
+  const payload = {
+    id_hex:         currentHex,
+    fecha_solicitud: val('fecha_solicitud'),
+    n_solicitud:    val('n_solicitud'),
+    rol:            val('rol'),
+    tribunal:       val('tribunal'),
+    tipo_diligencia: val('tipo_diligencia'),
+    estudio:        val('estudio'),
+    demandante:     val('demandante'),
+    demandado:      val('demandado'),
+    rut:            val('rut'),
+    mandamiento:    val('mandamiento'),
+    notificar_a:    val('notificar_a'),
+    direccion:      val('direccion'),
+    ciudad:         'Antofagasta',
+    piezas:         val('piezas'),
+    n_pagare:       val('n_pagare'),
+    observacion:    val('observacion'),
+    ts_ingreso:     new Date().toISOString(),
+    tipo_json:      'INGRESO'
+  };
+
+  document.getElementById('status-txt').textContent = '⏳ Guardando en Dropbox...';
+  document.getElementById('btn-guardar').disabled = true;
+
+  // TODO: implementar subida a Dropbox → /ingresos/{id_hex}_INGRESO.json
+  // Por ahora: simular + ofrecer descarga local del JSON
+  console.log('Payload INGRESO:', payload);
+  await new Promise(r => setTimeout(r, 800)); // simula latencia
+
+  // Descarga local provisional
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `${currentHex}_INGRESO.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  document.getElementById('status-txt').textContent = '✅ Guardado. JSON descargado localmente (Dropbox pendiente).';
+  showToast('✅ Causa guardada: ' + currentHex, 'success');
+  document.getElementById('btn-guardar').disabled = false;
+});
+
+// ── IMPRIMIR ──
+document.getElementById('btn-imprimir').addEventListener('click', () => {
+  if (!currentHex) { showToast('⚠ Genere el ID hex primero', 'error'); return; }
+  // Abre ventana de impresión con resumen (se ampliará en siguiente sesión)
+  showToast('🖨 Función de impresión — próxima iteración', 'info');
+});
+
+// ── LIMPIAR ──
+document.getElementById('btn-limpiar').addEventListener('click', () => {
+  if (!confirm('¿Limpiar todo el formulario?')) return;
+  document.querySelectorAll('input:not([readonly]), select, textarea').forEach(el => {
+    if (el.type === 'date') el.value = new Date().toISOString().slice(0,10);
+    else el.value = '';
+  });
+  document.querySelectorAll('[id^="f-"]').forEach(el => el.classList.remove('has-error'));
+  currentHex = null;
+  clearQR();
+  updateProgress();
+  recalcHex();
+  document.getElementById('status-txt').textContent = '📋 Formulario limpiado.';
+  showToast('🗑 Formulario limpiado', 'info');
+});
+
+// ── TOAST ──
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', 3500);
+}
+
+// ── STATUSBAR time ──
+setInterval(() => {
+  document.getElementById('status-time').textContent = fmtTime(new Date());
+}, 1000);
+document.getElementById('status-time').textContent = fmtTime(new Date());
+</script>
+</body>
+</html>
