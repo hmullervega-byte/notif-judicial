@@ -4,7 +4,62 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ingreso de Causas — Receptoría Judicial</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+// ── OBSERVACIÓN OBLIGATORIA SEGÚN TIPO DILIGENCIA ──
+const tipoSelect = document.getElementById('tipo_diligencia');
+const obsWrapper = document.getElementById('f-observacion');
+const obsInput   = document.getElementById('observacion');
+const obsReqMark = document.getElementById('obs-req-mark');
+
+function updateObsRequired() {
+  const sel = tipoSelect.options[tipoSelect.selectedIndex];
+  const required = sel && sel.getAttribute('data-obs-required') === '1';
+
+  if (required) {
+    obsReqMark.innerHTML = '<span class="req">*</span>';
+    obsInput.placeholder = 'Requerido — especifique el detalle';
+    obsInput.setAttribute('data-obs-req', '1');
+    // Agregar a validación dinámica
+    if (!REQUIRED.includes('observacion')) REQUIRED.push('observacion');
+  } else {
+    obsReqMark.innerHTML = '';
+    obsInput.placeholder = 'Opcional';
+    obsInput.removeAttribute('data-obs-req');
+    obsWrapper.classList.remove('has-error');
+    // Quitar de validación
+    const idx = REQUIRED.indexOf('observacion');
+    if (idx > -1) REQUIRED.splice(idx, 1);
+  }
+  updateProgress();
+}
+
+tipoSelect.addEventListener('change', () => {
+  onFieldChange('tipo_diligencia');
+  updateObsRequired();
+});
+
+// Validar observacion si es requerida
+const _origValidate = validateField;
+validateField = function(id) {
+  if (id === 'observacion') {
+    const isReq = obsInput.getAttribute('data-obs-req') === '1';
+    if (!isReq) return true;
+    const v = val('observacion');
+    if (!v) {
+      obsWrapper.classList.add('has-error');
+      return false;
+    } else {
+      obsWrapper.classList.remove('has-error');
+      return true;
+    }
+  }
+  return _origValidate(id);
+};
+
+obsInput.addEventListener('input',  () => { if (obsInput.getAttribute('data-obs-req')) validateField('observacion'); updateProgress(); });
+obsInput.addEventListener('blur',   () => { if (obsInput.getAttribute('data-obs-req')) validateField('observacion'); });
+
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
@@ -473,13 +528,50 @@
             <label>Tipo Diligencia <span class="req">*</span> <span class="col-ref">Col. I</span></label>
             <select name="tipo_diligencia" id="tipo_diligencia">
               <option value="">— Seleccionar —</option>
-              <option value="NOT44-EJE">NOT44-EJE — Art. 44 Ejecutivo</option>
-              <option value="NOT44-ORD">NOT44-ORD — Art. 44 Ordinario</option>
-              <option value="NOT-PERSONAL-EJE">NOT-PERSONAL-EJE — Personal Ejecutivo</option>
-              <option value="NOT-PERSONAL-ORD">NOT-PERSONAL-ORD — Personal Ordinario</option>
-              <option value="BN">BN — Búsqueda Negativa</option>
-              <option value="CEDULA">CÉDULA — Notificación por Cédula</option>
-              <option value="EMBARGO">EMBARGO</option>
+              <optgroup label="── Alzamiento ──">
+                <option value="ALZAMIENTO-CBR">Alzamiento CBR</option>
+                <option value="ALZAMIENTO-RVM">Alzamiento RVM</option>
+                <option value="ALZAMIENTO-TESORERIA">Alzamiento Tesorería</option>
+                <option value="ALZAMIENTO-OTROS" data-obs-required="1">Alzamiento Otros</option>
+              </optgroup>
+              <optgroup label="── Embargo ──">
+                <option value="EMBARGO-CBR">Embargo CBR</option>
+                <option value="EMBARGO-CUENTA-CORRIENTE">Embargo Cuenta Corriente</option>
+                <option value="EMBARGO-FRUSTRADO">Embargo Frustrado</option>
+                <option value="EMBARGO-OTROS" data-obs-required="1">Embargo Otros</option>
+                <option value="EMBARGO-RVM">Embargo RVM</option>
+                <option value="EMBARGO-TESORERIA">Embargo Tesorería</option>
+              </optgroup>
+              <optgroup label="── Notificación ──">
+                <option value="NOT-CEDULA">Not. Cédula</option>
+                <option value="NOT-CEDULA-ART52">Not. Cédula Art. 52</option>
+                <option value="NOT-CUMPLIMIENTO-INCIDENTAL">Not. Cumplimiento Incidental</option>
+                <option value="NOT-DEMANDA-ARRENDAMIENTO-GRAL">Not. Demanda Arrendamiento General</option>
+                <option value="NOT-DEMANDA-ARRENDAMIENTO-MON">Not. Demanda Arrendamiento Monitorio</option>
+                <option value="NOT-DEMANDA-COBRANZA-LABORAL">Not. Demanda Cobranza Laboral</option>
+                <option value="NOT-DEMANDA-EJE-DESPOSEIMIENTO">Not. Demanda Ejecutiva Desposeimiento</option>
+                <option value="NOT-DEMANDA-EJE-GENERAL">Not. Demanda Ejecutiva General</option>
+                <option value="NOT-DEMANDA-EJE-HIPOTECARIA">Not. Demanda Ejecutiva Hipotecaria</option>
+                <option value="NOT-DEMANDA-FAMILIA">Not. Demanda Familia</option>
+                <option value="NOT-DEMANDA-ORDINARIA">Not. Demanda Ordinaria</option>
+                <option value="NOT-DEMANDA-JUICIO-SUMARIO">Not. Demanda Juicio Sumario</option>
+                <option value="NOT-GESTION-PREPARATORIA" data-obs-required="1">Not. Gestión Preparatoria</option>
+                <option value="NOT-GESTION-VOLUNTARIA">Not. Gestión Voluntaria</option>
+                <option value="NOT-MEDIDA-PRECAUTORIA">Not. Medida Precautoria</option>
+                <option value="NOT-PROTECCION-TURNO">Not. Protección [TURNO]</option>
+                <option value="NOT-RECIBE-CAUSA-PRUEBA">Not. Recibe la Causa a Prueba</option>
+                <option value="NOT-SENTENCIA">Not. Sentencia</option>
+              </optgroup>
+              <optgroup label="── Prueba ──">
+                <option value="PRUEBA-CONFESIONAL">Prueba Confesional</option>
+                <option value="PRUEBA-TESTIMONIAL">Prueba Testimonial</option>
+              </optgroup>
+              <optgroup label="── Requerimiento ──">
+                <option value="REQ-PAGO-TRIBUNAL">Requerimiento Pago Tribunal</option>
+              </optgroup>
+              <optgroup label="── Otro ──">
+                <option value="OTRO" data-obs-required="1">Otro</option>
+              </optgroup>
             </select>
             <span class="error-msg">Seleccione el tipo de diligencia</span>
           </div>
@@ -570,9 +662,10 @@
             <input type="text" name="n_pagare" id="n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
           </div>
 
-          <div class="field span1">
-            <label>Observación <span class="col-ref">Col. S</span></label>
-            <input type="text" name="observacion" id="observacion" placeholder="Opcional" autocomplete="off">
+          <div class="field span2" id="f-observacion">
+            <label>Observación <span id="obs-req-mark"></span> <span class="col-ref">Col. S</span></label>
+            <textarea name="observacion" id="observacion" rows="2" placeholder="Opcional"></textarea>
+            <span class="error-msg">Requerido para este tipo de diligencia</span>
           </div>
 
         </div>
