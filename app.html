@@ -338,11 +338,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   display: flex; align-items: center; gap: .3rem;
 }
 .field label .req { color: var(--red); font-size: 13px; line-height: 1; }
-.field label .col-ref {
-  font-family: var(--mono); font-size: 10px; color: #94a3b8;
-  background: #f1f5f9; border: 1px solid var(--border);
-  padding: 0 4px; border-radius: 3px;
-}
 input, select, textarea {
   font-family: var(--sans); font-size: 13.5px; color: var(--text);
   background: #fff; border: 1.5px solid var(--border);
@@ -772,22 +767,22 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span1" id="fw-fecha_solicitud">
-                    <label>Fecha Solicitud <span class="req">*</span> <span class="col-ref">Col. L</span></label>
+                    <label>Fecha Solicitud <span class="req">*</span></label>
                     <input type="date" name="fecha_solicitud" id="f-fecha_solicitud">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-n_solicitud">
-                    <label>N° Solicitud <span class="req">*</span> <span class="col-ref">Col. P</span></label>
+                    <label>N° Solicitud <span class="req">*</span></label>
                     <input type="text" name="n_solicitud" id="f-n_solicitud" placeholder="Ej: 2026-001523" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-rol">
-                    <label>ROL <span class="req">*</span> <span class="col-ref">Col. A</span></label>
+                    <label>ROL <span class="req">*</span></label>
                     <input type="text" name="rol" id="f-rol" placeholder="Ej: C-4521-2023" autocomplete="off" style="font-family:var(--mono); letter-spacing:.04em;">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-tribunal">
-                    <label>Tribunal <span class="req">*</span> <span class="col-ref">Col. B</span></label>
+                    <label>Tribunal <span class="req">*</span></label>
                     <select name="tribunal" id="f-tribunal">
                       <option value="">— Seleccionar —</option>
                       <option value="1° Juzgado de Letras de Antofagasta">1° Juzgado de Letras</option>
@@ -798,12 +793,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <span class="error-msg">Seleccione tribunal</span>
                   </div>
                   <div class="field span1" id="fw-estudio">
-                    <label>Estudio Jurídico <span class="req">*</span> <span class="col-ref">Col. O</span></label>
+                    <label>Estudio Jurídico <span class="req">*</span></label>
                     <input type="text" name="estudio" id="f-estudio" placeholder="Nombre del estudio" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-tipo_diligencia">
-                    <label>Tipo Diligencia <span class="req">*</span> <span class="col-ref">Col. I</span></label>
+                    <label>Tipo Diligencia <span class="req">*</span></label>
                     <select name="tipo_diligencia" id="f-tipo_diligencia">
                       <option value="">— Seleccionar —</option>
                       <optgroup label="── Alzamiento ──">
@@ -863,27 +858,27 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span1" id="fw-demandante">
-                    <label>Demandante <span class="req">*</span> <span class="col-ref">Col. C</span></label>
+                    <label>Demandante <span class="req">*</span></label>
                     <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-demandado">
-                    <label>Demandado <span class="req">*</span> <span class="col-ref">Col. D</span></label>
+                    <label>Demandado <span class="req">*</span></label>
                     <input type="text" name="demandado" id="f-demandado" placeholder="Nombre completo" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1">
-                    <label>RUT <span class="col-ref">Col. E</span></label>
+                    <label>RUT</label>
                     <input type="text" name="rut" id="f-rut" placeholder="12.345.678-9" autocomplete="off" style="font-family:var(--mono);">
                     <span class="hint">Opcional</span>
                   </div>
                   <div class="field span1">
-                    <label>Monto Mandamiento <span class="col-ref">Col. H</span></label>
+                    <label>Monto Mandamiento</label>
                     <input type="text" name="mandamiento" id="f-mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
                     <span class="hint">Opcional</span>
                   </div>
                   <div class="field span2" id="fw-notificar_a">
-                    <label>Notificar a <span class="req">*</span> <span class="col-ref">Col. K</span></label>
+                    <label>Notificar a <span class="req">*</span></label>
                     <textarea name="notificar_a" id="f-notificar_a" rows="2"
                       placeholder="Ej: BARBARA HENRIQUEZ CORNEJO, en su calidad de deudor principal"></textarea>
                     <span class="hint">⚠ Una fila por notificado. Si hay aval, use una causa separada.</span>
@@ -899,13 +894,13 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span2" id="fw-direccion">
-                    <label>Dirección <span class="req">*</span> <span class="col-ref">Col. F</span></label>
+                    <label>Dirección <span class="req">*</span></label>
                     <input type="text" name="direccion" id="f-direccion"
                       placeholder="Ej: Av. O'Higgins 1234, dpto 502, Torre B" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1">
-                    <label>Ciudad <span class="col-ref">Col. G</span></label>
+                    <label>Ciudad</label>
                     <input type="text" value="Antofagasta" readonly>
                   </div>
                 </div>
@@ -918,16 +913,16 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span2">
-                    <label>Piezas a Notificar <span class="col-ref">Col. J</span></label>
+                    <label>Piezas a Notificar</label>
                     <textarea name="piezas" id="f-piezas" rows="2"
                       placeholder="Ej: Demanda, resolución de fecha 12/03/2026, mandamiento de ejecución"></textarea>
                   </div>
                   <div class="field span1">
-                    <label>N° Pagaré <span class="col-ref">Col. U</span></label>
+                    <label>N° Pagaré</label>
                     <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
                   </div>
                   <div class="field span2" id="fw-observacion">
-                    <label>Observación <span id="obs-req-mark"></span> <span class="col-ref">Col. S</span></label>
+                    <label>Observación <span id="obs-req-mark"></span></label>
                     <textarea name="observacion" id="f-observacion" rows="2" placeholder="Opcional"></textarea>
                     <span class="error-msg">Requerido para este tipo de diligencia</span>
                   </div>
