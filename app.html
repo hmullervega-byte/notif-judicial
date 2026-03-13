@@ -1318,32 +1318,43 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
 
+  // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
-    id_hex:          currentHex,
-    fecha_solicitud: fval('fecha_solicitud'),
-    n_solicitud:     fval('n_solicitud'),
-    rol:             fval('rol'),
-    tribunal:        fval('tribunal'),
-    tipo_diligencia: fval('tipo_diligencia'),
-    estudio:         fval('estudio'),
-    demandante:      fval('demandante'),
-    demandado:       fval('demandado'),
-    rut:             fval('rut'),
-    mandamiento:     fval('mandamiento'),
-    notificar_a:     fval('notificar_a'),
-    direccion:       fval('direccion'),
-    ciudad:          'Antofagasta',
-    piezas:          fval('piezas'),
-    n_pagare:        fval('n_pagare'),
-    observacion:     fval('observacion'),
-    ts_ingreso:      new Date().toISOString(),
-    tipo_json:       'INGRESO',
-    estado:          'pendiente_validacion',
-    ingresado_por:   currentUser.username
+    id_hex:  currentHex,
+    estado:  'pendiente_validacion',
+    datos: {
+      fecha_solicitud:   fval('fecha_solicitud'),
+      nro_solicitud:     fval('n_solicitud'),
+      estudio_juridico:  fval('estudio'),
+      tipo_diligencia:   fval('tipo_diligencia'),
+      rol:               fval('rol'),
+      tribunal:          fval('tribunal'),
+      demandante:        fval('demandante'),
+      demandado:         fval('demandado'),
+      rut:               fval('rut'),
+      direccion:         fval('direccion'),
+      notificar_a:       fval('notificar_a'),
+      ciudad:            'Antofagasta',
+      monto_mandamiento: fval('mandamiento') ? Number(fval('mandamiento').replace(/[^0-9]/g,'')) || fval('mandamiento') : '',
+      piezas:            fval('piezas'),
+      nro_pagare:        fval('n_pagare'),
+      comentario:        fval('observacion')
+    },
+    historial: [
+      {
+        accion:  'ingreso',
+        fecha:   new Date().toISOString(),
+        usuario: currentUser.nombre
+      }
+    ]
   };
 
-  // Guardar en memoria + localStorage provisional
-  causas.push(payload);
+  // Nombre de archivo: {id_hex}_CAUSA.json → /causas/ en Dropbox
+  // TODO: subirPayload(`/causas/${currentHex}_CAUSA.json`, payload)
+  // Por ahora: guardar en memoria + localStorage (provisional hasta integrar Dropbox)
+  causas.push({ id_hex: currentHex, estado: payload.estado,
+    ...payload.datos, ts_ingreso: payload.historial[0].fecha,
+    _causa_json: payload });
   try { localStorage.setItem('notif_causas_dev', JSON.stringify(causas)); } catch(e) {}
 
   showToast('✅ Causa guardada: ' + currentHex.slice(0,8) + '…', 'success');
