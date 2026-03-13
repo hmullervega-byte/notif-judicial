@@ -530,9 +530,122 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
   .main-content { padding: 0; }
   .card { box-shadow: none; border: 1px solid #ccc; }
 }
+
+/* ════════════════════════════════════════
+   PANTALLA CONFIGURACION DROPBOX
+════════════════════════════════════════ */
+#screen-config {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0d1b2a 0%, #1e3a5f 100%);
+  padding: 2rem;
+  flex-direction: column;
+  gap: 1rem;
+}
+#screen-config.active { display: flex; }
+.config-box {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 460px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.config-step-badge {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3);
+  color: #f59e0b; font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: .25rem .75rem; border-radius: 20px; margin-bottom: .75rem;
+}
+.config-box h2 { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: .3rem; text-align:center; }
+.config-box .config-sub { color: #64748b; font-size: 12px; line-height: 1.6; text-align:center; margin-bottom:1.25rem; }
+.config-field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .85rem; }
+.config-field label { color: #94a3b8; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.config-field input {
+  background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.10);
+  border-radius: 8px; color: #fff; font-family: var(--mono); font-size: 13px;
+  padding: .55rem .85rem; outline: none; transition: border-color .15s; width: 100%;
+}
+.config-field input::placeholder { color: #334155; }
+.config-field input:focus { border-color: var(--blue-lt); }
+.config-hint {
+  background: rgba(15,23,42,.6); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; padding: .75rem 1rem; font-size: 12px;
+  color: #64748b; line-height: 1.7; margin-bottom: 1rem;
+}
+.config-hint code { font-family: var(--mono); font-size: 11px;
+  background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 3px; color: #93c5fd; }
+.config-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+.btn-config-save {
+  flex: 1; background: var(--blue); color: #fff; border: none; border-radius: 8px;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  padding: .65rem; cursor: pointer; transition: background .15s;
+}
+.btn-config-save:hover { background: #1d4ed8; }
+.btn-config-save:disabled { background: #1e3050; color: #475569; cursor: not-allowed; }
+.btn-config-test {
+  background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12);
+  color: #94a3b8; border-radius: 8px; font-family: var(--sans); font-size: 13px;
+  font-weight: 600; padding: .65rem 1rem; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn-config-test:hover { border-color: var(--blue-lt); color: #fff; }
+#config-test-result { min-height: 20px; text-align: center; font-size: 12px; font-weight: 600; margin-top: .5rem; }
+#config-test-result.ok  { color: #4ade80; }
+#config-test-result.err { color: #f87171; }
+
 </style>
 </head>
 <body>
+
+
+<!-- ════════════════════════════════════════
+     CONFIGURACIÓN DROPBOX (primera vez)
+════════════════════════════════════════ -->
+<div id="screen-config">
+  <div class="config-box">
+    <div style="text-align:center; margin-bottom:1.25rem;">
+      <div class="config-step-badge">⚙ Configuración inicial</div>
+      <h2>Credenciales Dropbox</h2>
+      <p class="config-sub">
+        Estos valores están en <code>dropbox_token.json</code><br>
+        en la carpeta del sistema (PC de oficina).<br>
+        Se guardan solo en este navegador — nunca en GitHub.
+      </p>
+    </div>
+
+    <div class="config-hint">
+      📁 Abrir <code>dropbox_token.json</code> y copiar:
+      <br>• <code>"app_key"</code> → campo App Key
+      <br>• <code>"app_secret"</code> → campo App Secret
+      <br>• <code>"refresh_token"</code> → campo Refresh Token
+    </div>
+
+    <div class="config-field">
+      <label>App Key</label>
+      <input type="text" id="cfg-app-key" placeholder="xxxxxxxxxxxxxxxx" autocomplete="off" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="config-field">
+      <label>App Secret</label>
+      <input type="password" id="cfg-app-secret" placeholder="xxxxxxxxxxxxxxxx" autocomplete="off">
+    </div>
+    <div class="config-field">
+      <label>Refresh Token</label>
+      <input type="password" id="cfg-refresh-token" placeholder="larga cadena alfanumérica…" autocomplete="off">
+    </div>
+
+    <div id="config-test-result"></div>
+
+    <div class="config-actions">
+      <button class="btn-config-test" id="btn-config-test">🔌 Probar</button>
+      <button class="btn-config-save" id="btn-config-save">Guardar y continuar →</button>
+    </div>
+  </div>
+</div>
 
 <!-- ════════════════════════════════════════
      LOGIN
@@ -942,9 +1055,10 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 // Credenciales: completar antes de deploy
 // ══════════════════════════════════════════════
 const DBX = {
-  APP_KEY:       '4hrizh2x3o8vhpm',       // ← completar
-  APP_SECRET:    '78sznypcfpwlseu',    // ← completar
-  REFRESH_TOKEN: 'q4zzzVPzddUAAAAAAAAAAaF-c4YXjUyTimOeyN5P3cD0TW_Rx39082bsQZKHn7QW', // ← completar
+  // Credenciales leídas desde localStorage — nunca hardcodeadas
+  get APP_KEY()       { return localStorage.getItem('notif_dbx_app_key')       || ''; },
+  get APP_SECRET()    { return localStorage.getItem('notif_dbx_app_secret')     || ''; },
+  get REFRESH_TOKEN() { return localStorage.getItem('notif_dbx_refresh_token')  || ''; },
   _accessToken:  null,
   _expiresAt:    0,
 
@@ -1049,11 +1163,109 @@ const DBX = {
 
   // Verifica si las credenciales están configuradas
   isConfigured() {
-    return !this.APP_KEY.includes('AQUI') &&
-           !this.APP_SECRET.includes('AQUI') &&
-           !this.REFRESH_TOKEN.includes('AQUI');
+    return !!(this.APP_KEY && this.APP_SECRET && this.REFRESH_TOKEN);
+  },
+
+  // Guarda credenciales en localStorage
+  saveCredentials(appKey, appSecret, refreshToken) {
+    localStorage.setItem('notif_dbx_app_key',       appKey.trim());
+    localStorage.setItem('notif_dbx_app_secret',     appSecret.trim());
+    localStorage.setItem('notif_dbx_refresh_token',  refreshToken.trim());
+    // Invalidar token en caché
+    this._accessToken = null;
+    this._expiresAt   = 0;
+  },
+
+  clearCredentials() {
+    localStorage.removeItem('notif_dbx_app_key');
+    localStorage.removeItem('notif_dbx_app_secret');
+    localStorage.removeItem('notif_dbx_refresh_token');
+    this._accessToken = null;
+    this._expiresAt   = 0;
   }
 };
+
+// ══════════════════════════════════════════════
+// CONFIGURACIÓN DROPBOX — pantalla inicial
+// ══════════════════════════════════════════════
+
+function mostrarPantallaConfig() {
+  document.getElementById('screen-config').classList.add('active');
+  document.getElementById('screen-login').style.display = 'none';
+}
+
+function ocultarPantallaConfig() {
+  document.getElementById('screen-config').classList.remove('active');
+}
+
+// Botón Probar conexión
+document.getElementById('btn-config-test').addEventListener('click', async () => {
+  const key   = document.getElementById('cfg-app-key').value.trim();
+  const sec   = document.getElementById('cfg-app-secret').value.trim();
+  const tok   = document.getElementById('cfg-refresh-token').value.trim();
+  const res   = document.getElementById('config-test-result');
+  const btn   = document.getElementById('btn-config-test');
+
+  if (!key || !sec || !tok) {
+    res.textContent = '⚠ Complete los tres campos primero';
+    res.className = 'err';
+    return;
+  }
+
+  btn.textContent = '⏳ Probando…';
+  btn.disabled    = true;
+  res.textContent = '';
+  res.className   = '';
+
+  try {
+    // Guardar temporalmente para que DBX.getToken() los use
+    localStorage.setItem('notif_dbx_app_key',       key);
+    localStorage.setItem('notif_dbx_app_secret',     sec);
+    localStorage.setItem('notif_dbx_refresh_token',  tok);
+    DBX._accessToken = null; // forzar renovación
+
+    const token = await DBX.getToken();
+    if (token) {
+      res.textContent = '✅ Conexión exitosa — credenciales válidas';
+      res.className   = 'ok';
+      document.getElementById('btn-config-save').disabled = false;
+    }
+  } catch(err) {
+    // Limpiar localStorage si falló
+    DBX.clearCredentials();
+    res.textContent = '❌ Error: ' + (err.message || 'Credenciales inválidas');
+    res.className   = 'err';
+  } finally {
+    btn.textContent = '🔌 Probar';
+    btn.disabled    = false;
+  }
+});
+
+// Botón Guardar configuración
+document.getElementById('btn-config-save').addEventListener('click', () => {
+  const key = document.getElementById('cfg-app-key').value.trim();
+  const sec = document.getElementById('cfg-app-secret').value.trim();
+  const tok = document.getElementById('cfg-refresh-token').value.trim();
+
+  if (!key || !sec || !tok) {
+    document.getElementById('config-test-result').textContent = '⚠ Complete los tres campos';
+    document.getElementById('config-test-result').className   = 'err';
+    return;
+  }
+
+  DBX.saveCredentials(key, sec, tok);
+  ocultarPantallaConfig();
+  // Mostrar login normalmente
+  document.getElementById('screen-login').style.display = 'flex';
+});
+
+// Verificación al inicio: ¿hay credenciales guardadas?
+(function verificarCredenciales() {
+  if (!DBX.isConfigured()) {
+    mostrarPantallaConfig();
+  }
+  // Si están configuradas, screen-login ya es visible por defecto
+})();
 
 // ══════════════════════════════════════════════
 // USUARIOS — placeholder, se reemplaza al final
@@ -1089,6 +1301,7 @@ const PERFILES = {
       { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
       { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
       { id: 'causas',     icon: '📂', label: 'Causas',         view: 'view-causas'   },
+      { id: 'config-dbx', icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
     ]
   }
 };
@@ -1180,8 +1393,13 @@ function buildNav(items) {
     el.dataset.view = item.view;
     el.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
     el.addEventListener('click', () => {
-      showView(item.view);
-      setActiveNav(item.id);
+      if (item.action) {
+        // Item de acción especial (sin vista)
+        navActions[item.action]?.();
+      } else {
+        showView(item.view);
+        setActiveNav(item.id);
+      }
     });
     nav.appendChild(el);
   });
@@ -1225,6 +1443,37 @@ document.getElementById('btn-logout').addEventListener('click', () => {
   document.getElementById('login-pass').classList.remove('err');
   limpiarFormulario();
 });
+
+
+// ── Acciones especiales de nav ──
+const navActions = {
+  reconfigDropbox() {
+    // Precargar valores actuales
+    document.getElementById('cfg-app-key').value      = localStorage.getItem('notif_dbx_app_key')       || '';
+    document.getElementById('cfg-app-secret').value   = '';  // No mostrar secret guardado
+    document.getElementById('cfg-refresh-token').value= '';  // No mostrar token guardado
+    document.getElementById('config-test-result').textContent = '';
+    document.getElementById('config-test-result').className   = '';
+    document.getElementById('btn-config-save').disabled = false;
+    // Mostrar pantalla de configuración sobre la app
+    document.getElementById('screen-config').classList.add('active');
+    document.getElementById('screen-config').style.zIndex = '999';
+    // Cambiar el botón guardar para volver a la app (no al login)
+    document.getElementById('btn-config-save').onclick = () => {
+      const key = document.getElementById('cfg-app-key').value.trim();
+      const sec = document.getElementById('cfg-app-secret').value.trim();
+      const tok = document.getElementById('cfg-refresh-token').value.trim();
+      if (!key) { showToast('⚠ App Key requerido', 'warn'); return; }
+      // Solo actualizar los campos que se ingresaron
+      if (key) localStorage.setItem('notif_dbx_app_key', key);
+      if (sec) localStorage.setItem('notif_dbx_app_secret', sec);
+      if (tok) localStorage.setItem('notif_dbx_refresh_token', tok);
+      DBX._accessToken = null;
+      document.getElementById('screen-config').classList.remove('active');
+      showToast('✅ Credenciales actualizadas', 'success');
+    };
+  }
+};
 
 // ══════════════════════════════════════════════
 // DASHBOARD
