@@ -850,7 +850,10 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Causas Ingresadas</div>
             <div class="page-sub" id="causas-count">Cargando…</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox()" title="Recargar desde Dropbox">🔄 Recargar</button>
+            <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
+          </div>
         </div>
 
         <div class="filter-bar">
@@ -932,6 +935,125 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 ════════════════════════════════════════ -->
 <script>
 'use strict';
+
+// ══════════════════════════════════════════════
+// DROPBOX — OAuth2 con refresh token
+// Mismo patrón que Eleven y watcher.py
+// Credenciales: completar antes de deploy
+// ══════════════════════════════════════════════
+const DBX = {
+  APP_KEY:       'TU_APP_KEY_AQUI',       // ← completar
+  APP_SECRET:    'TU_APP_SECRET_AQUI',    // ← completar
+  REFRESH_TOKEN: 'TU_REFRESH_TOKEN_AQUI', // ← completar
+  _accessToken:  null,
+  _expiresAt:    0,
+
+  // Obtiene access_token vigente (renueva si expiró o faltan <5 min)
+  async getToken() {
+    if (this._accessToken && Date.now() < this._expiresAt - 300_000) {
+      return this._accessToken;
+    }
+    const resp = await fetch('https://api.dropbox.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'refresh_token',
+        refresh_token: this.REFRESH_TOKEN,
+        client_id:     this.APP_KEY,
+        client_secret: this.APP_SECRET,
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error('Dropbox auth error: ' + err);
+    }
+    const data = await resp.json();
+    this._accessToken = data.access_token;
+    this._expiresAt   = Date.now() + (data.expires_in * 1000);
+    return this._accessToken;
+  },
+
+  // Sube un objeto JS como JSON a Dropbox (overwrite)
+  async upload(path, obj) {
+    const token = await this.getToken();
+    const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization':   'Bearer ' + token,
+        'Dropbox-API-Arg': JSON.stringify({
+          path:       path,
+          mode:       'overwrite',
+          autorename: false,
+          mute:       true,
+        }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: JSON.stringify(obj, null, 2)
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error('Dropbox upload error: ' + err);
+    }
+    return await resp.json();
+  },
+
+  // Descarga un archivo y lo parsea como JSON
+  async download(path) {
+    const token = await this.getToken();
+    const resp = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        'Authorization':   'Bearer ' + token,
+        'Dropbox-API-Arg': JSON.stringify({ path }),
+      }
+    });
+    if (!resp.ok) {
+      if (resp.status === 409) return null; // archivo no existe → OK
+      throw new Error('Dropbox download error: ' + resp.status);
+    }
+    return await resp.json();
+  },
+
+  // Lista una carpeta y retorna array de FileMetadata
+  async listFolder(path, limit = 200) {
+    const token = await this.getToken();
+    let entries = [];
+    let cursor  = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const url  = cursor
+        ? 'https://api.dropboxapi.com/2/files/list_folder/continue'
+        : 'https://api.dropboxapi.com/2/files/list_folder';
+      const body = cursor
+        ? JSON.stringify({ cursor })
+        : JSON.stringify({ path, limit });
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type':  'application/json',
+        },
+        body
+      });
+      if (!resp.ok) throw new Error('Dropbox list error: ' + resp.status);
+      const data = await resp.json();
+      entries.push(...data.entries.filter(e => e['.tag'] === 'file'));
+      hasMore = data.has_more;
+      cursor  = data.cursor;
+      if (entries.length >= limit) { hasMore = false; }
+    }
+    return entries;
+  },
+
+  // Verifica si las credenciales están configuradas
+  isConfigured() {
+    return !this.APP_KEY.includes('AQUI') &&
+           !this.APP_SECRET.includes('AQUI') &&
+           !this.REFRESH_TOKEN.includes('AQUI');
+  }
+};
 
 // ══════════════════════════════════════════════
 // USUARIOS — placeholder, se reemplaza al final
@@ -1086,7 +1208,7 @@ function showView(viewId) {
   if (navItem) setActiveNav(navItem.dataset.id);
 
   // Acciones específicas al entrar a una vista
-  if (viewId === 'view-causas') renderCausas();
+  if (viewId === 'view-causas') cargarCausasDropbox();
   if (viewId === 'view-dashboard') buildDashboard();
 }
 
@@ -1111,6 +1233,21 @@ function buildDashboard() {
   const now = new Date();
   document.getElementById('dash-welcome').textContent =
     `Bienvenido, ${currentUser.nombre} — ${now.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long'})}`;
+
+  // Alerta si Dropbox no está configurado
+  const statsGrid = document.getElementById('dash-stats');
+  const alertId = 'dbx-config-alert';
+  const existing = document.getElementById(alertId);
+  if (!DBX.isConfigured() && !existing) {
+    const alert = document.createElement('div');
+    alert.id = alertId;
+    alert.className = 'alert alert-warn';
+    alert.style.marginBottom = '1rem';
+    alert.innerHTML = '⚠ <strong>Dropbox no configurado.</strong> Edita las constantes APP_KEY, APP_SECRET y REFRESH_TOKEN en el código. Las causas se guardan solo en memoria de sesión.';
+    statsGrid.parentNode.insertBefore(alert, statsGrid);
+  } else if (DBX.isConfigured() && existing) {
+    existing.remove();
+  }
 
   const pendientes = causas.filter(c => c.estado === 'pendiente_validacion').length;
   const validadas  = causas.filter(c => c.estado === 'validada').length;
@@ -1349,18 +1486,43 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
     ]
   };
 
-  // Nombre de archivo: {id_hex}_CAUSA.json → /causas/ en Dropbox
-  // TODO: subirPayload(`/causas/${currentHex}_CAUSA.json`, payload)
-  // Por ahora: guardar en memoria + localStorage (provisional hasta integrar Dropbox)
-  causas.push({ id_hex: currentHex, estado: payload.estado,
-    ...payload.datos, ts_ingreso: payload.historial[0].fecha,
-    _causa_json: payload });
-  try { localStorage.setItem('notif_causas_dev', JSON.stringify(causas)); } catch(e) {}
+  // Subir a Dropbox /causas/{id_hex}_CAUSA.json
+  const dbxPath = `/causas/${currentHex}_CAUSA.json`;
 
-  showToast('✅ Causa guardada: ' + currentHex.slice(0,8) + '…', 'success');
-  buildDashboard();
-  limpiarFormulario();
-  showView('view-causas');
+  // Verificar credenciales configuradas
+  if (!DBX.isConfigured()) {
+    showToast('⚠ Credenciales Dropbox no configuradas — modo demo', 'warn');
+    causas.push({ id_hex: currentHex, estado: payload.estado,
+      ...payload.datos, ts_ingreso: payload.historial[0].fecha });
+    buildDashboard();
+    limpiarFormulario();
+    showView('view-causas');
+    return;
+  }
+
+  // UI: estado de carga
+  const btnG = document.getElementById('btn-guardar');
+  btnG.disabled = true;
+  btnG.textContent = '⏳ Subiendo…';
+
+  try {
+    await DBX.upload(dbxPath, payload);
+    showToast('✅ Causa guardada en Dropbox: ' + currentHex.slice(0,8) + '…', 'success');
+    // Agregar a memoria local para actualizar la vista sin releer Dropbox
+    causas.push({ id_hex: currentHex, estado: payload.estado,
+      ...payload.datos, ts_ingreso: payload.historial[0].fecha,
+      _causa_json: payload });
+    buildDashboard();
+    limpiarFormulario();
+    showView('view-causas');
+  } catch(err) {
+    console.error('Error Dropbox:', err);
+    showToast('❌ Error al guardar: ' + err.message, 'error');
+    // NO limpiar formulario en caso de error
+  } finally {
+    btnG.disabled = false;
+    btnG.textContent = '💾 Guardar';
+  }
 });
 
 // ── LIMPIAR ──
@@ -1398,11 +1560,66 @@ document.getElementById('btn-imprimir').addEventListener('click', () => {
 // ══════════════════════════════════════════════
 // LISTADO CAUSAS
 // ══════════════════════════════════════════════
-// Cargar desde localStorage si hay datos
-try {
-  const stored = JSON.parse(localStorage.getItem('notif_causas_dev') || '[]');
-  if (Array.isArray(stored)) causas = stored;
-} catch(e) {}
+// ── CARGAR CAUSAS DESDE DROPBOX ──
+// Se ejecuta al entrar a la vista Causas
+async function cargarCausasDropbox() {
+  if (!DBX.isConfigured()) {
+    // Modo demo: causas solo en memoria de sesión
+    renderCausas();
+    return;
+  }
+
+  const tbody = document.getElementById('causas-body');
+  tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+    <span class="icon">⏳</span><p>Cargando causas desde Dropbox…</p>
+  </div></td></tr>`;
+
+  try {
+    const entries = await DBX.listFolder('/causas');
+    const causaFiles = entries.filter(e => e.name.endsWith('_CAUSA.json'));
+
+    if (causaFiles.length === 0) {
+      causas = [];
+      renderCausas();
+      return;
+    }
+
+    // Descargar en paralelo (máx 10 simultáneas para no saturar)
+    const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
+    const chunks = chunk(causaFiles, 10);
+    causas = [];
+
+    for (const batch of chunks) {
+      const results = await Promise.allSettled(
+        batch.map(f => DBX.download(`/causas/${f.name}`))
+      );
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value) {
+          const c = r.value;
+          // Aplanar estructura para tabla: id_hex + estado + datos.*
+          causas.push({
+            id_hex:  c.id_hex,
+            estado:  c.estado,
+            ts_ingreso: c.historial?.[0]?.fecha || '',
+            ...c.datos,
+            _causa_json: c
+          });
+        }
+      });
+    }
+
+    // Ordenar por ts_ingreso desc
+    causas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+    renderCausas();
+    buildDashboard();
+
+  } catch(err) {
+    console.error('Error cargando causas:', err);
+    tbody.innerHTML = `<tr><td colspan="8"><div class="alert alert-danger">
+      ❌ Error al cargar causas desde Dropbox: ${err.message}
+    </div></td></tr>`;
+  }
+}
 
 function renderCausas() {
   const search  = document.getElementById('search-causas').value.toLowerCase();
