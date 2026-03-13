@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Notif Judicial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --navy:     #0d1b2a;
+  --navy2:    #1b2d42;
+  --navy3:    #243d57;
+  --blue:     #1a56db;
+  --blue-lt:  #3b82f6;
+  --blue-xs:  #eff6ff;
+  --accent:   #f59e0b;
+  --red:      #dc2626;
+  --red-lt:   #fef2f2;
+  --green:    #16a34a;
+  --green-lt: #f0fdf4;
+  --purple:   #7c3aed;
+  --bg:       #f1f5f9;
+  --surface:  #ffffff;
+  --border:   #e2e8f0;
+  --text:     #1e293b;
+  --muted:    #64748b;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'IBM Plex Sans', sans-serif;
+  --r4:       4px;
+  --r8:       8px;
+  --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+/* ════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════ */
+#screen-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--navy) 0%, #1e3a5f 100%);
+  padding: 2rem;
+}
+.login-box {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 380px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+.login-logo .icon { font-size: 40px; display: block; margin-bottom: .5rem; }
+.login-logo h1 { color: #fff; font-size: 17px; font-weight: 600; letter-spacing: .02em; }
+.login-logo p  { color: #94a3b8; font-size: 12px; margin-top: 3px; }
+
+.login-field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1rem; }
+.login-field label { color: #94a3b8; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.login-field input {
+  background: rgba(255,255,255,.07);
+  border: 1.5px solid rgba(255,255,255,.12);
+  border-radius: var(--r8);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 14px;
+  padding: .6rem .85rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.login-field input::placeholder { color: #475569; }
+.login-field input:focus { border-color: var(--blue-lt); }
+.login-field input.err { border-color: #f87171; }
+
+.btn-login {
+  width: 100%;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--r8);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  padding: .7rem;
+  cursor: pointer;
+  margin-top: .25rem;
+  transition: background .15s, transform .1s;
+  letter-spacing: .02em;
+}
+.btn-login:hover { background: #1d4ed8; }
+.btn-login:active { transform: scale(.98); }
+
+.login-error {
+  color: #f87171;
+  font-size: 12px;
+  text-align: center;
+  min-height: 18px;
+  margin-top: .5rem;
+}
+
+/* ════════════════════════════════════════
+   APP SHELL
+════════════════════════════════════════ */
+#screen-app { display: none; min-height: 100vh; flex-direction: column; }
+#screen-app.active { display: flex; }
+
+/* TOPBAR */
+.topbar {
+  background: var(--navy);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  flex-shrink: 0;
+}
+.topbar-brand {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .02em;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  white-space: nowrap;
+}
+.topbar-brand .badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.badge-padawan { background: #0ea5e9; color: #fff; }
+.badge-jedi    { background: var(--green); color: #fff; }
+.badge-darth   { background: var(--accent); color: var(--navy); }
+
+.topbar-spacer { flex: 1; }
+.topbar-time { font-family: var(--mono); font-size: 11px; color: #64748b; white-space: nowrap; }
+.topbar-notif {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 18px;
+  padding: .25rem;
+  transition: color .15s;
+}
+.topbar-notif:hover { color: #fff; }
+.notif-dot {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 8px; height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  border: 1.5px solid var(--navy);
+  display: none;
+}
+.notif-dot.show { display: block; }
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+  padding: .25rem .5rem;
+  border-radius: var(--r4);
+  transition: background .15s;
+}
+.topbar-user:hover { background: rgba(255,255,255,.06); }
+.topbar-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.av-padawan { background: #0ea5e9; color: #fff; }
+.av-jedi    { background: var(--green); color: #fff; }
+.av-darth   { background: var(--accent); color: var(--navy); }
+.topbar-username { font-size: 12px; color: #cbd5e1; font-weight: 500; }
+.btn-logout {
+  background: none;
+  border: 1px solid rgba(255,255,255,.12);
+  color: #94a3b8;
+  border-radius: var(--r4);
+  font-family: var(--sans);
+  font-size: 11px;
+  padding: .25rem .6rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-logout:hover { border-color: #f87171; color: #f87171; }
+
+/* LAYOUT */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* SIDEBAR NAV */
+.sidebar-nav {
+  width: 220px;
+  background: var(--navy2);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,.05);
+}
+.nav-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #475569;
+  padding: .75rem 1rem .3rem;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem 1rem;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.05); color: #cbd5e1; }
+.nav-item.active {
+  background: rgba(26,86,219,.18);
+  color: #fff;
+  border-left-color: var(--blue-lt);
+}
+.nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  display: none;
+}
+.nav-badge.show { display: block; }
+.sidebar-footer {
+  margin-top: auto;
+  padding: .75rem 1rem;
+  font-size: 11px;
+  color: #334155;
+  font-family: var(--mono);
+  border-top: 1px solid rgba(255,255,255,.05);
+}
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+/* PANTALLAS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ════════════════════════════════════════
+   COMPONENTES COMUNES
+════════════════════════════════════════ */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.page-title { font-size: 18px; font-weight: 700; color: var(--navy); }
+.page-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r8);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.card-header {
+  background: var(--navy2);
+  color: #fff;
+  padding: .5rem 1rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.card-header .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.card-body { padding: 1rem; }
+
+/* FORM GRID */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1rem; }
+.span2 { grid-column: 1 / -1; }
+.span1 { grid-column: span 1; }
+
+.field { display: flex; flex-direction: column; gap: .25rem; }
+.field label {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: .3rem;
+}
+.field label .req { color: var(--red); font-size: 13px; line-height: 1; }
+.field label .col-ref {
+  font-family: var(--mono); font-size: 10px; color: #94a3b8;
+  background: #f1f5f9; border: 1px solid var(--border);
+  padding: 0 4px; border-radius: 3px;
+}
+input, select, textarea {
+  font-family: var(--sans); font-size: 13.5px; color: var(--text);
+  background: #fff; border: 1.5px solid var(--border);
+  border-radius: var(--r4); padding: .45rem .6rem; width: 100%;
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--blue-lt);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+textarea { resize: vertical; min-height: 64px; }
+select { cursor: pointer; }
+input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed; }
+.has-error input, .has-error select, .has-error textarea { border-color: var(--red); background: var(--red-lt); }
+.error-msg { font-size: 11px; color: var(--red); display: none; margin-top: 2px; }
+.has-error .error-msg { display: block; }
+.hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* BOTONES */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: .45rem; padding: .5rem 1rem; border-radius: var(--r4);
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: all .15s; letter-spacing: .01em;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+.btn-secondary { background: #f1f5f9; color: var(--navy); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: #e2e8f0; }
+.btn-danger { background: #fff; color: var(--red); border: 1.5px solid #fca5a5; }
+.btn-danger:hover { background: var(--red-lt); }
+.btn-sm { padding: .3rem .65rem; font-size: 12px; }
+.btn-icon { padding: .4rem; border-radius: var(--r4); }
+
+/* PROGRESS BAR */
+.progress-wrap { height: 3px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+.progress-bar  { height: 100%; background: var(--blue); border-radius: 2px; transition: width .3s; }
+
+/* TAGS */
+.tag {
+  display: inline-flex; align-items: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .05em;
+}
+.tag-blue   { background: #dbeafe; color: #1d4ed8; }
+.tag-green  { background: #dcfce7; color: #15803d; }
+.tag-yellow { background: #fef9c3; color: #a16207; }
+.tag-red    { background: #fee2e2; color: #b91c1c; }
+.tag-gray   { background: #f1f5f9; color: #475569; }
+.tag-purple { background: #ede9fe; color: #6d28d9; }
+
+/* TABLA */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: #f8fafc; color: var(--muted);
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: .5rem .75rem;
+  text-align: left; border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: .55rem .75rem; vertical-align: middle; }
+tbody td .mono { font-family: var(--mono); font-size: 12px; }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r8); padding: 1rem; box-shadow: var(--shadow);
+}
+.stat-value { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--navy); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: .3rem; font-weight: 500; }
+.stat-delta { font-size: 11px; color: var(--green); margin-top: .2rem; }
+
+/* SIDEBAR FORM (layout 2 col) */
+.form-layout { display: grid; grid-template-columns: 1fr 260px; gap: 1.25rem; align-items: start; }
+.form-sidebar { display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 72px; }
+
+/* HEX DISPLAY */
+.hex-display { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .4rem; }
+.hex-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.hex-value { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--navy); letter-spacing: .08em; word-break: break-all; min-height: 24px; }
+.hex-value.empty { color: #cbd5e1; font-size: 12px; font-weight: 400; }
+.hex-ok { font-size: 11px; color: var(--green); }
+.hex-pending { font-size: 11px; color: var(--muted); }
+
+/* QR */
+.qr-panel { padding: .75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+#qr-container {
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--border); border-radius: var(--r4);
+  background: #f8fafc; overflow: hidden;
+}
+#qr-placeholder { text-align: center; color: #94a3b8; font-size: 11px; padding: 1rem; line-height: 1.5; }
+
+/* COMPLETITUD */
+.completeness { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: .35rem; }
+.completeness .pct { font-family: var(--mono); font-weight: 600; color: var(--blue); }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--navy); color: #fff;
+  padding: .65rem 1.1rem; border-radius: var(--r8);
+  font-size: 13px; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  transform: translateY(80px); opacity: 0;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+  z-index: 9999; max-width: 340px;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.t-error   { background: var(--red); }
+#toast.t-success { background: var(--green); }
+#toast.t-warn    { background: var(--accent); color: var(--navy); }
+
+/* MODAL */
+#modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 500;
+  align-items: center; justify-content: center; padding: 1rem;
+}
+#modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--r8);
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  width: 100%; max-width: 480px; overflow: hidden;
+}
+.modal-header {
+  background: var(--navy2); color: #fff;
+  padding: .75rem 1rem; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-body { padding: 1.25rem; }
+.modal-footer { padding: .75rem 1rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: .5rem; }
+
+/* SEARCH BAR */
+.search-bar {
+  display: flex; gap: .5rem; align-items: center;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r4); padding: .3rem .6rem;
+  transition: border-color .15s;
+}
+.search-bar:focus-within { border-color: var(--blue-lt); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.search-bar input { border: none; background: none; font-size: 13px; padding: 0; box-shadow: none; }
+.search-bar input:focus { box-shadow: none; }
+.search-icon { color: var(--muted); font-size: 14px; }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty-state .icon { font-size: 36px; display: block; margin-bottom: .75rem; }
+.empty-state p { font-size: 13px; }
+
+/* ALERT */
+.alert { padding: .65rem 1rem; border-radius: var(--r4); font-size: 13px; display: flex; align-items: flex-start; gap: .5rem; margin-bottom: .75rem; }
+.alert-info   { background: var(--blue-xs); border: 1px solid #bfdbfe; color: #1e40af; }
+.alert-warn   { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.alert-danger { background: var(--red-lt); border: 1px solid #fca5a5; color: #991b1b; }
+
+/* FILTROS */
+.filter-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.filter-bar select, .filter-bar input { width: auto; font-size: 13px; padding: .35rem .6rem; }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .form-layout { grid-template-columns: 1fr; }
+  .form-sidebar { position: static; }
+  .sidebar-nav { width: 56px; }
+  .nav-item span:not(.icon) { display: none; }
+  .nav-section-label { display: none; }
+  .sidebar-footer { display: none; }
+}
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .span2, .span1 { grid-column: 1 / -1; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media print {
+  .topbar, .sidebar-nav, .form-sidebar, .page-header .btn,
+  .filter-bar, #toast, #modal-overlay { display: none !important; }
+  .main-content { padding: 0; }
+  .card { box-shadow: none; border: 1px solid #ccc; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">⚖</span>
+      <h1>Sistema Notif Judicial</h1>
+      <p>Receptoría — Antofagasta</p>
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="nombre de usuario" autocomplete="username" autocapitalize="none">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-login">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     APP SHELL
+════════════════════════════════════════ -->
+<div id="screen-app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      ⚖ Notif Judicial
+      <span class="badge" id="top-badge">—</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <span class="topbar-time" id="top-time"></span>
+    <button class="topbar-notif" id="btn-notif" title="Notificaciones">
+      🔔
+      <span class="notif-dot" id="notif-dot"></span>
+    </button>
+    <div class="topbar-user" id="top-user">
+      <div class="topbar-avatar" id="top-avatar"></div>
+      <span class="topbar-username" id="top-username"></span>
+    </div>
+    <button class="btn-logout" id="btn-logout">Salir</button>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- SIDEBAR NAV -->
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <!-- generado dinámicamente según perfil -->
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main-content" id="main-content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="view" id="view-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub" id="dash-welcome"></div>
+          </div>
+        </div>
+        <div class="stats-grid" id="dash-stats"></div>
+        <div class="card">
+          <div class="card-header"><span class="dot"></span>Actividad reciente</div>
+          <div class="card-body">
+            <div class="empty-state" id="dash-empty">
+              <span class="icon">📋</span>
+              <p>Sin causas recientes. Ingrese la primera causa.</p>
+            </div>
+            <div class="table-wrap" id="dash-recent" style="display:none">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rol</th><th>Demandado</th><th>Tipo</th><th>Estado</th><th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-recent-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INGRESO CAUSAS ── -->
+      <div class="view" id="view-ingreso">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Ingresar Causa</div>
+            <div class="page-sub">Complete todos los campos obligatorios</div>
+          </div>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
+            <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
+            <button class="btn btn-primary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
+          </div>
+        </div>
+
+        <div class="form-layout">
+          <!-- COLUMNA PRINCIPAL -->
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+
+            <!-- Identificación -->
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Identificación de la Causa</div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="field span1" id="fw-fecha_solicitud">
+                    <label>Fecha Solicitud <span class="req">*</span> <span class="col-ref">Col. L</span></label>
+                    <input type="date" name="fecha_solicitud" id="f-fecha_solicitud">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-n_solicitud">
+                    <label>N° Solicitud <span class="req">*</span> <span class="col-ref">Col. P</span></label>
+                    <input type="text" name="n_solicitud" id="f-n_solicitud" placeholder="Ej: 2026-001523" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-rol">
+                    <label>ROL <span class="req">*</span> <span class="col-ref">Col. A</span></label>
+                    <input type="text" name="rol" id="f-rol" placeholder="Ej: C-4521-2023" autocomplete="off" style="font-family:var(--mono); letter-spacing:.04em;">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-tribunal">
+                    <label>Tribunal <span class="req">*</span> <span class="col-ref">Col. B</span></label>
+                    <select name="tribunal" id="f-tribunal">
+                      <option value="">— Seleccionar —</option>
+                      <option value="1° Juzgado de Letras de Antofagasta">1° Juzgado de Letras</option>
+                      <option value="2° Juzgado de Letras de Antofagasta">2° Juzgado de Letras</option>
+                      <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
+                      <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
+                    </select>
+                    <span class="error-msg">Seleccione tribunal</span>
+                  </div>
+                  <div class="field span1" id="fw-estudio">
+                    <label>Estudio Jurídico <span class="req">*</span> <span class="col-ref">Col. O</span></label>
+                    <input type="text" name="estudio" id="f-estudio" placeholder="Nombre del estudio" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-tipo_diligencia">
+                    <label>Tipo Diligencia <span class="req">*</span> <span class="col-ref">Col. I</span></label>
+                    <select name="tipo_diligencia" id="f-tipo_diligencia">
+                      <option value="">— Seleccionar —</option>
+                      <optgroup label="── Alzamiento ──">
+                        <option value="ALZAMIENTO-CBR">Alzamiento CBR</option>
+                        <option value="ALZAMIENTO-RVM">Alzamiento RVM</option>
+                        <option value="ALZAMIENTO-TESORERIA">Alzamiento Tesorería</option>
+                        <option value="ALZAMIENTO-OTROS" data-obs-required="1">Alzamiento Otros</option>
+                      </optgroup>
+                      <optgroup label="── Embargo ──">
+                        <option value="EMBARGO-CBR">Embargo CBR</option>
+                        <option value="EMBARGO-CUENTA-CORRIENTE">Embargo Cuenta Corriente</option>
+                        <option value="EMBARGO-FRUSTRADO">Embargo Frustrado</option>
+                        <option value="EMBARGO-OTROS" data-obs-required="1">Embargo Otros</option>
+                        <option value="EMBARGO-RVM">Embargo RVM</option>
+                        <option value="EMBARGO-TESORERIA">Embargo Tesorería</option>
+                      </optgroup>
+                      <optgroup label="── Notificación ──">
+                        <option value="NOT-CEDULA">Not. Cédula</option>
+                        <option value="NOT-CEDULA-ART52">Not. Cédula Art. 52</option>
+                        <option value="NOT-CUMPLIMIENTO-INCIDENTAL">Not. Cumplimiento Incidental</option>
+                        <option value="NOT-DEMANDA-ARRENDAMIENTO-GRAL">Not. Demanda Arrendamiento General</option>
+                        <option value="NOT-DEMANDA-ARRENDAMIENTO-MON">Not. Demanda Arrendamiento Monitorio</option>
+                        <option value="NOT-DEMANDA-COBRANZA-LABORAL">Not. Demanda Cobranza Laboral</option>
+                        <option value="NOT-DEMANDA-EJE-DESPOSEIMIENTO">Not. Demanda Ejecutiva Desposeimiento</option>
+                        <option value="NOT-DEMANDA-EJE-GENERAL">Not. Demanda Ejecutiva General</option>
+                        <option value="NOT-DEMANDA-EJE-HIPOTECARIA">Not. Demanda Ejecutiva Hipotecaria</option>
+                        <option value="NOT-DEMANDA-FAMILIA">Not. Demanda Familia</option>
+                        <option value="NOT-DEMANDA-ORDINARIA">Not. Demanda Ordinaria</option>
+                        <option value="NOT-DEMANDA-JUICIO-SUMARIO">Not. Demanda Juicio Sumario</option>
+                        <option value="NOT-GESTION-PREPARATORIA" data-obs-required="1">Not. Gestión Preparatoria</option>
+                        <option value="NOT-GESTION-VOLUNTARIA">Not. Gestión Voluntaria</option>
+                        <option value="NOT-MEDIDA-PRECAUTORIA">Not. Medida Precautoria</option>
+                        <option value="NOT-PROTECCION-TURNO">Not. Protección [TURNO]</option>
+                        <option value="NOT-RECIBE-CAUSA-PRUEBA">Not. Recibe la Causa a Prueba</option>
+                        <option value="NOT-SENTENCIA">Not. Sentencia</option>
+                      </optgroup>
+                      <optgroup label="── Prueba ──">
+                        <option value="PRUEBA-CONFESIONAL">Prueba Confesional</option>
+                        <option value="PRUEBA-TESTIMONIAL">Prueba Testimonial</option>
+                      </optgroup>
+                      <optgroup label="── Requerimiento ──">
+                        <option value="REQ-PAGO-TRIBUNAL">Requerimiento Pago Tribunal</option>
+                      </optgroup>
+                      <optgroup label="── Otro ──">
+                        <option value="OTRO" data-obs-required="1">Otro</option>
+                      </optgroup>
+                    </select>
+                    <span class="error-msg">Seleccione tipo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Partes -->
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Partes del Juicio</div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="field span1" id="fw-demandante">
+                    <label>Demandante <span class="req">*</span> <span class="col-ref">Col. C</span></label>
+                    <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-demandado">
+                    <label>Demandado <span class="req">*</span> <span class="col-ref">Col. D</span></label>
+                    <input type="text" name="demandado" id="f-demandado" placeholder="Nombre completo" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1">
+                    <label>RUT <span class="col-ref">Col. E</span></label>
+                    <input type="text" name="rut" id="f-rut" placeholder="12.345.678-9" autocomplete="off" style="font-family:var(--mono);">
+                    <span class="hint">Opcional</span>
+                  </div>
+                  <div class="field span1">
+                    <label>Monto Mandamiento <span class="col-ref">Col. H</span></label>
+                    <input type="text" name="mandamiento" id="f-mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
+                    <span class="hint">Opcional</span>
+                  </div>
+                  <div class="field span2" id="fw-notificar_a">
+                    <label>Notificar a <span class="req">*</span> <span class="col-ref">Col. K</span></label>
+                    <textarea name="notificar_a" id="f-notificar_a" rows="2"
+                      placeholder="Ej: BARBARA HENRIQUEZ CORNEJO, en su calidad de deudor principal"></textarea>
+                    <span class="hint">⚠ Una fila por notificado. Si hay aval, use una causa separada.</span>
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Domicilio -->
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Domicilio</div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="field span2" id="fw-direccion">
+                    <label>Dirección <span class="req">*</span> <span class="col-ref">Col. F</span></label>
+                    <input type="text" name="direccion" id="f-direccion"
+                      placeholder="Ej: Av. O'Higgins 1234, dpto 502, Torre B" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1">
+                    <label>Ciudad <span class="col-ref">Col. G</span></label>
+                    <input type="text" value="Antofagasta" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Adicionales -->
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Datos Adicionales</div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="field span2">
+                    <label>Piezas a Notificar <span class="col-ref">Col. J</span></label>
+                    <textarea name="piezas" id="f-piezas" rows="2"
+                      placeholder="Ej: Demanda, resolución de fecha 12/03/2026, mandamiento de ejecución"></textarea>
+                  </div>
+                  <div class="field span1">
+                    <label>N° Pagaré <span class="col-ref">Col. U</span></label>
+                    <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
+                  </div>
+                  <div class="field span2" id="fw-observacion">
+                    <label>Observación <span id="obs-req-mark"></span> <span class="col-ref">Col. S</span></label>
+                    <textarea name="observacion" id="f-observacion" rows="2" placeholder="Opcional"></textarea>
+                    <span class="error-msg">Requerido para este tipo de diligencia</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SIDEBAR -->
+          <div class="form-sidebar">
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>ID Hex</div>
+              <div class="hex-display">
+                <span class="hex-label">Col. W — Identificador único</span>
+                <span class="hex-value empty" id="hex-display">Completar campos…</span>
+                <div id="hex-status" class="hex-pending">◌ Esperando campos</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Código QR</div>
+              <div class="qr-panel">
+                <div id="qr-container">
+                  <div id="qr-placeholder">Se genera al completar campos obligatorios</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="dot"></span>Completitud</div>
+              <div style="padding:.75rem 1rem;">
+                <div class="completeness">
+                  <span>Campos obligatorios</span>
+                  <span class="pct" id="f-pct">0%</span>
+                </div>
+                <div class="progress-wrap"><div class="progress-bar" id="f-progress"></div></div>
+                <div style="margin-top:.5rem; font-size:11px; color:var(--muted);" id="f-missing">Faltan campos.</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /form-layout -->
+      </div><!-- /view-ingreso -->
+
+      <!-- ── LISTADO CAUSAS ── -->
+      <div class="view" id="view-causas">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Causas Ingresadas</div>
+            <div class="page-sub" id="causas-count">Cargando…</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-bar" style="flex:1; min-width:200px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-causas" placeholder="Buscar por ROL, demandado, N° solicitud…">
+          </div>
+          <select id="filter-tipo" style="min-width:180px;">
+            <option value="">Todos los tipos</option>
+            <option value="NOT">Notificaciones</option>
+            <option value="EMBARGO">Embargos</option>
+            <option value="ALZAMIENTO">Alzamientos</option>
+            <option value="PRUEBA">Pruebas</option>
+            <option value="REQ">Requerimientos</option>
+            <option value="OTRO">Otros</option>
+          </select>
+          <select id="filter-estado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente_validacion">Pendiente validación</option>
+            <option value="validada">Validada</option>
+            <option value="en_ruta">En ruta</option>
+            <option value="cerrada">Cerrada</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table id="tabla-causas">
+              <thead>
+                <tr>
+                  <th>N° Sol.</th>
+                  <th>ROL</th>
+                  <th>Demandado</th>
+                  <th>Tipo</th>
+                  <th>Estudio</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="causas-body">
+                <tr>
+                  <td colspan="8">
+                    <div class="empty-state">
+                      <span class="icon">📂</span>
+                      <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-causas -->
+
+    </main>
+  </div><!-- /app-body -->
+</div><!-- /screen-app -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL genérico -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-title">Detalle</span>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════
+// USUARIOS — placeholder, se reemplaza al final
+// ══════════════════════════════════════════════
+const USERS = {
+  'marco':  { pass: 'pass123', perfil: 'padawan', nombre: 'Marco' },
+  'receptora': { pass: 'pass456', perfil: 'jedi',    nombre: 'Receptora' },
+  'helmuth':{ pass: 'pass789', perfil: 'darth',   nombre: 'Helmuth' }
+};
+
+const PERFILES = {
+  padawan: {
+    badge: 'PADAWAN', badgeClass: 'badge-padawan', avClass: 'av-padawan',
+    inicial: 'M',
+    nav: [
+      { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
+      { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
+      { id: 'causas',     icon: '📂', label: 'Mis Causas',     view: 'view-causas'   },
+    ]
+  },
+  jedi: {
+    badge: 'JEDI', badgeClass: 'badge-jedi', avClass: 'av-jedi',
+    inicial: 'R',
+    nav: [
+      { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
+      { id: 'causas',     icon: '📂', label: 'Causas',         view: 'view-causas'   },
+    ]
+  },
+  darth: {
+    badge: 'DARTH', badgeClass: 'badge-darth', avClass: 'av-darth',
+    inicial: 'H',
+    nav: [
+      { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
+      { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
+      { id: 'causas',     icon: '📂', label: 'Causas',         view: 'view-causas'   },
+    ]
+  }
+};
+
+// ══════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════
+let currentUser = null;
+let causas = []; // array de causas en memoria (luego vendrá de Dropbox)
+
+// ══════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('btn-login').addEventListener('click', doLogin);
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+
+  if (!USERS[user] || USERS[user].pass !== pass) {
+    err.textContent = 'Usuario o contraseña incorrectos';
+    document.getElementById('login-pass').classList.add('err');
+    document.getElementById('login-user').classList.add('err');
+    // shake
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none'; box.offsetHeight;
+    box.style.animation = 'shake .35s ease';
+    return;
+  }
+
+  currentUser = { ...USERS[user], username: user };
+  document.getElementById('login-error').textContent = '';
+  initApp();
+}
+
+// ══════════════════════════════════════════════
+// INICIALIZAR APP
+// ══════════════════════════════════════════════
+function initApp() {
+  const perfil = PERFILES[currentUser.perfil];
+
+  // Ocultar login, mostrar app
+  document.getElementById('screen-login').style.display = 'none';
+  const appEl = document.getElementById('screen-app');
+  appEl.style.display = 'flex';
+
+  // Topbar
+  const badge = document.getElementById('top-badge');
+  badge.textContent = perfil.badge;
+  badge.className = 'badge ' + perfil.badgeClass;
+
+  const av = document.getElementById('top-avatar');
+  av.textContent = currentUser.nombre[0].toUpperCase();
+  av.className = 'topbar-avatar ' + perfil.avClass;
+
+  document.getElementById('top-username').textContent = currentUser.nombre;
+
+  // Nav sidebar
+  buildNav(perfil.nav);
+
+  // Dashboard
+  buildDashboard();
+
+  // Mostrar dashboard por defecto
+  showView('view-dashboard');
+  setActiveNav('dashboard');
+}
+
+// ══════════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════════
+function buildNav(items) {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+
+  const section = document.createElement('div');
+  section.className = 'nav-section-label';
+  section.textContent = 'Menú';
+  nav.appendChild(section);
+
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'nav-item';
+    el.dataset.id = item.id;
+    el.dataset.view = item.view;
+    el.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
+    el.addEventListener('click', () => {
+      showView(item.view);
+      setActiveNav(item.id);
+    });
+    nav.appendChild(el);
+  });
+
+  const footer = document.createElement('div');
+  footer.className = 'sidebar-footer';
+  footer.textContent = 'v1.0.0-dev';
+  nav.appendChild(footer);
+}
+
+function setActiveNav(id) {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+}
+
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(viewId);
+  if (el) el.classList.add('active');
+
+  // Sincronizar nav
+  const navItem = document.querySelector(`.nav-item[data-view="${viewId}"]`);
+  if (navItem) setActiveNav(navItem.dataset.id);
+
+  // Acciones específicas al entrar a una vista
+  if (viewId === 'view-causas') renderCausas();
+  if (viewId === 'view-dashboard') buildDashboard();
+}
+
+// ══════════════════════════════════════════════
+// LOGOUT
+// ══════════════════════════════════════════════
+document.getElementById('btn-logout').addEventListener('click', () => {
+  currentUser = null;
+  document.getElementById('screen-app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-user').classList.remove('err');
+  document.getElementById('login-pass').classList.remove('err');
+  limpiarFormulario();
+});
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function buildDashboard() {
+  const now = new Date();
+  document.getElementById('dash-welcome').textContent =
+    `Bienvenido, ${currentUser.nombre} — ${now.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long'})}`;
+
+  const pendientes = causas.filter(c => c.estado === 'pendiente_validacion').length;
+  const validadas  = causas.filter(c => c.estado === 'validada').length;
+  const enRuta     = causas.filter(c => c.estado === 'en_ruta').length;
+  const total      = causas.length;
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-value">${total}</div>
+      <div class="stat-label">Total causas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--accent)">${pendientes}</div>
+      <div class="stat-label">Pendientes validación</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--green)">${validadas}</div>
+      <div class="stat-label">Validadas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--blue)">${enRuta}</div>
+      <div class="stat-label">En ruta</div>
+    </div>
+  `;
+
+  if (causas.length === 0) {
+    document.getElementById('dash-empty').style.display = 'block';
+    document.getElementById('dash-recent').style.display = 'none';
+  } else {
+    document.getElementById('dash-empty').style.display = 'none';
+    document.getElementById('dash-recent').style.display = 'block';
+    const recientes = [...causas].sort((a,b) => b.ts_ingreso.localeCompare(a.ts_ingreso)).slice(0,5);
+    document.getElementById('dash-recent-body').innerHTML = recientes.map(c => `
+      <tr>
+        <td class="mono">${c.rol}</td>
+        <td>${c.demandado}</td>
+        <td>${tipoBadge(c.tipo_diligencia)}</td>
+        <td>${estadoBadge(c.estado)}</td>
+        <td class="mono">${fmtFecha(c.fecha_solicitud)}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+// FORMULARIO INGRESO
+// ══════════════════════════════════════════════
+const REQUIRED_FIELDS = ['fecha_solicitud','n_solicitud','rol','tribunal',
+  'tipo_diligencia','estudio','demandante','demandado','notificar_a','direccion'];
+const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
+
+let currentHex = null;
+let qrInstance  = null;
+let hexDebounce = null;
+
+// Bind inputs
+document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso select, #view-ingreso textarea')
+  .forEach(el => {
+    if (!el.name) return;
+    el.addEventListener('input',  () => onFieldChange(el.name));
+    el.addEventListener('change', () => onFieldChange(el.name));
+    el.addEventListener('blur',   () => validateField(el.name));
+  });
+
+// Tipo diligencia → observación obligatoria
+document.getElementById('f-tipo_diligencia').addEventListener('change', updateObsRequired);
+
+function fval(name) {
+  const el = document.getElementById('f-' + name);
+  return el ? el.value.trim() : '';
+}
+
+function onFieldChange(name) {
+  if (REQUIRED_FIELDS.includes(name)) validateField(name);
+  updateProgress();
+  if (HEX_FIELDS.includes(name)) {
+    clearTimeout(hexDebounce);
+    hexDebounce = setTimeout(recalcHex, 350);
+  }
+}
+
+function validateField(name) {
+  const isReq = REQUIRED_FIELDS.includes(name) ||
+    (name === 'observacion' && document.getElementById('f-observacion').getAttribute('data-obs-req') === '1');
+  if (!isReq) return true;
+  const v = fval(name);
+  const wrapper = document.getElementById('fw-' + name);
+  if (!wrapper) return true;
+  if (!v) { wrapper.classList.add('has-error'); return false; }
+  wrapper.classList.remove('has-error'); return true;
+}
+
+function updateProgress() {
+  const filled = REQUIRED_FIELDS.filter(id => fval(id).length > 0);
+  const pct = Math.round(filled.length / REQUIRED_FIELDS.length * 100);
+  document.getElementById('f-progress').style.width = pct + '%';
+  document.getElementById('f-pct').textContent = pct + '%';
+
+  const labelMap = {
+    'fecha_solicitud':'Fecha', 'n_solicitud':'N° Sol.', 'rol':'ROL',
+    'tribunal':'Tribunal', 'tipo_diligencia':'Tipo', 'estudio':'Estudio',
+    'demandante':'Demandante', 'demandado':'Demandado',
+    'notificar_a':'Notificar a', 'direccion':'Dirección'
+  };
+  const missing = REQUIRED_FIELDS.filter(id => fval(id).length === 0);
+  const missingEl = document.getElementById('f-missing');
+  if (missing.length === 0) {
+    missingEl.textContent = '✓ Campos completos';
+    missingEl.style.color = 'var(--green)';
+    document.getElementById('btn-guardar').disabled = false;
+  } else {
+    missingEl.textContent = 'Faltan: ' + missing.map(id => labelMap[id] || id).join(', ');
+    missingEl.style.color = 'var(--muted)';
+    document.getElementById('btn-guardar').disabled = true;
+  }
+}
+
+async function sha256hex16(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16).toUpperCase();
+}
+
+async function recalcHex() {
+  const parts = HEX_FIELDS.map(fval);
+  const hexEl  = document.getElementById('hex-display');
+  const statEl = document.getElementById('hex-status');
+
+  if (parts.some(p => !p)) {
+    hexEl.textContent = 'Completar campos…';
+    hexEl.className = 'hex-value empty';
+    statEl.textContent = '◌ Esperando campos';
+    statEl.className = 'hex-pending';
+    currentHex = null;
+    clearQR();
+    return;
+  }
+  const hex = await sha256hex16(parts.join(''));
+  currentHex = hex;
+  hexEl.textContent = hex;
+  hexEl.className = 'hex-value';
+  statEl.textContent = '✓ Generado';
+  statEl.className = 'hex-ok';
+  generateQR(hex);
+}
+
+function clearQR() {
+  document.getElementById('qr-container').innerHTML =
+    '<div id="qr-placeholder">Se genera al completar campos obligatorios</div>';
+  qrInstance = null;
+  document.getElementById('btn-imprimir').disabled = true;
+}
+
+function generateQR(hex) {
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+  try {
+    new QRCode(container, { text: hex, width: 152, height: 152,
+      colorDark: '#0d1b2a', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+    document.getElementById('btn-imprimir').disabled = false;
+  } catch(e) {
+    container.innerHTML = '<span style="color:red;font-size:11px;">Error QR</span>';
+  }
+}
+
+// Observación condicional
+function updateObsRequired() {
+  const sel = document.getElementById('f-tipo_diligencia');
+  const opt = sel.options[sel.selectedIndex];
+  const req = opt && opt.getAttribute('data-obs-required') === '1';
+  const obsEl   = document.getElementById('f-observacion');
+  const markEl  = document.getElementById('obs-req-mark');
+  const wrapper = document.getElementById('fw-observacion');
+
+  if (req) {
+    obsEl.setAttribute('data-obs-req', '1');
+    obsEl.placeholder = 'Requerido — especifique el detalle';
+    markEl.innerHTML = '<span class="req">*</span>';
+    if (!REQUIRED_FIELDS.includes('observacion')) REQUIRED_FIELDS.push('observacion');
+  } else {
+    obsEl.removeAttribute('data-obs-req');
+    obsEl.placeholder = 'Opcional';
+    markEl.innerHTML = '';
+    wrapper.classList.remove('has-error');
+    const idx = REQUIRED_FIELDS.indexOf('observacion');
+    if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
+  }
+  updateProgress();
+}
+
+document.getElementById('f-observacion').addEventListener('input', () => {
+  if (document.getElementById('f-observacion').getAttribute('data-obs-req')) {
+    validateField('observacion');
+    updateProgress();
+  }
+});
+
+// Init formulario
+document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
+updateProgress();
+recalcHex();
+
+// ── GUARDAR ──
+document.getElementById('btn-guardar').addEventListener('click', async () => {
+  let ok = true;
+  REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
+  if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
+
+  const payload = {
+    id_hex:          currentHex,
+    fecha_solicitud: fval('fecha_solicitud'),
+    n_solicitud:     fval('n_solicitud'),
+    rol:             fval('rol'),
+    tribunal:        fval('tribunal'),
+    tipo_diligencia: fval('tipo_diligencia'),
+    estudio:         fval('estudio'),
+    demandante:      fval('demandante'),
+    demandado:       fval('demandado'),
+    rut:             fval('rut'),
+    mandamiento:     fval('mandamiento'),
+    notificar_a:     fval('notificar_a'),
+    direccion:       fval('direccion'),
+    ciudad:          'Antofagasta',
+    piezas:          fval('piezas'),
+    n_pagare:        fval('n_pagare'),
+    observacion:     fval('observacion'),
+    ts_ingreso:      new Date().toISOString(),
+    tipo_json:       'INGRESO',
+    estado:          'pendiente_validacion',
+    ingresado_por:   currentUser.username
+  };
+
+  // Guardar en memoria + localStorage provisional
+  causas.push(payload);
+  try { localStorage.setItem('notif_causas_dev', JSON.stringify(causas)); } catch(e) {}
+
+  showToast('✅ Causa guardada: ' + currentHex.slice(0,8) + '…', 'success');
+  buildDashboard();
+  limpiarFormulario();
+  showView('view-causas');
+});
+
+// ── LIMPIAR ──
+document.getElementById('btn-limpiar').addEventListener('click', () => {
+  if (causas.length > 0 || fval('rol')) {
+    if (!confirm('¿Limpiar el formulario?')) return;
+  }
+  limpiarFormulario();
+});
+
+function limpiarFormulario() {
+  document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso select, #view-ingreso textarea')
+    .forEach(el => {
+      if (el.type === 'date') el.value = new Date().toISOString().slice(0,10);
+      else el.value = '';
+    });
+  document.querySelectorAll('[id^="fw-"]').forEach(el => el.classList.remove('has-error'));
+  document.getElementById('obs-req-mark').innerHTML = '';
+  const obsEl = document.getElementById('f-observacion');
+  obsEl.removeAttribute('data-obs-req');
+  obsEl.placeholder = 'Opcional';
+  const idx = REQUIRED_FIELDS.indexOf('observacion');
+  if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
+  currentHex = null;
+  clearQR();
+  updateProgress();
+  recalcHex();
+  document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
+}
+
+document.getElementById('btn-imprimir').addEventListener('click', () => {
+  showToast('🖨 Formulario físico — próxima iteración', 'info');
+});
+
+// ══════════════════════════════════════════════
+// LISTADO CAUSAS
+// ══════════════════════════════════════════════
+// Cargar desde localStorage si hay datos
+try {
+  const stored = JSON.parse(localStorage.getItem('notif_causas_dev') || '[]');
+  if (Array.isArray(stored)) causas = stored;
+} catch(e) {}
+
+function renderCausas() {
+  const search  = document.getElementById('search-causas').value.toLowerCase();
+  const fTipo   = document.getElementById('filter-tipo').value;
+  const fEstado = document.getElementById('filter-estado').value;
+
+  let filtered = causas.filter(c => {
+    const matchSearch = !search ||
+      c.rol?.toLowerCase().includes(search) ||
+      c.demandado?.toLowerCase().includes(search) ||
+      c.n_solicitud?.toLowerCase().includes(search) ||
+      c.estudio?.toLowerCase().includes(search);
+    const matchTipo   = !fTipo   || c.tipo_diligencia?.startsWith(fTipo);
+    const matchEstado = !fEstado || c.estado === fEstado;
+    return matchSearch && matchTipo && matchEstado;
+  });
+
+  document.getElementById('causas-count').textContent =
+    `${filtered.length} causa${filtered.length !== 1 ? 's' : ''} encontrada${filtered.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('causas-body');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
+      <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  // Ordenar: más recientes primero
+  filtered.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+
+  tbody.innerHTML = filtered.map(c => `
+    <tr>
+      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || '—'}</td>
+      <td class="mono">${c.rol || '—'}</td>
+      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td style="font-size:12px;">${c.estudio || '—'}</td>
+      <td>${estadoBadge(c.estado)}</td>
+      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Filtros reactivos
+document.getElementById('search-causas').addEventListener('input', renderCausas);
+document.getElementById('filter-tipo').addEventListener('change', renderCausas);
+document.getElementById('filter-estado').addEventListener('change', renderCausas);
+
+function verCausa(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Causa — ' + (c.rol || hex.slice(0,8));
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
+      <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol}</strong></div>
+      <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud}</span></div>
+      <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal}</div>
+      <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
+      <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante}</div>
+      <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado}</div>
+      <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a}</div>
+      <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion}</div>
+      <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
+      <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
+    </div>
+    ${c.observacion ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion}</div>` : ''}
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function tipoBadge(tipo) {
+  if (!tipo) return '<span class="tag tag-gray">—</span>';
+  const cls = tipo.startsWith('NOT') ? 'tag-blue' :
+              tipo.startsWith('EMBARGO') ? 'tag-red' :
+              tipo.startsWith('ALZAMIENTO') ? 'tag-purple' :
+              tipo.startsWith('PRUEBA') ? 'tag-yellow' :
+              tipo.startsWith('REQ') ? 'tag-green' : 'tag-gray';
+  return `<span class="tag ${cls}">${tipo}</span>`;
+}
+
+function estadoBadge(estado) {
+  const map = {
+    'pendiente_validacion': ['tag-yellow','Pdte. validación'],
+    'validada':             ['tag-green','Validada'],
+    'en_ruta':              ['tag-blue','En ruta'],
+    'bp_positiva':          ['tag-purple','BP positiva'],
+    'not44_realizada':      ['tag-green','NOT44 realizada'],
+    'cerrada':              ['tag-gray','Cerrada']
+  };
+  const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
+  return `<span class="tag ${cls}">${label}</span>`;
+}
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show t-${type}`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', 3500);
+}
+
+// ══════════════════════════════════════════════
+// RELOJ
+// ══════════════════════════════════════════════
+function updateTime() {
+  document.getElementById('top-time').textContent =
+    new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ══════════════════════════════════════════════
+// CSS ANIMACIÓN SHAKE (login)
+// ══════════════════════════════════════════════
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)}
+}`;
+document.head.appendChild(styleEl);
+</script>
+</body>
+</html>
