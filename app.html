@@ -1973,22 +1973,54 @@ document.getElementById('btn-imprimir').addEventListener('click', () => {
   setTimeout(() => window.print(), 200);
 });
 
-function poblarFormularioFisico() {
-  // Datos de la causa
+function poblarFormularioFisico(causa) {
+  // Si se pasa una causa existente, usar sus datos; si no, leer del formulario
+  const d = causa ? {
+    fecha_solicitud: causa.fecha_solicitud || '',
+    n_solicitud:     causa.n_solicitud || causa.nro_solicitud || '',
+    rol:             causa.rol || '',
+    tribunal:        causa.tribunal || '',
+    demandante:      causa.demandante || '',
+    estudio:         causa.estudio || causa.estudio_juridico || '',
+    demandado:       causa.demandado || '',
+    rut:             causa.rut || '',
+    direccion:       causa.direccion || '',
+    notificar_a:     causa.notificar_a || '',
+    mandamiento:     causa.monto_mandamiento || '',
+    tipo_diligencia: causa.tipo_diligencia || '',
+    piezas:          causa.piezas || '',
+    hex:             causa.id_hex
+  } : {
+    fecha_solicitud: fval('fecha_solicitud'),
+    n_solicitud:     fval('n_solicitud'),
+    rol:             fval('rol'),
+    tribunal:        fval('tribunal'),
+    demandante:      fval('demandante'),
+    estudio:         fval('estudio'),
+    demandado:       fval('demandado'),
+    rut:             fval('rut'),
+    direccion:       fval('direccion'),
+    notificar_a:     fval('notificar_a'),
+    mandamiento:     fval('mandamiento'),
+    tipo_diligencia: fval('tipo_diligencia'),
+    piezas:          fval('piezas'),
+    hex:             currentHex
+  };
+
   const campos = [
-    ['Fecha Solicitud', fval('fecha_solicitud')],
-    ['N° Solicitud',    fval('n_solicitud')],
-    ['ROL',             fval('rol')],
-    ['Tribunal',        fval('tribunal')],
-    ['Demandante',      fval('demandante')],
-    ['Estudio',         fval('estudio')],
-    ['Demandado',       fval('demandado')],
-    ['RUT',             fval('rut') || '—'],
-    ['Dirección',       fval('direccion'), true],
-    ['Notificar a',     fval('notificar_a'), true],
-    ['Mandamiento',     fval('mandamiento') || '—'],
-    ['Tipo Diligencia', fval('tipo_diligencia')],
-    ['Piezas',          fval('piezas') || '—', true],
+    ['Fecha Solicitud', d.fecha_solicitud],
+    ['N° Solicitud',    d.n_solicitud],
+    ['ROL',             d.rol],
+    ['Tribunal',        d.tribunal],
+    ['Demandante',      d.demandante],
+    ['Estudio',         d.estudio],
+    ['Demandado',       d.demandado],
+    ['RUT',             d.rut || '—'],
+    ['Dirección',       d.direccion, true],
+    ['Notificar a',     d.notificar_a, true],
+    ['Mandamiento',     d.mandamiento || '—'],
+    ['Tipo Diligencia', d.tipo_diligencia],
+    ['Piezas',          d.piezas || '—', true],
   ];
 
   document.getElementById('pf-datos').innerHTML = campos.map(([label, val, span]) =>
@@ -1996,13 +2028,14 @@ function poblarFormularioFisico() {
   ).join('');
 
   // QR
+  const hex = d.hex;
   const qrEl = document.getElementById('pf-qr');
   qrEl.innerHTML = '';
-  new QRCode(qrEl, { text: currentHex, width: 100, height: 100,
+  new QRCode(qrEl, { text: hex, width: 100, height: 100,
     colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
 
   // ID hex
-  document.getElementById('pf-hex').textContent = currentHex;
+  document.getElementById('pf-hex').textContent = hex;
 
   // Días 01-31
   document.getElementById('pf-dias').innerHTML =
@@ -2129,6 +2162,7 @@ function renderCausas() {
       <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+        <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
     </tr>
   `).join('');
@@ -2158,7 +2192,19 @@ function verCausa(hex) {
     </div>
     ${c.observacion ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion}</div>` : ''}
   `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
+  `;
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+function imprimirCausa(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+  closeModal();
+  poblarFormularioFisico(c);
+  setTimeout(() => window.print(), 200);
 }
 
 function closeModal() {
