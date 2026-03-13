@@ -734,10 +734,19 @@
       <input type="text" id="texto-D10b" placeholder="Ej: el demandado se fue hace un mes" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
 
-    <!-- Campo texto D10c: qué falta en la dirección -->
-    <div id="campo-D10c" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">¿Qué falta en la dirección?</div>
-      <input type="text" id="texto-D10c" placeholder="Ej: la nomenclatura de la torre" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo texto D10c: qué falta en la dirección + checkbox registros -->
+    <div id="campo-D10c" style="display:none">
+      <div class="obs-box">
+        <div class="field-label" style="margin-bottom:6px">¿Qué falta en la dirección?</div>
+        <input type="text" id="texto-D10c" placeholder="Ej: la nomenclatura de la torre" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
+      <!-- Checkbox visible solo si Q01 también está seleccionado -->
+      <div id="campo-D10c-registros" style="display:none; margin-top:8px; padding:10px 14px; background:var(--surface2); border-radius:8px; border-left:3px solid var(--accent2);">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+          <input type="checkbox" id="chk-D10c-registros" onchange="onD10cRegistrosChange()" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent2);">
+          <span>El conserje consultó sus registros (emite R06)</span>
+        </label>
+      </div>
     </div>
 
     <!-- FAMILIA 2: PERSONA INFORMA -->
@@ -830,10 +839,24 @@
       </div>
     </div>
 
-    <!-- Campo Q05: nombre opcional -->
-    <div id="campo-Q05" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Nombre del residente (opcional)</div>
-      <input type="text" id="texto-Q05-nombre" placeholder="Ej: Pedro Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    <!-- Campo Q05: calidad/parentesco + nombre opcional -->
+    <div id="campo-Q05" style="display:none">
+      <div style="font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:0.08em; margin:10px 0 6px;">Calidad (opcional)</div>
+      <div class="codes-grid" id="q05-calidad-grid">
+        <button class="code-btn" data-group="Q05cal" data-code="familiar" onclick="selectQ05Cal(this)">
+          <span class="code-desc">Familiar</span>
+        </button>
+        <button class="code-btn" data-group="Q05cal" data-code="ex pareja" onclick="selectQ05Cal(this)">
+          <span class="code-desc">Ex pareja</span>
+        </button>
+        <button class="code-btn" data-group="Q05cal" data-code="dueño de la propiedad" onclick="selectQ05Cal(this)">
+          <span class="code-desc">Dueño/a de la propiedad</span>
+        </button>
+      </div>
+      <div class="obs-box" style="margin-top:8px">
+        <div class="field-label" style="margin-bottom:6px">Nombre del residente (opcional)</div>
+        <input type="text" id="texto-Q05-nombre" placeholder="Ej: Pedro Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+      </div>
     </div>
 
     <!-- Campo Q08: nombre, cargo y empresa (todos opcionales) -->
@@ -897,7 +920,7 @@
     <div class="codes-grid" id="R-grid">
       <button class="code-btn r-btn" data-group="R" data-code="R01" data-restrict="todos" onclick="selectR(this)">
         <span class="code-tag" style="color:var(--accent)">R01</span>
-        <span class="code-desc">No vive allí</span>
+        <span class="code-desc" id="r01-label">No vive allí</span>
       </button>
       <button class="code-btn r-btn" data-group="R" data-code="R02" data-restrict="menos-Q08" onclick="selectR(this)">
         <span class="code-tag" style="color:var(--accent)">R02</span>
@@ -939,6 +962,11 @@
     <div id="campo-R04" style="display:none" class="obs-box">
       <div class="field-label" style="margin-bottom:6px">Ciudad de destino</div>
       <input type="text" id="texto-R04" placeholder="Ej: Calama, Santiago..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
+    </div>
+    <!-- R03: precisión temporal opcional -->
+    <div id="campo-R03" style="display:none" class="obs-box">
+      <div class="field-label" style="margin-bottom:6px">Hace cuánto tiempo (opcional)</div>
+      <input type="text" id="texto-R03" placeholder='Ej: "varios años", "más de un año"...' style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
     </div>
     <div id="campo-R08b" style="display:none" class="obs-box">
       <div class="field-label" style="margin-bottom:6px">Observación adicional</div>
@@ -1048,7 +1076,7 @@
   </div>
 
   <!-- OBSERVACIONES -->
-  <div class="section-title">Observaciones (opcional)</div>
+  <div class="section-title" id="obs-label">Observaciones (opcional)</div>
   <div class="obs-box">
     <textarea id="obs-input" placeholder="Detalles adicionales, nombre del informante, etc."></textarea>
   </div>
@@ -1096,6 +1124,7 @@ let state = {
     D:       null,
     Q:       null,
     Q01met:  null,
+    Q05cal:  null,             // calidad Q05: 'familiar'|'ex pareja'|'dueño de la propiedad'
     Q09sub:  null,             // 'Q09a' | 'Q09b'
     sexo:    null,
     R:       null,
@@ -1496,7 +1525,12 @@ function selectD(btn) {
   }
   ['D10b','D10c'].forEach(c => show('campo-' + c, state.selections.D === c));
   show('hora-block', state.selections.D !== 'D03');
-  if (state.selections.D) resetSubSelections();
+  // D11 coexiste con Q02/Q05 — no limpiar Q si D11 activo
+  if (state.selections.D && state.selections.D !== 'D11') {
+    resetSubSelections();
+  }
+  // Checkbox D10c-registros: visible solo si D10c + Q01 simultáneos
+  actualizarD10cRegistros();
 }
 
 // ── Shared: Q (BN Fam2, BP, NOT44) ──
@@ -1515,13 +1549,26 @@ function selectQ(btn) {
   state.selections.Q09sub = null;
   btn.classList.add('selected-p');
 
-  // Limpiar D si estaba activo (exclusión mutua BN)
-  if (state.selections.D) {
+  // Limpiar D si estaba activo — EXCEPTO D11 que coexiste con Q02/Q05
+  const dActivo = state.selections.D;
+  if (dActivo && dActivo !== 'D11') {
     state.selections.D = null;
     document.querySelectorAll('[data-family="1"]').forEach(b => b.classList.remove('selected-c'));
     ['D10b','D10c'].forEach(c => show('campo-' + c, false));
     show('hora-block', true);
   }
+  // Si D11 activo pero Q seleccionado no es Q02/Q05, limpiar D11
+  if (dActivo === 'D11' && !['Q02','Q05'].includes(code)) {
+    state.selections.D = null;
+    document.querySelectorAll('[data-family="1"]').forEach(b => b.classList.remove('selected-c'));
+  }
+  // E03: etiqueta obs dinámica para BN + Q
+  const obsLbl = document.getElementById('obs-label');
+  if (obsLbl && state.selections.tipo === 'BN') {
+    obsLbl.textContent = 'Observación adicional del informante (opcional)';
+  }
+  // Actualizar checkbox D10c + Q01
+  actualizarD10cRegistros();
 
   // Campos contextuales según Q seleccionado
   const esBPNOT44 = ['BP','NOT44'].includes(state.selections.tipo);
@@ -1600,6 +1647,32 @@ function selectQ09Sub(btn) {
   }
 }
 
+function selectQ05Cal(btn) {
+  const code = btn.dataset.code;
+  if (state.selections.Q05cal === code) {
+    state.selections.Q05cal = null;
+    btn.classList.remove('selected');
+  } else {
+    document.querySelectorAll('[data-group="Q05cal"]').forEach(b => b.classList.remove('selected'));
+    state.selections.Q05cal = code;
+    btn.classList.add('selected');
+  }
+}
+
+// D10c + Q01 → mostrar checkbox "consultó registros"
+function actualizarD10cRegistros() {
+  const visible = state.selections.D === 'D10c' && state.selections.Q === 'Q01';
+  show('campo-D10c-registros', visible);
+  if (!visible) {
+    const chk = document.getElementById('chk-D10c-registros');
+    if (chk) chk.checked = false;
+  }
+}
+
+function onD10cRegistrosChange() {
+  // Solo visual — el valor se lee en enviarResultado
+}
+
 // ── Piezas editables en NOT44 ──
 function editarPiezasNot44() {
   const actual = document.getElementById('not44-piezas-display').textContent;
@@ -1652,20 +1725,27 @@ function selectSexo(btn) {
 function updateRSection(qCode) {
   show('seccion-R', true);
   state.selections.R = null;
+  // E01: etiqueta dinámica R01 según Q01
+  const r01lbl = document.getElementById('r01-label');
+  if (r01lbl) r01lbl.textContent = (qCode === 'Q01')
+    ? 'No tiene registro como residente del inmueble'
+    : 'No vive allí';
+  // Q09a/Q09b = mismo tratamiento que Q09
+  const qEff = ['Q09a','Q09b'].includes(qCode) ? 'Q09' : qCode;
   document.querySelectorAll('.r-btn').forEach(b => {
     b.classList.remove('selected');
     const r = b.dataset.restrict;
     let v = false;
     if (r === 'todos') v = true;
-    else if (r === 'menos-Q08') v = qCode !== 'Q08';
+    else if (r === 'menos-Q08') v = qEff !== 'Q08';
     else if (r === 'Q01')       v = qCode === 'Q01';
-    else if (r === 'Q08')       v = qCode === 'Q08';
-    else if (r === 'Q03-Q04-Q05') v = ['Q03','Q05'].includes(qCode); // Q04/Q07 eliminados
-    // Q09: solo R01-R05
-    if (qCode === 'Q09') v = (r === 'todos' || r === 'menos-Q08');
+    else if (r === 'Q08')       v = qEff === 'Q08';
+    else if (r === 'Q03-Q04-Q05') v = ['Q03','Q05'].includes(qEff);
+    // Q09/Q09a/Q09b y Q01b: solo R01-R05
+    if (qEff === 'Q09' || qCode === 'Q01b') v = (r === 'todos' || r === 'menos-Q08');
     b.style.display = v ? 'block' : 'none';
   });
-  ['R04','R08b','R09'].forEach(c => show('campo-' + c, false));
+  ['R03','R04','R08b','R09'].forEach(c => show('campo-' + c, false));
 }
 
 function selectR(btn) {
@@ -1676,6 +1756,7 @@ function selectR(btn) {
     state.selections.R = code;
     btn.classList.add('selected');
   }
+  show('campo-R03',  state.selections.R === 'R03');
   show('campo-R04',  state.selections.R === 'R04');
   show('campo-R08b', state.selections.R === 'R08b');
   show('campo-R09',  state.selections.R === 'R09');
@@ -1711,6 +1792,7 @@ function selectN44Sexo(btn) {
 function resetSubSelections() {
   state.selections.Q    = null;
   state.selections.Q01met = null;
+  state.selections.Q05cal = null;
   state.selections.Q09sub = null;
   state.selections.sexo = null;
   state.selections.R    = null;
@@ -1718,10 +1800,11 @@ function resetSubSelections() {
   state.selections.N44  = null;
   state.selections.N44sexo = null;
   document.querySelectorAll('[data-group="Q"]').forEach(b => b.classList.remove('selected-p'));
-  document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"],[data-group="Q09sub"]').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"],[data-group="Q09sub"],[data-group="Q05cal"]').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.r-btn,.n44-btn').forEach(b => b.classList.remove('selected'));
   ['campo-Q01','campo-Q01-met','campo-Q01b','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
-   'campo-n44-entrega','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => show(c, false));
+   'campo-n44-entrega','campo-R03','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C',
+   'campo-D10c-registros'].forEach(c => show(c, false));
   show('seccion-sexo',      false);
   show('seccion-R',         false);
   show('seccion-not44-n44', false);
@@ -1738,10 +1821,10 @@ function setDefaultFechaHora() {
 }
 
 function resetSelections() {
-  state.selections = { tipo:null, D:null, Q:null, Q01met:null, Q09sub:null, sexo:null, R:null, BP:null, N44:null, N44sexo:null, citFecha:null, citHora:null };
+  state.selections = { tipo:null, D:null, Q:null, Q01met:null, Q05cal:null, Q09sub:null, sexo:null, R:null, BP:null, N44:null, N44sexo:null, citFecha:null, citHora:null };
   document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected','selected-p','selected-c'));
   ['campo-D10b','campo-D10c','campo-Q01','campo-Q01-met','campo-Q01b','campo-Q02','campo-Q03','campo-Q05','campo-Q08','campo-Q09',
-   'campo-n44-entrega','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C'].forEach(c => {
+   'campo-n44-entrega','campo-R03','campo-R04','campo-R08b','campo-R09','campos-N44-A','campos-N44-C','campo-D10c-registros'].forEach(c => {
     const el = document.getElementById(c); if (el) el.style.display = 'none';
   });
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
@@ -1837,17 +1920,28 @@ async function enviarResultado() {
   };
 
   if (t === 'BN') {
-    // Familia 1
+    // Familia 1 — D code
     if (state.selections.D) {
       codigos.push(state.selections.D);
       if (state.selections.D === 'D10b') { const v = document.getElementById('texto-D10b').value.trim(); if (v) codigos.push('D10b:' + v); }
-      if (state.selections.D === 'D10c') { const v = document.getElementById('texto-D10c').value.trim(); if (v) codigos.push('D10c:' + v); }
+      if (state.selections.D === 'D10c') {
+        const v = document.getElementById('texto-D10c').value.trim(); if (v) codigos.push('D10c:' + v);
+        // Checkbox D10c + Q01 → agrega R06
+        const chkReg = document.getElementById('chk-D10c-registros');
+        if (chkReg?.checked && state.selections.Q === 'Q01') codigos.push('R06');
+      }
+      // D11 puede coexistir con Q02/Q05 (se continúa al bloque Familia 2)
     }
-    // Familia 2
+    // Familia 2 — Q + R
     if (state.selections.Q) {
       pushQ();
+      // Q05: calidad/parentesco opcional
+      if (state.selections.Q === 'Q05' && state.selections.Q05cal) {
+        codigos.push('Q05-calidad:' + state.selections.Q05cal);
+      }
       if (state.selections.R) {
         codigos.push(state.selections.R);
+        if (state.selections.R === 'R03')  { const v = document.getElementById('texto-R03').value.trim();  if (v) codigos.push('R03-tiempo:' + v); }
         if (state.selections.R === 'R04')  { const v = document.getElementById('texto-R04').value.trim();  if (v) codigos.push('R04:' + v); }
         if (state.selections.R === 'R08b') { const v = document.getElementById('texto-R08b').value.trim(); if (v) codigos.push('R08b:' + v); }
         if (state.selections.R === 'R09')  { const v = document.getElementById('texto-R09').value.trim();  if (v) codigos.push('R09:' + v); }
