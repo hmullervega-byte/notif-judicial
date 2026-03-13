@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema Notif Judicial</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
@@ -601,6 +602,15 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 #config-test-result.ok  { color: #4ade80; }
 #config-test-result.err { color: #f87171; }
 
+/* ── RUTA: toolbar + checkboxes ── */
+.ruta-toolbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .75rem 0; flex-wrap: wrap;
+}
+.ruta-toolbar .counter { font-size: 13px; color: var(--muted); font-weight: 500; }
+.ruta-toolbar .counter strong { color: var(--text); }
+.ruta-check { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
+
 </style>
 </head>
 <body>
@@ -1065,6 +1075,51 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
         </div>
       </div><!-- /view-validacion -->
 
+      <!-- ── SELECCIÓN DE RUTA ── -->
+      <div class="view" id="view-ruta">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Seleccionar Ruta</div>
+            <div class="page-sub" id="ruta-count">Cargando...</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarRuta()">🔄 Recargar</button>
+        </div>
+
+        <div class="ruta-toolbar">
+          <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
+          <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
+          <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptiroute()" style="display:none;">📤 Export Optiroute</button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table id="tabla-ruta">
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" class="ruta-check" id="ruta-check-all" onchange="toggleAllRuta(this.checked)"></th>
+                  <th>N° Sol.</th>
+                  <th>ROL</th>
+                  <th>Demandado</th>
+                  <th>Tipo</th>
+                  <th>Dirección</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody id="ruta-body">
+                <tr>
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <span class="icon">🗺</span>
+                      <p>No hay causas validadas disponibles para ruta.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-ruta -->
+
     </main>
   </div><!-- /app-body -->
 </div><!-- /screen-app -->
@@ -1326,7 +1381,8 @@ const PERFILES = {
     nav: [
       { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
       { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
-      { id: 'causas',     icon: '📂', label: 'Mis Causas',     view: 'view-causas'   },
+      { id: 'causas',     icon: '📂', label: 'Mis Causas',     view: 'view-causas'    },
+      { id: 'ruta',       icon: '🗺', label: 'Seleccionar Ruta', view: 'view-ruta'    },
     ]
   },
   jedi: {
@@ -1336,6 +1392,7 @@ const PERFILES = {
       { id: 'dashboard',   icon: '📊', label: 'Dashboard',      view: 'view-dashboard'   },
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
+      { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
     ]
   },
   darth: {
@@ -1346,6 +1403,7 @@ const PERFILES = {
       { id: 'ingreso',     icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'     },
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
+      { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
       { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
     ]
   }
@@ -1473,6 +1531,7 @@ function showView(viewId) {
   // Acciones específicas al entrar a una vista
   if (viewId === 'view-causas') cargarCausasDropbox();
   if (viewId === 'view-validacion') cargarValidacion();
+  if (viewId === 'view-ruta') cargarRuta();
   if (viewId === 'view-dashboard') buildDashboard();
 }
 
@@ -2144,6 +2203,174 @@ async function confirmarDevolver(hex) {
     btn.disabled = false;
     btn.textContent = '↩ Devolver';
   }
+}
+
+// ══════════════════════════════════════════════
+// SELECCIÓN DE RUTA + EXPORT OPTIROUTE
+// ══════════════════════════════════════════════
+let rutaSeleccionadas = new Set();
+
+async function cargarRuta() {
+  if (causas.length === 0 && DBX.isConfigured()) {
+    const tbody = document.getElementById('ruta-body');
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+      <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
+    </div></td></tr>`;
+    await cargarCausasDropbox();
+  }
+  rutaSeleccionadas.clear();
+  document.getElementById('ruta-check-all').checked = false;
+  renderRuta();
+}
+
+function renderRuta() {
+  const validadas = causas.filter(c => c.estado === 'validada');
+  document.getElementById('ruta-count').textContent =
+    `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} validada${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''}`;
+
+  // Mostrar botón export si hay causas en_ruta
+  const enRuta = causas.filter(c => c.estado === 'en_ruta');
+  document.getElementById('btn-export-optiroute').style.display = enRuta.length > 0 ? '' : 'none';
+
+  const tbody = document.getElementById('ruta-body');
+  if (validadas.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+      <span class="icon">🗺</span>
+      <p>${enRuta.length > 0 ? 'Todas las causas validadas ya están en ruta.' : 'No hay causas validadas disponibles para ruta.'}</p>
+    </div></td></tr>`;
+    document.getElementById('btn-generar-ruta').disabled = true;
+    return;
+  }
+
+  tbody.innerHTML = validadas.map(c => `
+    <tr>
+      <td><input type="checkbox" class="ruta-check" data-hex="${c.id_hex}"
+           ${rutaSeleccionadas.has(c.id_hex) ? 'checked' : ''}
+           onchange="toggleRutaCheck('${c.id_hex}', this.checked)"></td>
+      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || c.nro_solicitud || '—'}</td>
+      <td class="mono">${c.rol || '—'}</td>
+      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
+      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+    </tr>`).join('');
+
+  actualizarContadorRuta();
+}
+
+function toggleRutaCheck(hex, checked) {
+  if (checked) rutaSeleccionadas.add(hex);
+  else rutaSeleccionadas.delete(hex);
+  actualizarContadorRuta();
+  // Sync select-all checkbox
+  const validadas = causas.filter(c => c.estado === 'validada');
+  document.getElementById('ruta-check-all').checked = rutaSeleccionadas.size === validadas.length && validadas.length > 0;
+}
+
+function toggleAllRuta(checked) {
+  const validadas = causas.filter(c => c.estado === 'validada');
+  rutaSeleccionadas.clear();
+  if (checked) validadas.forEach(c => rutaSeleccionadas.add(c.id_hex));
+  document.querySelectorAll('#ruta-body .ruta-check').forEach(cb => cb.checked = checked);
+  actualizarContadorRuta();
+}
+
+function actualizarContadorRuta() {
+  const n = rutaSeleccionadas.size;
+  document.getElementById('ruta-sel-count').innerHTML =
+    `<strong>${n}</strong> causa${n !== 1 ? 's' : ''} seleccionada${n !== 1 ? 's' : ''}`;
+  document.getElementById('btn-generar-ruta').disabled = n === 0;
+}
+
+async function generarRuta() {
+  if (rutaSeleccionadas.size === 0) return;
+
+  const btn = document.getElementById('btn-generar-ruta');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando...';
+
+  const ahora = new Date().toISOString();
+  const seleccion = [];
+
+  try {
+    for (const hex of rutaSeleccionadas) {
+      const c = causas.find(x => x.id_hex === hex);
+      if (!c || !c._causa_json) continue;
+
+      const payload = c._causa_json;
+      payload.estado = 'en_ruta';
+      payload.historial.push({
+        accion:  'seleccion_ruta',
+        fecha:   ahora,
+        usuario: currentUser.nombre
+      });
+
+      if (DBX.isConfigured()) {
+        await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+      }
+      c.estado = 'en_ruta';
+      seleccion.push({
+        id_hex:    hex,
+        rol:       c.rol,
+        direccion: c.direccion,
+        demandado: c.demandado
+      });
+    }
+
+    if (DBX.isConfigured()) {
+      await DBX.upload('/estados/ruta.json', {
+        fecha:   ahora,
+        usuario: currentUser.nombre,
+        causas:  seleccion
+      });
+    }
+
+    rutaSeleccionadas.clear();
+    renderRuta();
+    buildDashboard();
+    showToast(`🗺 Ruta generada con ${seleccion.length} causa${seleccion.length !== 1 ? 's' : ''}`, 'success');
+
+  } catch(err) {
+    console.error('Error generando ruta:', err);
+    showToast('❌ Error al generar ruta: ' + err.message, 'error');
+  } finally {
+    btn.textContent = '🗺 Generar Ruta';
+    btn.disabled = rutaSeleccionadas.size === 0;
+  }
+}
+
+function exportOptiroute() {
+  const enRuta = causas.filter(c => c.estado === 'en_ruta');
+  if (enRuta.length === 0) {
+    showToast('⚠ No hay causas en ruta para exportar', 'warn');
+    return;
+  }
+
+  const headers = ['nombre','dirección','departamento','extra','comuna','correo','teléfono','demanda','referencia_pedido','proveedor'];
+  const rows = enRuta.map(c => [
+    c.rol || '',
+    c.direccion || '',
+    '',
+    '',
+    'Antofagasta',
+    '',
+    '',
+    '',
+    '',
+    ''
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const hoy = new Date();
+  const dd = String(hoy.getDate()).padStart(2, '0');
+  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+  const filename = `${dd}-${mm}-${hoy.getFullYear()} Optiroute.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+  showToast(`📤 Exportado: ${filename} (${enRuta.length} causas)`, 'success');
 }
 
 // ══════════════════════════════════════════════
