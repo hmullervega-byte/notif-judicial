@@ -376,6 +376,9 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 .btn-secondary:hover { background: #e2e8f0; }
 .btn-danger { background: #fff; color: var(--red); border: 1.5px solid #fca5a5; }
 .btn-danger:hover { background: var(--red-lt); }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success:hover { background: #15803d; }
+.btn-success:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
 .btn-sm { padding: .3rem .65rem; font-size: 12px; }
 .btn-icon { padding: .4rem; border-radius: var(--r4); }
 
@@ -1022,6 +1025,46 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
         </div>
       </div><!-- /view-causas -->
 
+      <!-- ── VALIDACIÓN JEDI ── -->
+      <div class="view" id="view-validacion">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Validar Causas</div>
+            <div class="page-sub" id="validacion-count">Cargando...</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarValidacion()">🔄 Recargar</button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table id="tabla-validacion">
+              <thead>
+                <tr>
+                  <th>N° Sol.</th>
+                  <th>ROL</th>
+                  <th>Demandado</th>
+                  <th>Tipo</th>
+                  <th>Dirección</th>
+                  <th>Ingresado por</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="validacion-body">
+                <tr>
+                  <td colspan="8">
+                    <div class="empty-state">
+                      <span class="icon">✅</span>
+                      <p>No hay causas pendientes de validación.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-validacion -->
+
     </main>
   </div><!-- /app-body -->
 </div><!-- /screen-app -->
@@ -1290,18 +1333,20 @@ const PERFILES = {
     badge: 'JEDI', badgeClass: 'badge-jedi', avClass: 'av-jedi',
     inicial: 'R',
     nav: [
-      { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
-      { id: 'causas',     icon: '📂', label: 'Causas',         view: 'view-causas'   },
+      { id: 'dashboard',   icon: '📊', label: 'Dashboard',      view: 'view-dashboard'   },
+      { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
+      { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
     ]
   },
   darth: {
     badge: 'DARTH', badgeClass: 'badge-darth', avClass: 'av-darth',
     inicial: 'H',
     nav: [
-      { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
-      { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
-      { id: 'causas',     icon: '📂', label: 'Causas',         view: 'view-causas'   },
-      { id: 'config-dbx', icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
+      { id: 'dashboard',   icon: '📊', label: 'Dashboard',      view: 'view-dashboard'   },
+      { id: 'ingreso',     icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'     },
+      { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
+      { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
+      { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
     ]
   }
 };
@@ -1427,6 +1472,7 @@ function showView(viewId) {
 
   // Acciones específicas al entrar a una vista
   if (viewId === 'view-causas') cargarCausasDropbox();
+  if (viewId === 'view-validacion') cargarValidacion();
   if (viewId === 'view-dashboard') buildDashboard();
 }
 
@@ -1950,6 +1996,155 @@ function closeModal() {
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
+
+// ══════════════════════════════════════════════
+// VALIDACIÓN JEDI
+// ══════════════════════════════════════════════
+async function cargarValidacion() {
+  // Asegurar que las causas estén cargadas desde Dropbox
+  if (causas.length === 0 && DBX.isConfigured()) {
+    const tbody = document.getElementById('validacion-body');
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
+    </div></td></tr>`;
+    await cargarCausasDropbox();
+  }
+  renderValidacion();
+}
+
+function renderValidacion() {
+  const pendientes = causas.filter(c => c.estado === 'pendiente_validacion');
+  document.getElementById('validacion-count').textContent =
+    `${pendientes.length} causa${pendientes.length !== 1 ? 's' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de validación`;
+
+  const tbody = document.getElementById('validacion-body');
+  if (pendientes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <span class="icon">✅</span>
+      <p>No hay causas pendientes de validación.</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  pendientes.sort((a,b) => (a.ts_ingreso||'').localeCompare(b.ts_ingreso||''));
+
+  tbody.innerHTML = pendientes.map(c => {
+    const ingreso = c._causa_json?.historial?.find(h => h.accion === 'ingreso');
+    const usuario = ingreso?.usuario || '—';
+    return `
+    <tr>
+      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || c.nro_solicitud || '—'}</td>
+      <td class="mono">${c.rol || '—'}</td>
+      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
+      <td style="font-size:12px;">${usuario}</td>
+      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td style="white-space:nowrap; display:flex; gap:.35rem;">
+        <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
+        <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function validarCausa(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c || !c._causa_json) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+
+  const payload = c._causa_json;
+  payload.estado = 'validada';
+  payload.historial.push({
+    accion:  'validada',
+    fecha:   new Date().toISOString(),
+    usuario: currentUser.nombre
+  });
+
+  if (!DBX.isConfigured()) {
+    c.estado = 'validada';
+    renderValidacion();
+    buildDashboard();
+    showToast('✅ Causa validada (modo demo)', 'success');
+    return;
+  }
+
+  try {
+    await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+    c.estado = 'validada';
+    renderValidacion();
+    buildDashboard();
+    showToast('✅ Causa validada: ' + (c.rol || hex.slice(0,8)), 'success');
+  } catch(err) {
+    console.error('Error al validar:', err);
+    showToast('❌ Error al validar: ' + err.message, 'error');
+  }
+}
+
+function mostrarDevolver(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Devolver causa — ' + (c.rol || hex.slice(0,8));
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">
+      <strong>${c.demandado}</strong> — ${c.direccion || ''}
+    </p>
+    <div class="field">
+      <label>Motivo de devolución <span class="req">*</span></label>
+      <textarea id="devolver-comentario" rows="3" placeholder="Ej: Dirección incompleta, falta número de departamento"></textarea>
+    </div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-danger btn-sm" id="btn-confirmar-devolver" onclick="confirmarDevolver('${hex}')">↩ Devolver</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('devolver-comentario').focus(), 100);
+}
+
+async function confirmarDevolver(hex) {
+  const comentario = document.getElementById('devolver-comentario').value.trim();
+  if (!comentario) {
+    showToast('⚠ Escriba el motivo de devolución', 'warn');
+    document.getElementById('devolver-comentario').focus();
+    return;
+  }
+
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c || !c._causa_json) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+
+  const payload = c._causa_json;
+  payload.historial.push({
+    accion:     'devuelta',
+    fecha:      new Date().toISOString(),
+    usuario:    currentUser.nombre,
+    comentario: comentario
+  });
+
+  if (!DBX.isConfigured()) {
+    closeModal();
+    renderValidacion();
+    showToast('↩ Causa devuelta (modo demo)', 'warn');
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirmar-devolver');
+  btn.disabled = true;
+  btn.textContent = '⏳ Enviando...';
+
+  try {
+    await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+    closeModal();
+    renderValidacion();
+    showToast('↩ Causa devuelta: ' + (c.rol || hex.slice(0,8)), 'warn');
+  } catch(err) {
+    console.error('Error al devolver:', err);
+    showToast('❌ Error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↩ Devolver';
+  }
+}
 
 // ══════════════════════════════════════════════
 // HELPERS
