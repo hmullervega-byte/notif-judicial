@@ -1336,6 +1336,20 @@ const DBX = {
     this._expiresAt   = 0;
   },
 
+  async deleteFile(path) {
+    const token = await this.getToken();
+    const resp = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ path })
+    });
+    if (!resp.ok) throw new Error('Dropbox delete error: ' + resp.status);
+    return await resp.json();
+  },
+
   clearCredentials() {
     localStorage.removeItem('notif_dbx_app_key');
     localStorage.removeItem('notif_dbx_app_secret');
@@ -2288,6 +2302,7 @@ function renderCausas() {
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
+        ${currentUser?.perfil === 'darth' ? `<button class="btn btn-danger btn-sm btn-icon" title="Eliminar causa" onclick="eliminarCausa('${c.id_hex}')">🗑</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2877,6 +2892,28 @@ function fmtTiempoRelativo(iso) {
 // ══════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════
+async function eliminarCausa(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  if (!confirm(`¿Eliminar causa ${c.rol || hex.slice(0,8)}?\n${c.demandado || ''}\n\nEsta acción no se puede deshacer.`)) return;
+
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.deleteFile(`/causas/${hex}_CAUSA.json`);
+    } catch(err) {
+      showToast('❌ Error al eliminar: ' + err.message, 'error');
+      return;
+    }
+  }
+
+  causas = causas.filter(x => x.id_hex !== hex);
+  actualizarIndex();
+  renderCausas();
+  buildDashboard();
+  renderNotificaciones();
+  showToast('🗑 Causa eliminada: ' + (c.rol || hex.slice(0,8)), 'success');
+}
+
 function normalizarTribunal(str) {
   if (!str) return '—';
   const m = str.match(/^(\d+)°/);
