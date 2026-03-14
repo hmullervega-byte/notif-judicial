@@ -1896,6 +1896,9 @@ async function guardarCausa(estadoInicial) {
 
   const accion = estadoInicial === 'borrador' ? 'borrador' : 'ingreso';
 
+  // DEBUG: verificar campos antes de armar payload
+  console.log('DEBUG guardar — tribunal:', JSON.stringify(fval('tribunal')), '| piezas:', JSON.stringify(fval('piezas')));
+
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
     id_hex:  currentHex,
@@ -1926,6 +1929,8 @@ async function guardarCausa(estadoInicial) {
       }
     ]
   };
+
+  console.log('DEBUG payload.datos:', JSON.stringify(payload.datos, null, 2));
 
   // Subir a Dropbox /causas/{id_hex}_CAUSA.json
   const dbxPath = `/causas/${currentHex}_CAUSA.json`;
