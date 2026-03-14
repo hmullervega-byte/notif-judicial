@@ -1922,6 +1922,7 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha,
       _causa_json: payload });
+    actualizarIndex();
     buildDashboard();
     limpiarFormulario();
     showView('view-causas');
@@ -2077,80 +2078,101 @@ async function cargarCausasDropbox(forzar = false) {
 
   const tbody = document.getElementById('causas-body');
   tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-    <span class="icon">⏳</span><p>Cargando causas desde Dropbox…</p>
+    <span class="icon">⏳</span><p>Cargando causas...</p>
   </div></td></tr>`;
 
   try {
-    const entries = await DBX.listFolder('/causas');
-    const causaFiles = entries.filter(e => e.name.endsWith('_CAUSA.json'));
+    // Descargar INDEX.json (1 sola petición)
+    const index = await DBX.download('/causas/INDEX.json');
 
-    if (causaFiles.length === 0) {
+    if (!index || !Array.isArray(index) || index.length === 0) {
       causas = [];
       _causasCargadas = true;
       renderCausas();
       return;
     }
 
-    // Descargar en paralelo (máx 10 simultáneas para no saturar)
-    const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
-    const chunks = chunk(causaFiles, 10);
-    const nuevas = [];
-    let pendientes = [...causaFiles];
-    let intento = 0;
-    const maxIntentos = 3;
+    // INDEX.json ya viene con los campos aplanados para la tabla
+    causas = index.map(c => ({
+      id_hex:           c.id_hex,
+      estado:           c.estado,
+      rol:              c.rol,
+      n_solicitud:      c.nro_solicitud,
+      nro_solicitud:    c.nro_solicitud,
+      demandado:        c.demandado,
+      rut:              c.rut,
+      direccion:        c.direccion,
+      tipo_diligencia:  c.tipo_diligencia,
+      fecha_solicitud:  c.fecha_solicitud,
+      estudio:          c.estudio_juridico,
+      estudio_juridico: c.estudio_juridico,
+      notificar_a:      c.notificar_a,
+      demandante:       c.demandante,
+      ciudad:           c.ciudad || 'Antofagasta',
+      ts_ingreso:       c.ts_ingreso || '',
+      _causa_json:      null  // se carga bajo demanda
+    }));
 
-    while (pendientes.length > 0 && intento < maxIntentos) {
-      const lotes = chunk(pendientes, 10);
-      const fallidos = [];
-
-      for (let bi = 0; bi < lotes.length; bi++) {
-        const batch = lotes[bi];
-        const results = await Promise.allSettled(
-          batch.map(f => DBX.download(`/causas/${f.name}`))
-        );
-        results.forEach((r, idx) => {
-          if (r.status === 'fulfilled' && r.value) {
-            const c = r.value;
-            nuevas.push({
-              id_hex:  c.id_hex,
-              estado:  c.estado,
-              ts_ingreso: c.historial?.[0]?.fecha || '',
-              ...c.datos,
-              _causa_json: c
-            });
-          } else {
-            fallidos.push(batch[idx]);
-          }
-        });
-        // Actualizar progreso
-        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-          <span class="icon">⏳</span><p>Cargando causas... ${nuevas.length}/${causaFiles.length}${intento > 0 ? ' (reintento '+intento+')' : ''}</p>
-        </div></td></tr>`;
-      }
-
-      pendientes = fallidos;
-      intento++;
-      if (pendientes.length > 0 && intento < maxIntentos) {
-        await new Promise(r => setTimeout(r, 1000)); // esperar 1s antes de reintentar
-      }
-    }
-    if (pendientes.length > 0) console.warn(`Dropbox: ${pendientes.length} causas no se pudieron cargar después de ${maxIntentos} intentos`);
-
-    // Reemplazar array completo de una sola vez (sin race condition)
-    nuevas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
-    causas = nuevas;
     _causasCargadas = true;
     renderCausas();
     buildDashboard();
     renderNotificaciones();
 
   } catch(err) {
-    console.error('Error cargando causas:', err);
+    console.error('Error cargando INDEX.json:', err);
     tbody.innerHTML = `<tr><td colspan="8"><div class="alert alert-danger">
-      ❌ Error al cargar causas desde Dropbox: ${err.message}
+      ❌ Error al cargar causas: ${err.message}
     </div></td></tr>`;
   } finally {
     _cargando = false;
+  }
+}
+
+// Actualiza INDEX.json en Dropbox con el estado actual de causas[]
+async function actualizarIndex() {
+  if (!DBX.isConfigured()) return;
+  const index = causas.map(c => ({
+    id_hex:           c.id_hex,
+    estado:           c.estado,
+    rol:              c.rol || '',
+    nro_solicitud:    c.nro_solicitud || c.n_solicitud || '',
+    demandado:        c.demandado || '',
+    rut:              c.rut || '',
+    direccion:        c.direccion || '',
+    tipo_diligencia:  c.tipo_diligencia || '',
+    fecha_solicitud:  c.fecha_solicitud || '',
+    estudio_juridico: c.estudio_juridico || c.estudio || '',
+    notificar_a:      c.notificar_a || '',
+    demandante:       c.demandante || '',
+    ciudad:           c.ciudad || 'Antofagasta',
+    ts_ingreso:       c.ts_ingreso || '',
+  }));
+  try {
+    await DBX.upload('/causas/INDEX.json', index);
+  } catch(e) {
+    console.warn('Error actualizando INDEX.json:', e);
+  }
+}
+
+// Descarga el _CAUSA.json completo de una causa bajo demanda
+async function cargarCausaCompleta(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return null;
+  if (c._causa_json) return c._causa_json;  // ya en caché
+
+  if (!DBX.isConfigured()) return null;
+
+  try {
+    const data = await DBX.download(`/causas/${hex}_CAUSA.json`);
+    if (data) {
+      c._causa_json = data;
+      // Sincronizar estado por si cambió
+      c.estado = data.estado;
+    }
+    return data;
+  } catch(err) {
+    console.error(`Error descargando ${hex}_CAUSA.json:`, err);
+    return null;
   }
 }
 
@@ -2238,7 +2260,19 @@ function imprimirCausa(hex) {
   if (!c) { showToast('⚠ Causa no encontrada', 'warn'); return; }
   closeModal();
   poblarFormularioFisico(c);
-  setTimeout(() => window.print(), 200);
+  setTimeout(() => window.print(), 250);
+}
+
+// Carga _causa_json si no está en caché, retorna la causa o null
+async function asegurarCausaCompleta(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) { showToast('⚠ Causa no encontrada', 'warn'); return null; }
+  if (!c._causa_json) {
+    showToast('⏳ Cargando causa...', 'info');
+    await cargarCausaCompleta(hex);
+  }
+  if (!c._causa_json) { showToast('❌ No se pudo cargar la causa', 'error'); return null; }
+  return c;
 }
 
 function closeModal() {
@@ -2300,8 +2334,8 @@ function renderValidacion() {
 }
 
 async function validarCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c || !c._causa_json) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
 
   const payload = c._causa_json;
   payload.estado = 'validada';
@@ -2323,6 +2357,7 @@ async function validarCausa(hex) {
   try {
     await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
     c.estado = 'validada';
+    actualizarIndex();
     renderValidacion();
     buildDashboard();
     renderNotificaciones();
@@ -2362,8 +2397,8 @@ async function confirmarDevolver(hex) {
     return;
   }
 
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c || !c._causa_json) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
 
   const payload = c._causa_json;
   payload.historial.push({
@@ -2387,6 +2422,7 @@ async function confirmarDevolver(hex) {
 
   try {
     await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+    actualizarIndex();
     closeModal();
     renderValidacion();
     renderNotificaciones();
@@ -2488,6 +2524,11 @@ async function generarRuta() {
   const seleccion = [];
 
   try {
+    // Cargar _causa_json de todas las seleccionadas
+    for (const hex of rutaSeleccionadas) {
+      await cargarCausaCompleta(hex);
+    }
+
     for (const hex of rutaSeleccionadas) {
       const c = causas.find(x => x.id_hex === hex);
       if (!c || !c._causa_json) continue;
@@ -2521,6 +2562,7 @@ async function generarRuta() {
     }
 
     rutaSeleccionadas.clear();
+    actualizarIndex();
     renderRuta();
     buildDashboard();
     showToast(`🗺 Ruta generada con ${seleccion.length} causa${seleccion.length !== 1 ? 's' : ''}`, 'success');
@@ -2591,11 +2633,10 @@ function calcNotificaciones() {
   const notifs = [];
 
   if (perfil === 'padawan') {
-    // Causas devueltas por Jedi/Darth con comentario
+    // Causas devueltas: solo se detectan si _causa_json ya está cargado
     causas.forEach(c => {
       if (!c._causa_json?.historial) return;
-      const hist = c._causa_json.historial;
-      const devueltas = hist.filter(h => h.accion === 'devuelta');
+      const devueltas = c._causa_json.historial.filter(h => h.accion === 'devuelta');
       devueltas.forEach(h => {
         notifs.push({
           icon: '↩',
