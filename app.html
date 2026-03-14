@@ -815,7 +815,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
             <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
-            <button class="btn btn-primary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
+            <button class="btn btn-secondary btn-sm" id="btn-guardar" disabled>💾 Borrador</button>
+            <button class="btn btn-primary btn-sm" id="btn-guardar-enviar" disabled>📤 Guardar y enviar</button>
           </div>
         </div>
 
@@ -829,7 +830,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span1" id="fw-fecha_solicitud">
-                    <label>Fecha Solicitud <span class="req">*</span></label>
+                    <label>Fecha Solicitud</label>
                     <input type="date" name="fecha_solicitud" id="f-fecha_solicitud">
                     <span class="error-msg">Obligatorio</span>
                   </div>
@@ -855,12 +856,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <span class="error-msg">Seleccione tribunal</span>
                   </div>
                   <div class="field span1" id="fw-estudio">
-                    <label>Estudio Jurídico <span class="req">*</span></label>
+                    <label>Estudio Jurídico</label>
                     <input type="text" name="estudio" id="f-estudio" placeholder="Nombre del estudio" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-tipo_diligencia">
-                    <label>Tipo Diligencia <span class="req">*</span></label>
+                    <label>Tipo Diligencia</label>
                     <select name="tipo_diligencia" id="f-tipo_diligencia">
                       <option value="">— Seleccionar —</option>
                       <optgroup label="── Alzamiento ──">
@@ -920,12 +921,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="card-body">
                 <div class="form-grid">
                   <div class="field span1" id="fw-demandante">
-                    <label>Demandante <span class="req">*</span></label>
+                    <label>Demandante</label>
                     <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-demandado">
-                    <label>Demandado <span class="req">*</span></label>
+                    <label>Demandado</label>
                     <input type="text" name="demandado" id="f-demandado" placeholder="Nombre completo" autocomplete="off">
                     <span class="error-msg">Obligatorio</span>
                   </div>
@@ -1055,6 +1056,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </select>
           <select id="filter-estado">
             <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option>
             <option value="pendiente_validacion">Pendiente validación</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
@@ -1663,8 +1665,9 @@ function buildDashboard() {
   }
 
   const stats = {
+    borrador:             causas.filter(c => c.estado === 'borrador').length,
     pendiente_validacion: causas.filter(c => c.estado === 'pendiente_validacion').length,
-    validada:             causas.filter(c => c.estado === 'validada').length,
+    validada:             causas.filter(c => c.estado === 'validada' || c.estado === 'borrador').length,
     en_ruta:              causas.filter(c => c.estado === 'en_ruta').length,
     resultado_registrado: causas.filter(c => c.estado === 'resultado_registrado').length,
     lista_para_estampe:   causas.filter(c => c.estado === 'lista_para_estampe').length,
@@ -1677,6 +1680,10 @@ function buildDashboard() {
     <div class="stat-card">
       <div class="stat-value">${total}</div>
       <div class="stat-label">Total causas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--muted)">${stats.borrador}</div>
+      <div class="stat-label">Borradores</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" style="color:var(--accent)">${stats.pendiente_validacion}</div>
@@ -1722,8 +1729,7 @@ function buildDashboard() {
 // ══════════════════════════════════════════════
 // FORMULARIO INGRESO
 // ══════════════════════════════════════════════
-const REQUIRED_FIELDS = ['fecha_solicitud','n_solicitud','rol','tribunal',
-  'tipo_diligencia','estudio','demandante','demandado','notificar_a','direccion'];
+const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','notificar_a','direccion'];
 const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
 
 let currentHex = null;
@@ -1785,10 +1791,12 @@ function updateProgress() {
     missingEl.textContent = '✓ Campos completos';
     missingEl.style.color = 'var(--green)';
     document.getElementById('btn-guardar').disabled = false;
+    document.getElementById('btn-guardar-enviar').disabled = false;
   } else {
     missingEl.textContent = 'Faltan: ' + missing.map(id => labelMap[id] || id).join(', ');
     missingEl.style.color = 'var(--muted)';
     document.getElementById('btn-guardar').disabled = true;
+    document.getElementById('btn-guardar-enviar').disabled = true;
   }
 }
 
@@ -1877,15 +1885,20 @@ updateProgress();
 recalcHex();
 
 // ── GUARDAR ──
-document.getElementById('btn-guardar').addEventListener('click', async () => {
+document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('borrador'));
+document.getElementById('btn-guardar-enviar').addEventListener('click', () => guardarCausa('pendiente_validacion'));
+
+async function guardarCausa(estadoInicial) {
   let ok = true;
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
 
+  const accion = estadoInicial === 'borrador' ? 'borrador' : 'ingreso';
+
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
     id_hex:  currentHex,
-    estado:  'pendiente_validacion',
+    estado:  estadoInicial,
     datos: {
       fecha_solicitud:   fval('fecha_solicitud'),
       nro_solicitud:     fval('n_solicitud'),
@@ -1906,7 +1919,7 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
     },
     historial: [
       {
-        accion:  'ingreso',
+        accion:  accion,
         fecha:   new Date().toISOString(),
         usuario: currentUser.nombre
       }
@@ -1929,13 +1942,18 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
 
   // UI: estado de carga
   const btnG = document.getElementById('btn-guardar');
+  const btnE = document.getElementById('btn-guardar-enviar');
   btnG.disabled = true;
-  btnG.textContent = '⏳ Subiendo…';
+  btnE.disabled = true;
+  const btnActivo = estadoInicial === 'borrador' ? btnG : btnE;
+  btnActivo.textContent = '⏳ Subiendo…';
 
   try {
     await DBX.upload(dbxPath, payload);
-    showToast('✅ Causa guardada en Dropbox: ' + currentHex.slice(0,8) + '…', 'success');
-    // Agregar a memoria local para actualizar la vista sin releer Dropbox
+    const msg = estadoInicial === 'borrador'
+      ? '💾 Borrador guardado: ' + currentHex.slice(0,8) + '…'
+      : '📤 Causa enviada a revisión: ' + currentHex.slice(0,8) + '…';
+    showToast(msg, 'success');
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha,
       _causa_json: payload });
@@ -1946,12 +1964,13 @@ document.getElementById('btn-guardar').addEventListener('click', async () => {
   } catch(err) {
     console.error('Error Dropbox:', err);
     showToast('❌ Error al guardar: ' + err.message, 'error');
-    // NO limpiar formulario en caso de error
   } finally {
     btnG.disabled = false;
-    btnG.textContent = '💾 Guardar';
+    btnE.disabled = false;
+    btnG.textContent = '💾 Borrador';
+    btnE.textContent = '📤 Guardar y enviar';
   }
-});
+}
 
 // ── LIMPIAR ──
 document.getElementById('btn-limpiar').addEventListener('click', () => {
@@ -2195,8 +2214,8 @@ async function cargarCausaCompleta(hex) {
 
 // Estados visibles por perfil
 const ESTADOS_POR_PERFIL = {
-  padawan: ['pendiente_validacion', 'validada', 'en_ruta'],
-  jedi:    ['pendiente_validacion', 'en_ruta', 'resultado_registrado'],
+  padawan: ['borrador', 'pendiente_validacion', 'validada', 'en_ruta'],
+  jedi:    ['pendiente_validacion'],
   darth:   null  // todos
 };
 
@@ -2261,25 +2280,119 @@ function verCausa(hex) {
   if (!c) return;
   document.getElementById('modal-title').textContent = 'Causa — ' + (c.rol || hex.slice(0,8));
   document.getElementById('modal-body').innerHTML = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
-      <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol}</strong></div>
-      <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud}</span></div>
-      <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal}</div>
-      <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
-      <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante}</div>
-      <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado}</div>
-      <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a}</div>
-      <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion}</div>
-      <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
-      <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
+    <div style="display:flex; gap:1rem; align-items:flex-start;">
+      <div style="flex:1;">
+        <div id="modal-campos" style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
+          <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol || '—'}</strong></div>
+          <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud || c.nro_solicitud || '—'}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
+          <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
+          <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
+          <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
+        </div>
+        ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
+      </div>
+      <div id="modal-qr" style="width:100px; height:100px; flex-shrink:0;"></div>
     </div>
-    ${c.observacion ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion}</div>` : ''}
   `;
+  // Generar QR en el modal
+  const qrEl = document.getElementById('modal-qr');
+  try { new QRCode(qrEl, { text: c.id_hex, width: 100, height: 100, colorDark:'#0d1b2a', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
+
   document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>
     <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
   `;
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+function editarCausa(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+
+  const campos = [
+    ['rol', 'ROL', c.rol],
+    ['n_solicitud', 'N° Solicitud', c.n_solicitud || c.nro_solicitud],
+    ['tribunal', 'Tribunal', c.tribunal],
+    ['demandante', 'Demandante', c.demandante],
+    ['demandado', 'Demandado', c.demandado],
+    ['rut', 'RUT', c.rut],
+    ['direccion', 'Dirección', c.direccion],
+    ['notificar_a', 'Notificar a', c.notificar_a],
+    ['tipo_diligencia', 'Tipo Diligencia', c.tipo_diligencia],
+    ['piezas', 'Piezas', c.piezas],
+    ['observacion', 'Observación', c.observacion || c.comentario],
+  ];
+
+  document.getElementById('modal-campos').innerHTML = campos.map(([key, label, val]) =>
+    `<div class="${key === 'direccion' || key === 'notificar_a' || key === 'piezas' || key === 'observacion' ? 'span2' : ''}">
+      <label style="font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;">${label}</label>
+      <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="font-size:13px; margin-top:2px;">
+    </div>`
+  ).join('');
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}')">💾 Guardar cambios</button>
+    <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
+  `;
+}
+
+async function guardarEdicion(hex) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+
+  const camposEditables = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
+    'direccion','notificar_a','tipo_diligencia','piezas','observacion'];
+  const modificados = [];
+  const payload = c._causa_json;
+
+  camposEditables.forEach(key => {
+    const el = document.getElementById('edit-' + key);
+    if (!el) return;
+    const nuevo = el.value.trim();
+    // Mapear al nombre correcto en datos
+    const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
+                     key === 'observacion' ? 'comentario' : key;
+    const anterior = (payload.datos[datosKey] || '').toString();
+    if (nuevo !== anterior) {
+      modificados.push(key);
+      payload.datos[datosKey] = nuevo;
+      // Actualizar también en el array local
+      c[key] = nuevo;
+      if (key === 'n_solicitud') { c.nro_solicitud = nuevo; c.n_solicitud = nuevo; }
+    }
+  });
+
+  if (modificados.length === 0) {
+    showToast('Sin cambios', 'info');
+    verCausa(hex);
+    return;
+  }
+
+  payload.historial.push({
+    accion: 'edicion',
+    fecha:  new Date().toISOString(),
+    usuario: currentUser.nombre,
+    campos_modificados: modificados
+  });
+
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+      actualizarIndex();
+      showToast(`✅ ${modificados.length} campo${modificados.length > 1 ? 's' : ''} actualizado${modificados.length > 1 ? 's' : ''}`, 'success');
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      return;
+    }
+  }
+
+  verCausa(hex);
 }
 
 function imprimirCausa(hex) {
@@ -2482,9 +2595,9 @@ async function cargarRuta() {
 }
 
 function renderRuta() {
-  const validadas = causas.filter(c => c.estado === 'validada');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
   document.getElementById('ruta-count').textContent =
-    `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} validada${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''}`;
+    `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''} para ruta`;
 
   // Mostrar botón export si hay causas en_ruta
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
@@ -2521,12 +2634,12 @@ function toggleRutaCheck(hex, checked) {
   else rutaSeleccionadas.delete(hex);
   actualizarContadorRuta();
   // Sync select-all checkbox
-  const validadas = causas.filter(c => c.estado === 'validada');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
   document.getElementById('ruta-check-all').checked = rutaSeleccionadas.size === validadas.length && validadas.length > 0;
 }
 
 function toggleAllRuta(checked) {
-  const validadas = causas.filter(c => c.estado === 'validada');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
   rutaSeleccionadas.clear();
   if (checked) validadas.forEach(c => rutaSeleccionadas.add(c.id_hex));
   document.querySelectorAll('#ruta-body .ruta-check').forEach(cb => cb.checked = checked);
@@ -2753,6 +2866,7 @@ function tipoBadge(tipo) {
 
 function estadoBadge(estado) {
   const map = {
+    'borrador':             ['tag-gray','Borrador'],
     'pendiente_validacion': ['tag-yellow','Pdte. validación'],
     'validada':             ['tag-green','Validada'],
     'en_ruta':              ['tag-blue','En ruta'],
