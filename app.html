@@ -1284,7 +1284,7 @@ const DBX = {
   },
 
   // Lista una carpeta y retorna array de FileMetadata
-  async listFolder(path, limit = 200) {
+  async listFolder(path) {
     const token = await this.getToken();
     let entries = [];
     let cursor  = null;
@@ -1296,7 +1296,7 @@ const DBX = {
         : 'https://api.dropboxapi.com/2/files/list_folder';
       const body = cursor
         ? JSON.stringify({ cursor })
-        : JSON.stringify({ path, limit });
+        : JSON.stringify({ path, limit: 2000 });
 
       const resp = await fetch(url, {
         method: 'POST',
@@ -1311,7 +1311,6 @@ const DBX = {
       entries.push(...data.entries.filter(e => e['.tag'] === 'file'));
       hasMore = data.has_more;
       cursor  = data.cursor;
-      if (entries.length >= limit) { hasMore = false; }
     }
     return entries;
   },
