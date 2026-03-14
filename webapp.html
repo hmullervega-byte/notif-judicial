@@ -1341,9 +1341,67 @@ async function loadCausa(idHex) {
   document.getElementById('loading-causa').classList.add('active');
   showScreen('scan');
   try {
-    const causasArr = await dbxGet('/causas.json');
+    // Intentar INDEX.json primero, fallback a causas.json, luego _CAUSA.json individual
+    let causaData = null;
+    try {
+      const index = await dbxGet('/causas/INDEX.json');
+      if (Array.isArray(index)) {
+        const found = index.find(c => c.id_hex === idHex);
+        if (found) {
+          // Mapear campos de INDEX.json al formato que usa fillCausa
+          causaData = {
+            id_hex:    found.id_hex,
+            rol:       found.rol,
+            tribunal:  found.tribunal || '',
+            demandante:found.demandante || '',
+            demandado: found.demandado || '',
+            rut:       found.rut || '',
+            notif_a:   found.notificar_a || found.notif_a || '',
+            direccion: found.direccion || '',
+            estudio:   found.estudio_juridico || found.estudio || '',
+            piezas:    found.piezas || '',
+            n_solicitud: found.nro_solicitud || '',
+            ciudad:    found.ciudad || 'Antofagasta',
+          };
+        }
+      }
+    } catch(e) { console.warn('INDEX.json no disponible, intentando causas.json'); }
+
+    // Fallback 1: causas.json (legacy)
+    if (!causaData) {
+      try {
+        const causasArr = await dbxGet('/causas.json');
+        if (Array.isArray(causasArr)) {
+          causaData = causasArr.find(c => c.id_hex === idHex) || null;
+        }
+      } catch(e) { console.warn('causas.json no disponible'); }
+    }
+
+    // Fallback 2: _CAUSA.json individual
+    if (!causaData) {
+      try {
+        const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+        if (individual && individual.datos) {
+          const d = individual.datos;
+          causaData = {
+            id_hex:    individual.id_hex,
+            rol:       d.rol || '',
+            tribunal:  d.tribunal || '',
+            demandante:d.demandante || '',
+            demandado: d.demandado || '',
+            rut:       d.rut || '',
+            notif_a:   d.notificar_a || d.notif_a || '',
+            direccion: d.direccion || '',
+            estudio:   d.estudio_juridico || d.estudio || '',
+            piezas:    d.piezas || '',
+            n_solicitud: d.nro_solicitud || '',
+            ciudad:    d.ciudad || 'Antofagasta',
+          };
+        }
+      } catch(e) { console.warn('_CAUSA.json individual no disponible'); }
+    }
+
     document.getElementById('loading-causa').classList.remove('active');
-    const causaData = causasArr.find(c => c.id_hex === idHex);
     if (!causaData) { showToast('⚠ Causa no encontrada: ' + idHex); return; }
     state.causaData = causaData;
     fillCausa(idHex, causaData);
