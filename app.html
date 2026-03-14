@@ -1425,9 +1425,9 @@ document.getElementById('btn-config-save').addEventListener('click', () => {
 // USUARIOS — placeholder, se reemplaza al final
 // ══════════════════════════════════════════════
 const USERS = {
-  'marco':  { pass: 'pass123', perfil: 'padawan', nombre: 'Marco' },
-  'receptora': { pass: 'pass456', perfil: 'jedi',    nombre: 'Receptora' },
-  'helmuth':{ pass: 'pass789', perfil: 'darth',   nombre: 'Helmuth' }
+  'marco':  { pass: '', perfil: 'padawan', nombre: 'Marco' },
+  'receptora': { pass: '', perfil: 'jedi',    nombre: 'Receptora' },
+  'helmuth':{ pass: '', perfil: 'darth',   nombre: 'Helmuth' }
 };
 
 const PERFILES = {
@@ -1481,14 +1481,11 @@ document.getElementById('btn-login').addEventListener('click', doLogin);
 
 function doLogin() {
   const user = document.getElementById('login-user').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value;
   const err  = document.getElementById('login-error');
 
-  if (!USERS[user] || USERS[user].pass !== pass) {
-    err.textContent = 'Usuario o contraseña incorrectos';
-    document.getElementById('login-pass').classList.add('err');
+  if (!USERS[user]) {
+    err.textContent = 'Usuario no existe';
     document.getElementById('login-user').classList.add('err');
-    // shake
     const box = document.querySelector('.login-box');
     box.style.animation = 'none'; box.offsetHeight;
     box.style.animation = 'shake .35s ease';
@@ -2096,36 +2093,48 @@ async function cargarCausasDropbox(forzar = false) {
 
     // Descargar en paralelo (máx 10 simultáneas para no saturar)
     const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
-    const chunks = chunk(causaFiles, 20);
+    const chunks = chunk(causaFiles, 10);
     const nuevas = [];
+    let pendientes = [...causaFiles];
+    let intento = 0;
+    const maxIntentos = 3;
 
-    let fallos = 0;
-    for (let bi = 0; bi < chunks.length; bi++) {
-      const batch = chunks[bi];
-      const results = await Promise.allSettled(
-        batch.map(f => DBX.download(`/causas/${f.name}`))
-      );
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value) {
-          const c = r.value;
-          nuevas.push({
-            id_hex:  c.id_hex,
-            estado:  c.estado,
-            ts_ingreso: c.historial?.[0]?.fecha || '',
-            ...c.datos,
-            _causa_json: c
-          });
-        } else {
-          fallos++;
-        }
-      });
-      // Actualizar progreso en UI
-      const pct = Math.round(((bi + 1) / chunks.length) * 100);
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-        <span class="icon">⏳</span><p>Cargando causas... ${nuevas.length}/${causaFiles.length} (${pct}%)</p>
-      </div></td></tr>`;
+    while (pendientes.length > 0 && intento < maxIntentos) {
+      const lotes = chunk(pendientes, 10);
+      const fallidos = [];
+
+      for (let bi = 0; bi < lotes.length; bi++) {
+        const batch = lotes[bi];
+        const results = await Promise.allSettled(
+          batch.map(f => DBX.download(`/causas/${f.name}`))
+        );
+        results.forEach((r, idx) => {
+          if (r.status === 'fulfilled' && r.value) {
+            const c = r.value;
+            nuevas.push({
+              id_hex:  c.id_hex,
+              estado:  c.estado,
+              ts_ingreso: c.historial?.[0]?.fecha || '',
+              ...c.datos,
+              _causa_json: c
+            });
+          } else {
+            fallidos.push(batch[idx]);
+          }
+        });
+        // Actualizar progreso
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+          <span class="icon">⏳</span><p>Cargando causas... ${nuevas.length}/${causaFiles.length}${intento > 0 ? ' (reintento '+intento+')' : ''}</p>
+        </div></td></tr>`;
+      }
+
+      pendientes = fallidos;
+      intento++;
+      if (pendientes.length > 0 && intento < maxIntentos) {
+        await new Promise(r => setTimeout(r, 1000)); // esperar 1s antes de reintentar
+      }
     }
-    if (fallos > 0) console.warn(`Dropbox: ${fallos} descargas fallidas de ${causaFiles.length}`);
+    if (pendientes.length > 0) console.warn(`Dropbox: ${pendientes.length} causas no se pudieron cargar después de ${maxIntentos} intentos`);
 
     // Reemplazar array completo de una sola vez (sin race condition)
     nuevas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
