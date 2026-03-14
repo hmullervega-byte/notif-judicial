@@ -1886,9 +1886,8 @@ updateProgress();
 recalcHex();
 
 // ── GUARDAR ──
-console.log('DEBUG: registrando listeners guardar...');
-document.getElementById('btn-guardar').addEventListener('click', () => { console.log('DEBUG: click borrador'); guardarCausa('borrador'); });
-document.getElementById('btn-guardar-enviar').addEventListener('click', () => { console.log('DEBUG: click enviar'); guardarCausa('pendiente_validacion'); });
+document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('borrador'));
+document.getElementById('btn-guardar-enviar').addEventListener('click', () => guardarCausa('pendiente_validacion'));
 
 async function guardarCausa(estadoInicial) {
   let ok = true;
@@ -1896,9 +1895,6 @@ async function guardarCausa(estadoInicial) {
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
 
   const accion = estadoInicial === 'borrador' ? 'borrador' : 'ingreso';
-
-  // DEBUG: verificar campos antes de armar payload
-  console.log('DEBUG guardar — tribunal:', JSON.stringify(fval('tribunal')), '| piezas:', JSON.stringify(fval('piezas')));
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
@@ -1930,8 +1926,6 @@ async function guardarCausa(estadoInicial) {
       }
     ]
   };
-
-  console.log('DEBUG payload.datos:', JSON.stringify(payload.datos, null, 2));
 
   // Subir a Dropbox /causas/{id_hex}_CAUSA.json
   const dbxPath = `/causas/${currentHex}_CAUSA.json`;
