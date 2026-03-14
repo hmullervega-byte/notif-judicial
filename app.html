@@ -1746,8 +1746,22 @@ document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso se
     el.addEventListener('blur',   () => validateField(el.name));
   });
 
-// Tipo diligencia → observación obligatoria
-document.getElementById('f-tipo_diligencia').addEventListener('change', updateObsRequired);
+// Tipo diligencia → observación obligatoria + autocompletar piezas
+document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); });
+document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
+document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
+
+const PIEZAS_EJE = 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia';
+
+function autocompletarPiezas() {
+  const rol = fval('rol').toUpperCase();
+  const tipo = fval('tipo_diligencia');
+  const piezas = document.getElementById('f-piezas');
+  // Solo autocompletar si piezas está vacío y ROL empieza por C- y tipo es ejecutiva general
+  if (rol.startsWith('C-') && tipo === 'NOT-DEMANDA-EJE-GENERAL' && !piezas.value.trim()) {
+    piezas.value = PIEZAS_EJE;
+  }
+}
 
 function fval(name) {
   const el = document.getElementById('f-' + name);
