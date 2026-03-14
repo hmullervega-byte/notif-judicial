@@ -2083,7 +2083,9 @@ async function cargarCausasDropbox(forzar = false) {
 
   try {
     // Descargar INDEX.json (1 sola petición)
+    console.time('INDEX.json descarga');
     const index = await DBX.download('/causas/INDEX.json');
+    console.timeEnd('INDEX.json descarga');
 
     if (!index || !Array.isArray(index) || index.length === 0) {
       causas = [];
