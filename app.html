@@ -1034,7 +1034,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-sub" id="causas-count">Cargando…</div>
           </div>
           <div style="display:flex; gap:.5rem;">
-            <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox()" title="Recargar desde Dropbox">🔄 Recargar</button>
+            <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox(true)" title="Recargar desde Dropbox">🔄 Recargar</button>
             <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
           </div>
         </div>
@@ -1099,7 +1099,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Validar Causas</div>
             <div class="page-sub" id="validacion-count">Cargando...</div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="cargarValidacion()">🔄 Recargar</button>
+          <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarValidacion()">🔄 Recargar</button>
         </div>
 
         <div class="card">
@@ -1139,7 +1139,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Seleccionar Ruta</div>
             <div class="page-sub" id="ruta-count">Cargando...</div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="cargarRuta()">🔄 Recargar</button>
+          <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarRuta()">🔄 Recargar</button>
         </div>
 
         <div class="ruta-toolbar">
@@ -2058,13 +2058,25 @@ function poblarFormularioFisico(causa) {
 // LISTADO CAUSAS
 // ══════════════════════════════════════════════
 // ── CARGAR CAUSAS DESDE DROPBOX ──
-// Se ejecuta al entrar a la vista Causas
-async function cargarCausasDropbox() {
+// Guard anti-concurrencia + caché
+let _cargando = false;
+let _causasCargadas = false;
+
+async function cargarCausasDropbox(forzar = false) {
   if (!DBX.isConfigured()) {
-    // Modo demo: causas solo en memoria de sesión
     renderCausas();
     return;
   }
+
+  // Si ya están cargadas y no se fuerza recarga, solo renderizar
+  if (_causasCargadas && !forzar) {
+    renderCausas();
+    return;
+  }
+
+  // Si ya hay una carga en curso, no lanzar otra
+  if (_cargando) return;
+  _cargando = true;
 
   const tbody = document.getElementById('causas-body');
   tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
@@ -2077,6 +2089,7 @@ async function cargarCausasDropbox() {
 
     if (causaFiles.length === 0) {
       causas = [];
+      _causasCargadas = true;
       renderCausas();
       return;
     }
@@ -2084,7 +2097,7 @@ async function cargarCausasDropbox() {
     // Descargar en paralelo (máx 10 simultáneas para no saturar)
     const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
     const chunks = chunk(causaFiles, 10);
-    causas = [];
+    const nuevas = [];
 
     for (const batch of chunks) {
       const results = await Promise.allSettled(
@@ -2093,8 +2106,7 @@ async function cargarCausasDropbox() {
       results.forEach((r, i) => {
         if (r.status === 'fulfilled' && r.value) {
           const c = r.value;
-          // Aplanar estructura para tabla: id_hex + estado + datos.*
-          causas.push({
+          nuevas.push({
             id_hex:  c.id_hex,
             estado:  c.estado,
             ts_ingreso: c.historial?.[0]?.fecha || '',
@@ -2105,8 +2117,10 @@ async function cargarCausasDropbox() {
       });
     }
 
-    // Ordenar por ts_ingreso desc
-    causas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+    // Reemplazar array completo de una sola vez (sin race condition)
+    nuevas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+    causas = nuevas;
+    _causasCargadas = true;
     renderCausas();
     buildDashboard();
     renderNotificaciones();
@@ -2116,6 +2130,8 @@ async function cargarCausasDropbox() {
     tbody.innerHTML = `<tr><td colspan="8"><div class="alert alert-danger">
       ❌ Error al cargar causas desde Dropbox: ${err.message}
     </div></td></tr>`;
+  } finally {
+    _cargando = false;
   }
 }
 
@@ -2217,8 +2233,7 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 // VALIDACIÓN JEDI
 // ══════════════════════════════════════════════
 async function cargarValidacion() {
-  // Asegurar que las causas estén cargadas desde Dropbox
-  if (causas.length === 0 && DBX.isConfigured()) {
+  if (!_causasCargadas && DBX.isConfigured()) {
     const tbody = document.getElementById('validacion-body');
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
       <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
@@ -2372,7 +2387,7 @@ async function confirmarDevolver(hex) {
 let rutaSeleccionadas = new Set();
 
 async function cargarRuta() {
-  if (causas.length === 0 && DBX.isConfigured()) {
+  if (!_causasCargadas && DBX.isConfigured()) {
     const tbody = document.getElementById('ruta-body');
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
       <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
