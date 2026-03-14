@@ -2327,9 +2327,10 @@ function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
@@ -2353,26 +2354,55 @@ function editarCausa(hex) {
   const c = causas.find(x => x.id_hex === hex);
   if (!c) return;
 
-  const campos = [
+  // Clonar opciones del select tribunal del formulario
+  const tribOpts = Array.from(document.getElementById('f-tribunal').options)
+    .map(o => `<option value="${o.value}" ${o.value === (c.tribunal||'') ? 'selected':''}>${o.textContent}</option>`).join('');
+
+  // Clonar opciones del select tipo_diligencia del formulario
+  const tipoSelect = document.getElementById('f-tipo_diligencia');
+  let tipoOpts = '';
+  for (const child of tipoSelect.children) {
+    if (child.tagName === 'OPTION') {
+      tipoOpts += `<option value="${child.value}" ${child.value === (c.tipo_diligencia||'') ? 'selected':''}>${child.textContent}</option>`;
+    } else if (child.tagName === 'OPTGROUP') {
+      tipoOpts += `<optgroup label="${child.label}">`;
+      for (const o of child.children) {
+        tipoOpts += `<option value="${o.value}" ${o.value === (c.tipo_diligencia||'') ? 'selected':''}>${o.textContent}</option>`;
+      }
+      tipoOpts += '</optgroup>';
+    }
+  }
+
+  const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;';
+  const inp = 'font-size:13px; margin-top:2px;';
+
+  const camposTexto = [
     ['rol', 'ROL', c.rol],
     ['n_solicitud', 'N° Solicitud', c.n_solicitud || c.nro_solicitud],
-    ['tribunal', 'Tribunal', c.tribunal],
     ['demandante', 'Demandante', c.demandante],
     ['demandado', 'Demandado', c.demandado],
     ['rut', 'RUT', c.rut],
-    ['direccion', 'Dirección', c.direccion],
-    ['notificar_a', 'Notificar a', c.notificar_a],
-    ['tipo_diligencia', 'Tipo Diligencia', c.tipo_diligencia],
-    ['piezas', 'Piezas', c.piezas],
-    ['observacion', 'Observación', c.observacion || c.comentario],
+    ['estudio', 'Estudio', c.estudio || c.estudio_juridico],
+    ['direccion', 'Dirección', c.direccion, true],
+    ['notificar_a', 'Notificar a', c.notificar_a, true],
+    ['piezas', 'Piezas', c.piezas, true],
+    ['observacion', 'Observación', c.observacion || c.comentario, true],
   ];
 
-  document.getElementById('modal-campos').innerHTML = campos.map(([key, label, val]) =>
-    `<div class="${key === 'direccion' || key === 'notificar_a' || key === 'piezas' || key === 'observacion' ? 'span2' : ''}">
-      <label style="font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;">${label}</label>
-      <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="font-size:13px; margin-top:2px;">
+  let html = '';
+  // Tribunal select
+  html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
+  // Tipo diligencia select
+  html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
+  // Campos texto
+  html += camposTexto.map(([key, label, val, span]) =>
+    `<div class="${span ? 'span2' : ''}">
+      <label style="${lbl}">${label}</label>
+      <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="${inp}">
     </div>`
   ).join('');
+
+  document.getElementById('modal-campos').innerHTML = html;
 
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}')">💾 Guardar cambios</button>
@@ -2385,7 +2415,7 @@ async function guardarEdicion(hex) {
   if (!c) return;
 
   const camposEditables = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
-    'direccion','notificar_a','tipo_diligencia','piezas','observacion'];
+    'estudio','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
   const modificados = [];
   const payload = c._causa_json;
 
@@ -2395,7 +2425,8 @@ async function guardarEdicion(hex) {
     const nuevo = el.value.trim();
     // Mapear al nombre correcto en datos
     const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
-                     key === 'observacion' ? 'comentario' : key;
+                     key === 'observacion' ? 'comentario' :
+                     key === 'estudio' ? 'estudio_juridico' : key;
     const anterior = (payload.datos[datosKey] || '').toString();
     if (nuevo !== anterior) {
       modificados.push(key);
@@ -2403,6 +2434,7 @@ async function guardarEdicion(hex) {
       // Actualizar también en el array local
       c[key] = nuevo;
       if (key === 'n_solicitud') { c.nro_solicitud = nuevo; c.n_solicitud = nuevo; }
+      if (key === 'estudio') { c.estudio_juridico = nuevo; }
     }
   });
 
