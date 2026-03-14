@@ -1528,12 +1528,12 @@ function initApp() {
   // Dashboard
   buildDashboard();
 
-  // Notificaciones (se actualizan cuando las causas estén cargadas)
-  renderNotificaciones();
-
   // Mostrar dashboard por defecto
   showView('view-dashboard');
   setActiveNav('dashboard');
+
+  // Precargar causas en background inmediatamente después del login
+  if (DBX.isConfigured()) cargarCausasDropbox();
 }
 
 // ══════════════════════════════════════════════
@@ -2096,7 +2096,7 @@ async function cargarCausasDropbox(forzar = false) {
 
     // Descargar en paralelo (máx 10 simultáneas para no saturar)
     const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
-    const chunks = chunk(causaFiles, 10);
+    const chunks = chunk(causaFiles, 50);
     const nuevas = [];
 
     for (const batch of chunks) {
