@@ -1751,16 +1751,16 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => { 
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
-const PIEZAS_EJE = 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia';
+const PIEZAS_EJE_C = 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia';
+const PIEZAS_EJE_E = 'de la demanda ejecutiva y la resolución que recae sobre ella, piezas que constan en el tribunal exhortante, conjuntamente con el cúmplase y los demás antecedentes necesarios para su acertada inteligencia';
 
 function autocompletarPiezas() {
   const rol = fval('rol').toUpperCase();
   const tipo = fval('tipo_diligencia');
   const piezas = document.getElementById('f-piezas');
-  // Solo autocompletar si piezas está vacío y ROL empieza por C- y tipo es ejecutiva general
-  if (rol.startsWith('C-') && tipo === 'NOT-DEMANDA-EJE-GENERAL' && !piezas.value.trim()) {
-    piezas.value = PIEZAS_EJE;
-  }
+  if (tipo !== 'NOT-DEMANDA-EJE-GENERAL' || piezas.value.trim()) return;
+  if (rol.startsWith('C-')) piezas.value = PIEZAS_EJE_C;
+  else if (rol.startsWith('E-')) piezas.value = PIEZAS_EJE_E;
 }
 
 function fval(name) {
