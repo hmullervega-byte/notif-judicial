@@ -815,7 +815,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
             <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
-            <button class="btn btn-secondary btn-sm" id="btn-guardar" disabled>💾 Borrador</button>
+            <button class="btn btn-secondary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
             <button class="btn btn-primary btn-sm" id="btn-guardar-enviar" disabled>📤 Guardar y enviar</button>
           </div>
         </div>
@@ -1056,7 +1056,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </select>
           <select id="filter-estado">
             <option value="">Todos los estados</option>
-            <option value="borrador">Borrador</option>
+            <option value="ingresada">Ingresada</option>
             <option value="pendiente_validacion">Pendiente validación</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
@@ -1666,9 +1666,9 @@ function buildDashboard() {
   }
 
   const stats = {
-    borrador:             causas.filter(c => c.estado === 'borrador').length,
+    ingresada:            causas.filter(c => c.estado === 'ingresada').length,
     pendiente_validacion: causas.filter(c => c.estado === 'pendiente_validacion').length,
-    validada:             causas.filter(c => c.estado === 'validada' || c.estado === 'borrador').length,
+    validada:             causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada').length,
     en_ruta:              causas.filter(c => c.estado === 'en_ruta').length,
     resultado_registrado: causas.filter(c => c.estado === 'resultado_registrado').length,
     lista_para_estampe:   causas.filter(c => c.estado === 'lista_para_estampe').length,
@@ -1683,8 +1683,8 @@ function buildDashboard() {
       <div class="stat-label">Total causas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--muted)">${stats.borrador}</div>
-      <div class="stat-label">Borradores</div>
+      <div class="stat-value" style="color:var(--green)">${stats.ingresada}</div>
+      <div class="stat-label">Ingresadas</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" style="color:var(--accent)">${stats.pendiente_validacion}</div>
@@ -1900,7 +1900,7 @@ updateProgress();
 recalcHex();
 
 // ── GUARDAR ──
-document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('borrador'));
+document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('ingresada'));
 document.getElementById('btn-guardar-enviar').addEventListener('click', () => guardarCausa('pendiente_validacion'));
 
 async function guardarCausa(estadoInicial) {
@@ -1908,7 +1908,7 @@ async function guardarCausa(estadoInicial) {
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
 
-  const accion = estadoInicial === 'borrador' ? 'borrador' : 'ingreso';
+  const accion = estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso';
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
@@ -1960,13 +1960,13 @@ async function guardarCausa(estadoInicial) {
   const btnE = document.getElementById('btn-guardar-enviar');
   btnG.disabled = true;
   btnE.disabled = true;
-  const btnActivo = estadoInicial === 'borrador' ? btnG : btnE;
+  const btnActivo = estadoInicial === 'ingresada' ? btnG : btnE;
   btnActivo.textContent = '⏳ Subiendo…';
 
   try {
     await DBX.upload(dbxPath, payload);
-    const msg = estadoInicial === 'borrador'
-      ? '💾 Borrador guardado: ' + currentHex.slice(0,8) + '…'
+    const msg = estadoInicial === 'ingresada'
+      ? '💾 Causa ingresada: ' + currentHex.slice(0,8) + '…'
       : '📤 Causa enviada a revisión: ' + currentHex.slice(0,8) + '…';
     showToast(msg, 'success');
     causas.push({ id_hex: currentHex, estado: payload.estado,
@@ -1982,7 +1982,7 @@ async function guardarCausa(estadoInicial) {
   } finally {
     btnG.disabled = false;
     btnE.disabled = false;
-    btnG.textContent = '💾 Borrador';
+    btnG.textContent = '💾 Guardar';
     btnE.textContent = '📤 Guardar y enviar';
   }
 }
@@ -2231,7 +2231,7 @@ async function cargarCausaCompleta(hex) {
 
 // Estados visibles por perfil
 const ESTADOS_POR_PERFIL = {
-  padawan: ['borrador', 'pendiente_validacion', 'validada', 'en_ruta'],
+  padawan: ['ingresada', 'pendiente_validacion', 'validada', 'en_ruta'],
   jedi:    ['pendiente_validacion'],
   darth:   null  // todos
 };
@@ -2618,7 +2618,7 @@ async function cargarRuta() {
 }
 
 function renderRuta() {
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
   document.getElementById('ruta-count').textContent =
     `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''} para ruta`;
 
@@ -2657,12 +2657,12 @@ function toggleRutaCheck(hex, checked) {
   else rutaSeleccionadas.delete(hex);
   actualizarContadorRuta();
   // Sync select-all checkbox
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
   document.getElementById('ruta-check-all').checked = rutaSeleccionadas.size === validadas.length && validadas.length > 0;
 }
 
 function toggleAllRuta(checked) {
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'borrador');
+  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
   rutaSeleccionadas.clear();
   if (checked) validadas.forEach(c => rutaSeleccionadas.add(c.id_hex));
   document.querySelectorAll('#ruta-body .ruta-check').forEach(cb => cb.checked = checked);
@@ -2898,7 +2898,7 @@ function tipoBadge(tipo) {
 
 function estadoBadge(estado) {
   const map = {
-    'borrador':             ['tag-gray','Borrador'],
+    'ingresada':             ['tag-green','Ingresada'],
     'pendiente_validacion': ['tag-yellow','Pdte. validación'],
     'validada':             ['tag-green','Validada'],
     'en_ruta':              ['tag-blue','En ruta'],
