@@ -1058,7 +1058,10 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="pendiente_validacion">Pendiente validación</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
-            <option value="cerrada">Cerrada</option>
+            <option value="resultado_registrado">Resultado registrado</option>
+            <option value="lista_para_estampe">Lista para estampe</option>
+            <option value="estampada">Estampada</option>
+            <option value="boleta_emitida">Boleta emitida</option>
           </select>
         </div>
 
@@ -1659,10 +1662,16 @@ function buildDashboard() {
     existing.remove();
   }
 
-  const pendientes = causas.filter(c => c.estado === 'pendiente_validacion').length;
-  const validadas  = causas.filter(c => c.estado === 'validada').length;
-  const enRuta     = causas.filter(c => c.estado === 'en_ruta').length;
-  const total      = causas.length;
+  const stats = {
+    pendiente_validacion: causas.filter(c => c.estado === 'pendiente_validacion').length,
+    validada:             causas.filter(c => c.estado === 'validada').length,
+    en_ruta:              causas.filter(c => c.estado === 'en_ruta').length,
+    resultado_registrado: causas.filter(c => c.estado === 'resultado_registrado').length,
+    lista_para_estampe:   causas.filter(c => c.estado === 'lista_para_estampe').length,
+    estampada:            causas.filter(c => c.estado === 'estampada').length,
+    boleta_emitida:       causas.filter(c => c.estado === 'boleta_emitida').length,
+  };
+  const total = causas.length;
 
   document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card">
@@ -1670,16 +1679,24 @@ function buildDashboard() {
       <div class="stat-label">Total causas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--accent)">${pendientes}</div>
-      <div class="stat-label">Pendientes validación</div>
+      <div class="stat-value" style="color:var(--accent)">${stats.pendiente_validacion}</div>
+      <div class="stat-label">Pdte. validación</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--green)">${validadas}</div>
+      <div class="stat-value" style="color:var(--green)">${stats.validada}</div>
       <div class="stat-label">Validadas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--blue)">${enRuta}</div>
+      <div class="stat-value" style="color:var(--blue)">${stats.en_ruta}</div>
       <div class="stat-label">En ruta</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--purple)">${stats.resultado_registrado + stats.lista_para_estampe}</div>
+      <div class="stat-label">Con resultado</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--green)">${stats.estampada + stats.boleta_emitida}</div>
+      <div class="stat-label">Cerradas</div>
     </div>
   `;
 
@@ -2176,12 +2193,22 @@ async function cargarCausaCompleta(hex) {
   }
 }
 
+// Estados visibles por perfil
+const ESTADOS_POR_PERFIL = {
+  padawan: ['pendiente_validacion', 'validada', 'en_ruta'],
+  jedi:    ['pendiente_validacion', 'en_ruta', 'resultado_registrado'],
+  darth:   null  // todos
+};
+
 function renderCausas() {
   const search  = document.getElementById('search-causas').value.toLowerCase();
   const fTipo   = document.getElementById('filter-tipo').value;
   const fEstado = document.getElementById('filter-estado').value;
+  const estadosVisibles = currentUser ? ESTADOS_POR_PERFIL[currentUser.perfil] : null;
 
   let filtered = causas.filter(c => {
+    // Filtro por perfil
+    if (estadosVisibles && !estadosVisibles.includes(c.estado)) return false;
     const matchSearch = !search ||
       c.rol?.toLowerCase().includes(search) ||
       c.demandado?.toLowerCase().includes(search) ||
@@ -2729,9 +2756,10 @@ function estadoBadge(estado) {
     'pendiente_validacion': ['tag-yellow','Pdte. validación'],
     'validada':             ['tag-green','Validada'],
     'en_ruta':              ['tag-blue','En ruta'],
-    'bp_positiva':          ['tag-purple','BP positiva'],
-    'not44_realizada':      ['tag-green','NOT44 realizada'],
-    'cerrada':              ['tag-gray','Cerrada']
+    'resultado_registrado': ['tag-purple','Resultado registrado'],
+    'lista_para_estampe':   ['tag-purple','Lista para estampe'],
+    'estampada':            ['tag-green','Estampada'],
+    'boleta_emitida':       ['tag-gray','Boleta emitida'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
   return `<span class="tag ${cls}">${label}</span>`;
