@@ -815,8 +815,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
             <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
-            <button class="btn btn-secondary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
-            <button class="btn btn-primary btn-sm" id="btn-guardar-enviar" disabled>📤 Guardar y enviar</button>
+            <button class="btn btn-primary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
+            <button class="btn btn-danger btn-sm" id="btn-guardar-enviar" disabled style="font-weight:700;">📤 Enviar a Receptora</button>
           </div>
         </div>
 
@@ -1056,7 +1056,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </select>
           <select id="filter-estado">
             <option value="">Todos los estados</option>
-            <option value="ingresada">Ingresada</option>
             <option value="pendiente_validacion">Pendiente validación</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
@@ -1680,9 +1679,8 @@ function buildDashboard() {
   }
 
   const stats = {
-    ingresada:            causas.filter(c => c.estado === 'ingresada').length,
     pendiente_validacion: causas.filter(c => c.estado === 'pendiente_validacion').length,
-    validada:             causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada').length,
+    validada:             causas.filter(c => c.estado === 'validada').length,
     en_ruta:              causas.filter(c => c.estado === 'en_ruta').length,
     resultado_registrado: causas.filter(c => c.estado === 'resultado_registrado').length,
     lista_para_estampe:   causas.filter(c => c.estado === 'lista_para_estampe').length,
@@ -1695,10 +1693,6 @@ function buildDashboard() {
     <div class="stat-card">
       <div class="stat-value">${total}</div>
       <div class="stat-label">Total causas</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color:var(--green)">${stats.ingresada}</div>
-      <div class="stat-label">Ingresadas</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" style="color:var(--accent)">${stats.pendiente_validacion}</div>
@@ -1914,8 +1908,22 @@ updateProgress();
 recalcHex();
 
 // ── GUARDAR ──
-document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('ingresada'));
-document.getElementById('btn-guardar-enviar').addEventListener('click', () => guardarCausa('pendiente_validacion'));
+document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('validada'));
+document.getElementById('btn-guardar-enviar').addEventListener('click', () => enviarAReceptora());
+
+function enviarAReceptora() {
+  const obs = fval('observacion');
+  if (!obs) {
+    showToast('⚠ Escriba un comentario en Observación para la Receptora', 'warn');
+    const wrapper = document.getElementById('fw-observacion');
+    if (wrapper) wrapper.classList.add('has-error');
+    document.getElementById('f-observacion').focus();
+    return;
+  }
+  const wrapper = document.getElementById('fw-observacion');
+  if (wrapper) wrapper.classList.remove('has-error');
+  guardarCausa('pendiente_validacion');
+}
 
 async function guardarCausa(estadoInicial) {
   let ok = true;
@@ -1979,9 +1987,9 @@ async function guardarCausa(estadoInicial) {
 
   try {
     await DBX.upload(dbxPath, payload);
-    const msg = estadoInicial === 'ingresada'
-      ? '💾 Causa ingresada: ' + currentHex.slice(0,8) + '…'
-      : '📤 Causa enviada a revisión: ' + currentHex.slice(0,8) + '…';
+    const msg = estadoInicial === 'pendiente_validacion'
+      ? '📤 Enviada a Receptora: ' + currentHex.slice(0,8) + '…'
+      : '💾 Causa guardada: ' + currentHex.slice(0,8) + '…';
     showToast(msg, 'success');
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha,
@@ -1997,7 +2005,7 @@ async function guardarCausa(estadoInicial) {
     btnG.disabled = false;
     btnE.disabled = false;
     btnG.textContent = '💾 Guardar';
-    btnE.textContent = '📤 Guardar y enviar';
+    btnE.textContent = '📤 Enviar a Receptora';
   }
 }
 
@@ -2245,7 +2253,7 @@ async function cargarCausaCompleta(hex) {
 
 // Estados visibles por perfil
 const ESTADOS_POR_PERFIL = {
-  padawan: ['ingresada', 'pendiente_validacion', 'validada', 'en_ruta'],
+  padawan: ['pendiente_validacion', 'validada', 'en_ruta'],
   jedi:    ['pendiente_validacion'],
   darth:   null  // todos
 };
@@ -2355,8 +2363,15 @@ function editarCausa(hex) {
   if (!c) return;
 
   // Clonar opciones del select tribunal del formulario
+  // Mapear valores legacy ("Primer","Segundo"...) al formato del select
+  const tribMap = {'primer':'1°','primero':'1°','segundo':'2°','tercer':'3°','tercero':'3°','cuarto':'4°'};
+  const tribVal = (c.tribunal||'').trim();
+  const tribNorm = tribMap[tribVal.toLowerCase()] || '';
   const tribOpts = Array.from(document.getElementById('f-tribunal').options)
-    .map(o => `<option value="${o.value}" ${o.value === (c.tribunal||'') ? 'selected':''}>${o.textContent}</option>`).join('');
+    .map(o => {
+      const sel = o.value === tribVal || (tribNorm && o.value.startsWith(tribNorm)) ? 'selected' : '';
+      return `<option value="${o.value}" ${sel}>${o.textContent}</option>`;
+    }).join('');
 
   // Clonar opciones del select tipo_diligencia del formulario
   const tipoSelect = document.getElementById('f-tipo_diligencia');
@@ -2665,7 +2680,7 @@ async function cargarRuta() {
 }
 
 function renderRuta() {
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
+  const validadas = causas.filter(c => c.estado === 'validada');
   document.getElementById('ruta-count').textContent =
     `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''} para ruta`;
 
@@ -2704,12 +2719,12 @@ function toggleRutaCheck(hex, checked) {
   else rutaSeleccionadas.delete(hex);
   actualizarContadorRuta();
   // Sync select-all checkbox
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
+  const validadas = causas.filter(c => c.estado === 'validada');
   document.getElementById('ruta-check-all').checked = rutaSeleccionadas.size === validadas.length && validadas.length > 0;
 }
 
 function toggleAllRuta(checked) {
-  const validadas = causas.filter(c => c.estado === 'validada' || c.estado === 'ingresada');
+  const validadas = causas.filter(c => c.estado === 'validada');
   rutaSeleccionadas.clear();
   if (checked) validadas.forEach(c => rutaSeleccionadas.add(c.id_hex));
   document.querySelectorAll('#ruta-body .ruta-check').forEach(cb => cb.checked = checked);
