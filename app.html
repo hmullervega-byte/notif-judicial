@@ -2096,10 +2096,12 @@ async function cargarCausasDropbox(forzar = false) {
 
     // Descargar en paralelo (máx 10 simultáneas para no saturar)
     const chunk = (arr, n) => Array.from({length: Math.ceil(arr.length/n)}, (_,i) => arr.slice(i*n, i*n+n));
-    const chunks = chunk(causaFiles, 50);
+    const chunks = chunk(causaFiles, 20);
     const nuevas = [];
 
-    for (const batch of chunks) {
+    let fallos = 0;
+    for (let bi = 0; bi < chunks.length; bi++) {
+      const batch = chunks[bi];
       const results = await Promise.allSettled(
         batch.map(f => DBX.download(`/causas/${f.name}`))
       );
@@ -2113,9 +2115,17 @@ async function cargarCausasDropbox(forzar = false) {
             ...c.datos,
             _causa_json: c
           });
+        } else {
+          fallos++;
         }
       });
+      // Actualizar progreso en UI
+      const pct = Math.round(((bi + 1) / chunks.length) * 100);
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+        <span class="icon">⏳</span><p>Cargando causas... ${nuevas.length}/${causaFiles.length} (${pct}%)</p>
+      </div></td></tr>`;
     }
+    if (fallos > 0) console.warn(`Dropbox: ${fallos} descargas fallidas de ${causaFiles.length}`);
 
     // Reemplazar array completo de una sola vez (sin race condition)
     nuevas.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
