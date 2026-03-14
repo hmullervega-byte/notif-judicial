@@ -1043,7 +1043,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
         <div class="filter-bar">
           <div class="search-bar" style="flex:1; min-width:200px;">
             <span class="search-icon">🔍</span>
-            <input type="text" id="search-causas" placeholder="Buscar por ROL, demandado, N° solicitud…">
+            <input type="text" id="search-causas" placeholder="Buscar por ROL, nombre, RUT o dirección...">
           </div>
           <select id="filter-tipo" style="min-width:180px;">
             <option value="">Todos los tipos</option>
@@ -1072,19 +1072,20 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
-                  <th>N° Sol.</th>
-                  <th>ROL</th>
-                  <th>Demandado</th>
-                  <th>Tipo</th>
+                  <th style="width:100px;">ROL</th>
+                  <th style="width:30px;">Trib.</th>
+                  <th style="min-width:140px;">Demandante</th>
+                  <th style="min-width:140px;">Demandado</th>
+                  <th style="width:90px;">Tipo</th>
                   <th>Estudio</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th style="width:90px;">Estado</th>
+                  <th style="width:80px;">Fecha</th>
+                  <th style="width:60px;">Acciones</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="8">
+                  <td colspan="9">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -2226,13 +2227,19 @@ function renderCausas() {
   const estadosVisibles = currentUser ? ESTADOS_POR_PERFIL[currentUser.perfil] : null;
 
   let filtered = causas.filter(c => {
-    // Filtro por perfil
     if (estadosVisibles && !estadosVisibles.includes(c.estado)) return false;
     const matchSearch = !search ||
       c.rol?.toLowerCase().includes(search) ||
+      (c.tribunal || '').toLowerCase().includes(search) ||
+      normalizarTribunal(c.tribunal).toLowerCase().includes(search) ||
       c.demandado?.toLowerCase().includes(search) ||
+      c.demandante?.toLowerCase().includes(search) ||
+      c.rut?.toLowerCase().includes(search) ||
+      c.direccion?.toLowerCase().includes(search) ||
       c.n_solicitud?.toLowerCase().includes(search) ||
-      c.estudio?.toLowerCase().includes(search);
+      c.nro_solicitud?.toLowerCase().includes(search) ||
+      c.estudio?.toLowerCase().includes(search) ||
+      c.estudio_juridico?.toLowerCase().includes(search);
     const matchTipo   = !fTipo   || c.tipo_diligencia?.startsWith(fTipo);
     const matchEstado = !fEstado || c.estado === fEstado;
     return matchSearch && matchTipo && matchEstado;
@@ -2243,25 +2250,25 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
     return;
   }
 
-  // Ordenar: más recientes primero
   filtered.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
 
   tbody.innerHTML = filtered.map(c => `
     <tr>
-      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || '—'}</td>
-      <td class="mono">${c.rol || '—'}</td>
-      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:12px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante}">${c.demandante || '—'}</td>
+      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="font-size:12px;">${c.estudio || '—'}</td>
+      <td style="font-size:12px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
       <td>${estadoBadge(c.estado)}</td>
-      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
@@ -2854,6 +2861,12 @@ function fmtTiempoRelativo(iso) {
 // ══════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════
+function normalizarTribunal(str) {
+  if (!str) return '—';
+  const m = str.match(/^(\d+°)/);
+  return m ? m[1] : str;
+}
+
 function tipoBadge(tipo) {
   if (!tipo) return '<span class="tag tag-gray">—</span>';
   const cls = tipo.startsWith('NOT') ? 'tag-blue' :
