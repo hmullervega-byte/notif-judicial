@@ -1886,8 +1886,9 @@ updateProgress();
 recalcHex();
 
 // ── GUARDAR ──
-document.getElementById('btn-guardar').addEventListener('click', () => guardarCausa('borrador'));
-document.getElementById('btn-guardar-enviar').addEventListener('click', () => guardarCausa('pendiente_validacion'));
+console.log('DEBUG: registrando listeners guardar...');
+document.getElementById('btn-guardar').addEventListener('click', () => { console.log('DEBUG: click borrador'); guardarCausa('borrador'); });
+document.getElementById('btn-guardar-enviar').addEventListener('click', () => { console.log('DEBUG: click enviar'); guardarCausa('pendiente_validacion'); });
 
 async function guardarCausa(estadoInicial) {
   let ok = true;
