@@ -1041,8 +1041,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <label>Ciudad / Comuna</label>
                   <input type="text" name="ciudad" id="f-ciudad" value="Antofagasta" autocomplete="off">
                 </div>
-                <div class="field">
-                  <label>N° Pagaré</label>
+                <div class="field" id="fw-nro_pagare">
+                  <label>N° Pagaré / N° Operación <span class="req req-pagare" style="display:none;">*</span></label>
                   <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
                 </div>
                 <div class="field span2">
@@ -1918,9 +1918,23 @@ function evaluarBancoRepresentado() {
   if (!mostrar) document.getElementById('f-banco_representado').value = '';
 }
 
-document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); });
-document.getElementById('f-demandante').addEventListener('input', evaluarBancoRepresentado);
-document.getElementById('f-demandante-select').addEventListener('change', evaluarBancoRepresentado);
+// N° Pagaré / N° Operación: obligatorio según estudio + demandante
+function evaluarPagare() {
+  const estudio = fval('estudio');
+  const demandante = fval('demandante').toUpperCase();
+  const bancosRecsa = ['BANCO ITAU CHILE', 'ITAU CORPBANCA S.A', 'BANCO SANTANDER-CHILE'];
+  const obligatorio =
+    (estudio === "Dell'Oro Abogados") ||
+    (estudio === 'Recsa' && bancosRecsa.some(b => demandante.includes(b)));
+  document.getElementById('f-n_pagare').required = obligatorio;
+  const req = document.querySelector('.req-pagare');
+  if (req) req.style.display = obligatorio ? 'inline' : 'none';
+  document.getElementById('f-n_pagare').placeholder = obligatorio ? 'Obligatorio' : 'Opcional';
+}
+
+document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante').addEventListener('input', () => { evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante-select').addEventListener('change', () => { evaluarBancoRepresentado(); evaluarPagare(); });
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -2136,6 +2150,12 @@ async function guardarCausa(estadoInicial) {
   if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
     showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
     document.getElementById('fw-banco_representado').classList.add('has-error');
+    return;
+  }
+  // Validación condicional: N° Pagaré / N° Operación
+  if (document.getElementById('f-n_pagare').required && !fval('n_pagare')) {
+    showToast('⚠ Ingresa el N° Pagaré / N° Operación para este estudio y demandante', 'warn');
+    document.getElementById('fw-nro_pagare').classList.add('has-error');
     return;
   }
 
