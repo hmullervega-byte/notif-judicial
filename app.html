@@ -2088,21 +2088,21 @@ document.getElementById('btn-imprimir').addEventListener('click', () => {
 
 function poblarFormularioFisico(causa) {
   const d = causa ? {
-    fecha_solicitud: causa.fecha_solicitud || '',
-    n_solicitud:     causa.n_solicitud || causa.nro_solicitud || '',
-    rol:             causa.rol || '',
-    tribunal:        causa.tribunal || '',
-    demandante:      causa.demandante || '',
-    estudio:         causa.estudio || causa.estudio_juridico || '',
-    demandado:       causa.demandado || '',
-    rut:             causa.rut || '',
-    direccion:       causa.direccion || '',
-    notificar_a:     causa.notificar_a || causa.demandado || '',
-    mandamiento:     causa.monto_mandamiento || causa.mandamiento || '',
-    tipo_diligencia: causa.tipo_diligencia || '',
-    piezas:          causa.piezas || '',
-    hex:             causa.id_hex,
-    comuna:          causa.comuna || 'ANTOFAGASTA',
+    fecha_solicitud: causa.datos?.fecha_solicitud || causa.fecha_solicitud || '',
+    n_solicitud:     causa.datos?.nro_solicitud || causa.datos?.n_solicitud || causa.nro_solicitud || causa.n_solicitud || '',
+    rol:             causa.datos?.rol || causa.rol || '',
+    tribunal:        causa.datos?.tribunal || causa.tribunal || '',
+    demandante:      causa.datos?.demandante || causa.demandante || '',
+    estudio:         causa.datos?.estudio_juridico || causa.datos?.estudio || causa.estudio_juridico || causa.estudio || '',
+    demandado:       causa.datos?.demandado || causa.demandado || '',
+    rut:             causa.datos?.rut || causa.rut || '',
+    direccion:       causa.datos?.direccion || causa.direccion || '',
+    notificar_a:     causa.datos?.notificar_a || causa.notificar_a || causa.datos?.demandado || causa.demandado || '',
+    mandamiento:     causa.datos?.monto_mandamiento || causa.monto_mandamiento || causa.mandamiento || '',
+    tipo_diligencia: causa.datos?.tipo_diligencia || causa.tipo_diligencia || '',
+    piezas:          causa.datos?.piezas || causa.piezas || '',
+    hex:             causa.id_hex || causa.hex,
+    comuna:          causa.datos?.ciudad || causa.ciudad || causa.comuna || 'ANTOFAGASTA',
   } : {
     fecha_solicitud: fval('fecha_solicitud'),
     n_solicitud:     fval('n_solicitud'),
@@ -2228,12 +2228,12 @@ function poblarFormularioFisico(causa) {
         Juzgado de Letras de Antofagasta</b>.
       </div>
 
-      <div style="font-family:'Times New Roman',Times,serif; font-size:13pt; text-align:center; margin-bottom:10px;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; text-align:center; margin-bottom:8px;">
         <b>${d.notificar_a}</b>
       </div>
 
-      <div style="border:1.5px solid #000; height:190px; margin-top:20px; position:relative;">
-        <div style="position:absolute; top:6px; right:8px; font-size:8pt; color:#555;">Datos (Rut, Firma)</div>
+      <div style="border:1.5px solid #000; width:340px; height:150px; margin:0 auto; position:relative;">
+        <div style="position:absolute; top:6px; left:8px; font-size:8pt; color:#555;">Datos (Rut, Firma)</div>
       </div>
     </div>
   </div>
