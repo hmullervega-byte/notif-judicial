@@ -976,6 +976,10 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <input type="text" name="mandamiento" id="f-mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
                     <span class="hint">Opcional</span>
                   </div>
+                  <div class="field span1">
+                    <label>Ciudad / Comuna</label>
+                    <input type="text" name="ciudad" id="f-ciudad" value="Antofagasta" autocomplete="off">
+                  </div>
                   <div class="field span2" id="fw-notificar_a">
                     <label>Notificar a <span class="req">*</span></label>
                     <textarea name="notificar_a" id="f-notificar_a" rows="2"
@@ -1795,6 +1799,36 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => { 
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
+// ── Formateo automático de campos ──────────────────────────────────
+// ROL: letra inicial siempre en mayúscula
+document.getElementById('f-rol').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  this.value = this.value.toUpperCase();
+  this.setSelectionRange(pos, pos);
+});
+
+// RUT: formato XX.XXX.XXX-X con K mayúscula
+document.getElementById('f-rut').addEventListener('blur', function() {
+  let v = this.value.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (!v) return;
+  const dv = v.slice(-1);
+  let cuerpo = v.slice(0, -1);
+  if (cuerpo.length > 0) {
+    cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    this.value = cuerpo + '-' + dv;
+  }
+});
+
+// Monto mandamiento: formato con separador de miles
+document.getElementById('f-mandamiento').addEventListener('blur', function() {
+  let v = this.value.replace(/[^0-9]/g, '');
+  if (!v) return;
+  this.value = '$' + Number(v).toLocaleString('es-CL');
+});
+
+// Ciudad: default Antofagasta
+document.getElementById('f-ciudad').value = document.getElementById('f-ciudad').value || 'Antofagasta';
+
 const PIEZAS_EJE_C = 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia';
 const PIEZAS_EJE_E = 'de la demanda ejecutiva y la resolución que recae sobre ella, piezas que constan en el tribunal exhortante, conjuntamente con el cúmplase y los demás antecedentes necesarios para su acertada inteligencia';
 
@@ -1984,7 +2018,7 @@ async function guardarCausa(estadoInicial) {
       rut:               fval('rut'),
       direccion:         fval('direccion'),
       notificar_a:       fval('notificar_a'),
-      ciudad:            'Antofagasta',
+      ciudad:            fval('ciudad') || 'Antofagasta',
       monto_mandamiento: fval('mandamiento') ? Number(fval('mandamiento').replace(/[^0-9]/g,'')) || fval('mandamiento') : '',
       piezas:            fval('piezas'),
       nro_pagare:        fval('n_pagare'),
