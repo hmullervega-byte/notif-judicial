@@ -2217,11 +2217,6 @@ function poblarFormularioFisico(causa) {
   <!-- ════════════════════════════════════════ -->
   <div class="pf-page">
     <div class="pf-recibo" style="padding-top:30px;">
-      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.8; margin-bottom:12px; text-align:left;">
-        Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
-        Juzgado de Letras de Antofagasta</b>.
-      </div>
-
       <div style="font-family:'Times New Roman',Times,serif; font-size:10pt; text-align:left; margin-bottom:8px;">
         <b>${d.notificar_a}</b>
       </div>
@@ -2246,6 +2241,7 @@ function poblarFormularioFisico(causa) {
         DOMICILIO: <b>${(d.direccion || '').toUpperCase()}</b>, ${(d.comuna || 'ANTOFAGASTA').toUpperCase()}
       </p>
 
+      <div style="height:45px;"></div>
       <p style="margin:0 0 4px;">
         En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
         en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
