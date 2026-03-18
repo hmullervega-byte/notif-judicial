@@ -593,10 +593,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
   margin-top: 10px; text-align: justify; }
 .pf-estampe b { font-weight: 700; }
 .pf-estampe-checks { display: flex; gap: 30px; justify-content: flex-end; margin-top: 6px; font-size: 10pt; }
-.pf-firma-block { text-align: center; margin-top: 16px; }
-.pf-firma-block .linea { border-top: 1px solid #000; width: 280px; margin: 0 auto 2px; }
-.pf-firma-block .nombre { font-size: 10pt; font-weight: 700; }
-.pf-firma-block .cargo { font-size: 9pt; }
 
 /* Hoja 2 — Citación */
 .pf-cita { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.7;
@@ -607,10 +603,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .pf-cita .blank { display: inline-block; border-bottom: 1px solid #000; min-width: 90px; }
 .pf-cita .aviso { font-size: 10pt; font-weight: 700; margin-top: 24px; border: 1.5px solid #000;
   padding: 10px; line-height: 1.4; }
-.pf-cita .firma-block { text-align: center; margin-top: 40px; }
-.pf-cita .firma-block .linea { border-top: 1px solid #000; width: 280px; margin: 0 auto 2px; }
-.pf-cita .firma-block .nombre { font-size: 11pt; font-weight: 700; }
-.pf-cita .firma-block .cargo { font-size: 10pt; }
 
 /* Hoja 3 — Firma requerido */
 .pf-recibo { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.8; padding: 30px 0; }
@@ -2223,16 +2215,16 @@ function poblarFormularioFisico(causa) {
   <!-- ════════════════════════════════════════ -->
   <div class="pf-page">
     <div class="pf-recibo" style="padding-top:30px;">
-      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.8; margin-bottom:12px; text-align:justify;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.8; margin-bottom:12px; text-align:left;">
         Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
         Juzgado de Letras de Antofagasta</b>.
       </div>
 
-      <div style="font-family:'Times New Roman',Times,serif; font-size:10pt; text-align:center; margin-bottom:8px;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:10pt; text-align:left; margin-bottom:8px;">
         <b>${d.notificar_a}</b>
       </div>
 
-      <div style="border:1.5px solid #000; width:340px; height:150px; margin:0 auto; position:relative;">
+      <div style="border:1.5px solid #000; width:340px; height:210px; margin:0 auto; position:relative;">
         <div style="position:absolute; top:6px; left:8px; font-size:8pt; color:#555;">Datos (Rut, Firma)</div>
       </div>
     </div>
@@ -2240,26 +2232,45 @@ function poblarFormularioFisico(causa) {
 
   <!-- ════════════════════════════════════════ -->
   <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
-  <!-- Solo si tipo_diligencia es NOT44        -->
+  <!-- SIEMPRE visible (debug: confirmar que se imprime) -->
   <!-- ════════════════════════════════════════ -->
-  ${esNot44 ? `<div class="pf-page">
-    <div class="pf-cita">
-      <div class="pf-estampe" style="margin-bottom:20px;">
-        DON(ÑA) <b>${d.notificar_a}</b><br>
-        DOMICILIO: <b>${d.direccion}</b>, ${d.comuna}<br><br>
+  <div class="pf-page">
+    <div style="font-family:'Times New Roman',Times,serif; font-size:12pt; line-height:1.6; text-align:justify;">
+
+      <p style="margin:0 0 4px;">
+        DON(ÑA) <b>${(d.notificar_a || '').toUpperCase()}</b>
+      </p>
+      <p style="margin:0 0 12px;">
+        DOMICILIO: <b>${(d.direccion || '').toUpperCase()}</b>, ${(d.comuna || 'ANTOFAGASTA').toUpperCase()}
+      </p>
+
+      <p style="margin:0 0 8px;">
         En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
         en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
-        los antecedentes que obran en la causa rol <b>${d.rol}</b> del <b>${tribCorto}</b>
-        Juzgado de Letras de Antofagasta.
+        los antecedentes que obran en la causa rol <b>${d.rol}</b> del
+        <b>${tribCorto}</b> Juzgado de Letras de Antofagasta.
+      </p>
+
+      <hr style="border:none; border-top:1px solid #000; margin:12px 0;">
+
+      <div style="text-align:right; font-size:10pt; margin-bottom:4px;">
+        APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
+        NO APLICA: <span class="pf-chk"></span>
+      </div>
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-size:10pt; font-weight:700;">MARIA JOSE CARREÑO MENDEZ</div>
+        <div style="font-size:9pt;">RECEPTORA JUDICIAL</div>
       </div>
 
-      <div style="border-top:2px solid #000; margin:16px 0;"></div>
+      <hr style="border:none; border-top:2px solid #000; margin:20px 0;">
 
-      <div class="pf-cita-title">Citación – Requerimiento</div>
-      <p>
+      <div style="text-align:center; font-size:14pt; font-weight:700; margin:16px 0; letter-spacing:.05em;">
+        CITACIÓN – REQUERIMIENTO
+      </div>
+
+      <p style="margin:0 0 8px;">
         Señor(a) <b>${d.notificar_a}</b>, queda citado para el
-        día<span class="blank">&nbsp;</span>2026,
-        a las <span class="blank" style="min-width:30px;">&nbsp;</span>:<span class="blank" style="min-width:30px;">&nbsp;</span> horas,
+        día __________ 2026, a las ___:___ horas,
         para que concurra a mi oficio de receptora judicial ubicado en
         <b>Calle Baquedano #239, oficina N° 716, Antofagasta</b>,
         a fin de requerirlo(a) de pago, por la suma señalada en autos,
@@ -2267,15 +2278,18 @@ function poblarFormularioFisico(causa) {
         requerido(a) en rebeldía si no comparece.
       </p>
 
-      <div style="border-top:1px solid #000; margin-top:20px;"></div>
-
-      <div class="aviso">
+      <hr style="border:none; border-top:1px solid #000; margin:16px 0;">
+      <div style="font-size:10pt; font-weight:700; padding:8px; border:1px solid #000; line-height:1.4;">
         ***Importante: La receptora solo atiende en su oficina en el día y hora de la citación.
         Si llega en otro horario u otro día, lamentablemente, no será atendido,
         debido a que trabaja mayormente en terreno.***
       </div>
+      <hr style="border:none; border-top:1px solid #000; margin:16px 0;">
+
     </div>
-  </div>` : ''}`;
+  </div>`;
+
+  console.log('DEBUG hoja3 — esNot44:', esNot44, '| tipo:', d.tipo_diligencia);
 
   document.getElementById('print-form').innerHTML = html;
 
