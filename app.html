@@ -2098,7 +2098,7 @@ function poblarFormularioFisico(causa) {
     rut:             causa.rut || '',
     direccion:       causa.direccion || '',
     notificar_a:     causa.notificar_a || causa.demandado || '',
-    mandamiento:     causa.monto_mandamiento || '',
+    mandamiento:     causa.monto_mandamiento || causa.mandamiento || '',
     tipo_diligencia: causa.tipo_diligencia || '',
     piezas:          causa.piezas || '',
     hex:             causa.id_hex,
@@ -2148,14 +2148,10 @@ function poblarFormularioFisico(causa) {
       <!-- DATOS CAUSA -->
       <tr><td class="lbl">ROL</td><td class="val" colspan="2">${d.rol}</td>
           <td class="lbl">TRIBUNAL</td><td class="val" colspan="2">${tribCorto}</td></tr>
-      <tr><td class="lbl">Demandado:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
-          <td class="val" colspan="3">${d.demandado}</td></tr>
-      <tr><td class="lbl">Rut:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
-          <td class="val" colspan="3">${d.rut || ''}</td></tr>
-      <tr><td class="lbl">Demandante:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
-          <td class="val" colspan="3">${d.demandante}</td></tr>
-      <tr><td class="lbl">Estudio dte:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
-          <td class="val" colspan="3">${d.estudio}</td></tr>
+      <tr><td class="lbl">Demandado:</td><td class="val" colspan="5">${d.demandado}</td></tr>
+      <tr><td class="lbl">Rut:</td><td class="val" colspan="5">${d.rut || ''}</td></tr>
+      <tr><td class="lbl">Demandante:</td><td class="val" colspan="5">${d.demandante}</td></tr>
+      <tr><td class="lbl">Estudio dte:</td><td class="val" colspan="5">${d.estudio}</td></tr>
 
       <!-- FECHA / HORA NOTIFICACIÓN -->
       <tr><td class="lbl-sm">FECHA DE NOTIFICACION</td><td class="blank" colspan="5"></td></tr>
@@ -2174,8 +2170,11 @@ function poblarFormularioFisico(causa) {
       <tr><td class="lbl-sm">Fecha y Hora 1°Not</td><td class="blank" colspan="5"></td></tr>
       <tr><td class="lbl-sm">Fecha y Hora 2°Not</td><td class="blank" colspan="5"></td></tr>
       <tr><td class="lbl-sm">Fecha Req. De Pago</td><td class="blank" colspan="5"></td></tr>
-      <tr><td class="lbl">Monto Mandamiento</td><td class="val" colspan="2">${d.mandamiento || ''}</td>
-          <td colspan="3"></td></tr>
+      <tr><td class="lbl">Monto Mandamiento</td><td class="val" colspan="5">${
+        d.mandamiento ? (typeof d.mandamiento === 'number' || /^\d+$/.test(d.mandamiento)
+          ? '$' + Number(d.mandamiento).toLocaleString('es-CL')
+          : d.mandamiento) : ''
+      }</td></tr>
 
       <!-- OBSERVACIÓN DILIGENCIA -->
       <tr><td class="lbl-sm">Observación diligencia</td><td class="blank blank-tall" colspan="5"></td></tr>
@@ -2205,7 +2204,8 @@ function poblarFormularioFisico(causa) {
 
     <!-- TEXTO NOTIFICACIÓN PRE-IMPRESO -->
     <div style="margin-top:6px; padding:4px 0; border-top:1px solid #000;">
-      <div style="font-size:9pt; font-weight:700; margin-bottom:2px;">Notificar demanda</div>
+      <div style="font-size:9pt; font-weight:700; margin-bottom:1px;">Notificar demanda</div>
+      <div style="font-size:9pt; margin-bottom:4px;">${d.piezas || 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia'}</div>
     </div>
     <div class="pf-estampe">
       DON(ÑA) <b>${d.notificar_a}</b><br>
