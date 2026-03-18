@@ -2126,6 +2126,9 @@ function poblarFormularioFisico(causa) {
   const tribMap = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
   const tribCorto = tribMatch ? (tribMap[tribMatch[0].toLowerCase()] || tribMatch[0]) : d.tribunal.split(' ')[0];
 
+  // Hoja 3 solo se imprime si tipo es NOT44-EJE o NOT44-ORD
+  const esNot44 = /NOT44/i.test(d.tipo_diligencia);
+
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
   // ════════════════════════════════════════
@@ -2202,48 +2205,68 @@ function poblarFormularioFisico(causa) {
       <tr><td colspan="6" class="blank blank-tall"></td></tr>
     </table>
 
-    <!-- TEXTO NOTIFICACIÓN PRE-IMPRESO -->
+    <!-- PIEZAS + ESTAMPADO/INFORMADO -->
     <div style="margin-top:6px; padding:4px 0; border-top:1px solid #000;">
       <div style="font-size:9pt; font-weight:700; margin-bottom:1px;">Notificar demanda</div>
       <div style="font-size:9pt; margin-bottom:4px;">${d.piezas || 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia'}</div>
     </div>
 
-    <div style="border-top:1px solid #000; margin-top:8px;"></div>
+    <div style="border-top:1px solid #000; margin-top:6px;"></div>
     <div class="pf-estampe-checks">
       <span class="pf-chk" style="font-size:10pt;">ESTAMPADO</span>
       <span class="pf-chk" style="font-size:10pt;">INFORMADO</span>
+    </div>
+    <div style="text-align:right; font-size:9pt; margin-top:4px;">
+      APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
+      NO APLICA: <span class="pf-chk"></span>
+    </div>
+
+    <div class="pf-firma-block">
+      <div class="linea"></div>
+      <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
+      <div class="cargo">RECEPTORA JUDICIAL</div>
     </div>
 
     <div class="pf-footer">ID: ${d.hex}</div>
   </div>
 
   <!-- ════════════════════════════════════════ -->
-  <!-- HOJA 2 — RECIBÍ DOCUMENTOS + FIRMA     -->
+  <!-- HOJA 2 — ACTA DE RECEPCIÓN (siempre)   -->
   <!-- ════════════════════════════════════════ -->
   <div class="pf-page">
-    <div class="pf-recibo">
-      <div style="font-family:'Times New Roman',Times,serif; font-size:13pt; line-height:1.8; margin-bottom:20px;">
+    <div class="pf-recibo" style="padding-top:30px;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:14pt; line-height:1.8; margin-bottom:30px; text-align:justify;">
         Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
         Juzgado de Letras de Antofagasta</b>.
       </div>
 
-      <div style="font-family:'Times New Roman',Times,serif; font-size:12pt; margin-bottom:40px;">
-        Nombre: <b>${d.notificar_a}</b>
+      <div style="font-family:'Times New Roman',Times,serif; font-size:13pt; text-align:center; margin-bottom:10px;">
+        <b>${d.notificar_a}</b>
       </div>
 
-      <table class="pf-recibo-t">
-        <tr><td style="font-size:12pt; height:120px; vertical-align:bottom; padding-bottom:8px;">
-          Firma: _______________________________________________
-        </td></tr>
-      </table>
+      <div style="border:1.5px solid #000; height:150px; margin-top:20px; position:relative;">
+        <div style="position:absolute; bottom:8px; left:10px; font-family:'Times New Roman',Times,serif; font-size:11pt;">Firma:</div>
+      </div>
     </div>
   </div>
 
   <!-- ════════════════════════════════════════ -->
   <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
+  <!-- Solo si tipo_diligencia es NOT44        -->
   <!-- ════════════════════════════════════════ -->
-  <div class="pf-page">
+  ${esNot44 ? `<div class="pf-page">
     <div class="pf-cita">
+      <div class="pf-estampe" style="margin-bottom:20px;">
+        DON(ÑA) <b>${d.notificar_a}</b><br>
+        DOMICILIO: <b>${d.direccion}</b>, ${d.comuna}<br><br>
+        En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
+        en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
+        los antecedentes que obran en la causa rol <b>${d.rol}</b> del <b>${tribCorto}</b>
+        Juzgado de Letras de Antofagasta.
+      </div>
+
+      <div style="border-top:2px solid #000; margin:16px 0;"></div>
+
       <div class="pf-cita-title">Citación – Requerimiento</div>
       <p>
         Señor(a) <b>${d.notificar_a}</b>, queda citado para el
@@ -2270,7 +2293,7 @@ function poblarFormularioFisico(causa) {
         <div class="cargo">RECEPTORA JUDICIAL</div>
       </div>
     </div>
-  </div>`;
+  </div>` : ''}`;
 
   document.getElementById('print-form').innerHTML = html;
 
