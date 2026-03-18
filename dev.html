@@ -358,34 +358,45 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .card-body { padding: 1rem; }
 
 /* FORM GRID */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1rem; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.form-grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 12px; }
 .span2 { grid-column: 1 / -1; }
 .span1 { grid-column: span 1; }
 
-.field { display: flex; flex-direction: column; gap: .25rem; }
+.col-section { display: flex; flex-direction: column; gap: 6px; }
+.col-header {
+  background: #1a2332; color: #fff; font-size: 11px; font-weight: 600;
+  padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.col-header::before { content: ''; width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; flex-shrink: 0; }
+.col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+.col-grid .span2 { grid-column: 1 / -1; }
+
+.field { display: flex; flex-direction: column; gap: 2px; }
 .field label {
-  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  font-size: 11px; font-weight: 500; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
   display: flex; align-items: center; gap: .3rem;
 }
 .field label .req { color: var(--red); font-size: 13px; line-height: 1; }
 input, select, textarea {
-  font-family: var(--sans); font-size: 13.5px; color: var(--text);
+  font-family: var(--sans); font-size: 13px; color: var(--text);
   background: #fff; border: 1.5px solid var(--border);
-  border-radius: var(--r4); padding: .45rem .6rem; width: 100%;
+  border-radius: var(--r4); padding: 5px 7px; width: 100%;
   transition: border-color .15s, box-shadow .15s; outline: none;
 }
 input:focus, select:focus, textarea:focus {
   border-color: var(--blue-lt);
   box-shadow: 0 0 0 3px rgba(59,130,246,.15);
 }
-textarea { resize: vertical; min-height: 64px; }
+textarea { resize: vertical; min-height: 40px; }
 select { cursor: pointer; }
 input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed; }
 .has-error input, .has-error select, .has-error textarea { border-color: var(--red); background: var(--red-lt); }
-.error-msg { font-size: 11px; color: var(--red); display: none; margin-top: 2px; }
+.error-msg { font-size: 11px; color: var(--red); display: none; margin-top: 1px; }
 .has-error .error-msg { display: block; }
-.hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hint { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
 /* BOTONES */
 .btn {
@@ -451,9 +462,10 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .stat-label { font-size: 11px; color: var(--muted); margin-top: .3rem; font-weight: 500; }
 .stat-delta { font-size: 11px; color: var(--green); margin-top: .2rem; }
 
-/* SIDEBAR FORM (layout 2 col) */
-.form-layout { display: grid; grid-template-columns: 1fr 260px; gap: 1.25rem; align-items: start; }
-.form-sidebar { display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 72px; }
+/* SIDEBAR FORM (layout main + sidebar) */
+.form-layout { display: flex; gap: 12px; align-items: flex-start; }
+.form-layout > :first-child { flex: 1; min-width: 0; }
+.form-sidebar { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 72px; }
 
 /* HEX DISPLAY */
 .hex-display { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .4rem; }
@@ -542,8 +554,9 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
-  .form-layout { grid-template-columns: 1fr; }
-  .form-sidebar { position: static; }
+  .form-layout { flex-direction: column; }
+  .form-grid-3col { grid-template-columns: 1fr; }
+  .form-sidebar { width: 100%; position: static; }
   .sidebar-nav { width: 56px; }
   .nav-item span:not(.icon) { display: none; }
   .nav-section-label { display: none; }
@@ -857,218 +870,200 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
         </div>
 
         <div class="form-layout">
-          <!-- COLUMNA PRINCIPAL -->
-          <div style="display:flex; flex-direction:column; gap:1rem;">
+          <!-- 3 COLUMNAS FORMULARIO -->
+          <div class="form-grid-3col">
 
-            <!-- Identificación -->
-            <div class="card">
-              <div class="card-header"><span class="dot"></span>Identificación de la Causa</div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="field span1" id="fw-fecha_solicitud">
-                    <label>Fecha Solicitud</label>
-                    <input type="date" name="fecha_solicitud" id="f-fecha_solicitud">
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1" id="fw-n_solicitud">
-                    <label>N° Solicitud <span class="req">*</span></label>
-                    <input type="text" name="n_solicitud" id="f-n_solicitud" placeholder="Ej: 2026-001523" autocomplete="off">
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1" id="fw-rol">
-                    <label>ROL <span class="req">*</span></label>
-                    <input type="text" name="rol" id="f-rol" placeholder="Ej: C-4521-2023" autocomplete="off" style="font-family:var(--mono); letter-spacing:.04em;">
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1" id="fw-tribunal">
-                    <label>Tribunal <span class="req">*</span></label>
-                    <select name="tribunal" id="f-tribunal">
-                      <option value="">— Seleccionar —</option>
-                      <option value="1° Juzgado de Letras de Antofagasta">1° Juzgado de Letras</option>
-                      <option value="2° Juzgado de Letras de Antofagasta">2° Juzgado de Letras</option>
-                      <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
-                      <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
-                    </select>
-                    <span class="error-msg">Seleccione tribunal</span>
-                  </div>
-                  <div class="field span1" id="fw-estudio">
-                    <label>Estudio Jurídico</label>
-                    <select name="estudio" id="f-estudio">
-                      <option value="">(seleccionar estudio)</option>
-                      <option value="Agecob">Agecob</option>
-                      <option value="BanPro">BanPro</option>
-                      <option value="CG Cobranzas Generales">CG Cobranzas Generales</option>
-                      <option value="Conseil">Conseil</option>
-                      <option value="Dell'Oro Abogados">Dell'Oro Abogados</option>
-                      <option value="Exhortos Frias">Exhortos Frias</option>
-                      <option value="Exhortos Chile">Exhortos Chile</option>
-                      <option value="Mellado y Cia">Mellado y Cia</option>
-                      <option value="Recsa">Recsa</option>
-                      <option value="Servicobranza">Servicobranza</option>
-                      <option value="Socofin">Socofin</option>
-                      <option value="Zapico">Zapico</option>
-                      <option value="Causa Particular">Causa Particular</option>
-                    </select>
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1">
-                    <label>Abogado / Procurador</label>
-                    <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre del abogado o procurador" autocomplete="off">
-                    <span class="hint">Opcional</span>
-                  </div>
-                  <div class="field span1" id="fw-tipo_diligencia">
-                    <label>Tipo Diligencia</label>
-                    <select name="tipo_diligencia" id="f-tipo_diligencia">
-                      <option value="">— Seleccionar —</option>
-                      <optgroup label="── Alzamiento ──">
-                        <option value="ALZAMIENTO-CBR">Alzamiento CBR</option>
-                        <option value="ALZAMIENTO-RVM">Alzamiento RVM</option>
-                        <option value="ALZAMIENTO-TESORERIA">Alzamiento Tesorería</option>
-                        <option value="ALZAMIENTO-OTROS" data-obs-required="1">Alzamiento Otros</option>
-                      </optgroup>
-                      <optgroup label="── Embargo ──">
-                        <option value="EMBARGO-CBR">Embargo CBR</option>
-                        <option value="EMBARGO-CUENTA-CORRIENTE">Embargo Cuenta Corriente</option>
-                        <option value="EMBARGO-FRUSTRADO">Embargo Frustrado</option>
-                        <option value="EMBARGO-OTROS" data-obs-required="1">Embargo Otros</option>
-                        <option value="EMBARGO-RVM">Embargo RVM</option>
-                        <option value="EMBARGO-TESORERIA">Embargo Tesorería</option>
-                      </optgroup>
-                      <optgroup label="── Notificación ──">
-                        <option value="NOT-CEDULA">Not. Cédula</option>
-                        <option value="NOT-CEDULA-ART52">Not. Cédula Art. 52</option>
-                        <option value="NOT-CUMPLIMIENTO-INCIDENTAL">Not. Cumplimiento Incidental</option>
-                        <option value="NOT-DEMANDA-ARRENDAMIENTO-GRAL">Not. Demanda Arrendamiento General</option>
-                        <option value="NOT-DEMANDA-ARRENDAMIENTO-MON">Not. Demanda Arrendamiento Monitorio</option>
-                        <option value="NOT-DEMANDA-COBRANZA-LABORAL">Not. Demanda Cobranza Laboral</option>
-                        <option value="NOT-DEMANDA-EJE-DESPOSEIMIENTO">Not. Demanda Ejecutiva Desposeimiento</option>
-                        <option value="NOT-DEMANDA-EJE-GENERAL">Not. Demanda Ejecutiva General</option>
-                        <option value="NOT-DEMANDA-EJE-HIPOTECARIA">Not. Demanda Ejecutiva Hipotecaria</option>
-                        <option value="NOT-DEMANDA-FAMILIA">Not. Demanda Familia</option>
-                        <option value="NOT-DEMANDA-ORDINARIA">Not. Demanda Ordinaria</option>
-                        <option value="NOT-DEMANDA-JUICIO-SUMARIO">Not. Demanda Juicio Sumario</option>
-                        <option value="NOT-GESTION-PREPARATORIA" data-obs-required="1">Not. Gestión Preparatoria</option>
-                        <option value="NOT-GESTION-VOLUNTARIA">Not. Gestión Voluntaria</option>
-                        <option value="NOT-MEDIDA-PRECAUTORIA">Not. Medida Precautoria</option>
-                        <option value="NOT-PROTECCION-TURNO">Not. Protección [TURNO]</option>
-                        <option value="NOT-RECIBE-CAUSA-PRUEBA">Not. Recibe la Causa a Prueba</option>
-                        <option value="NOT-SENTENCIA">Not. Sentencia</option>
-                      </optgroup>
-                      <optgroup label="── Prueba ──">
-                        <option value="PRUEBA-CONFESIONAL">Prueba Confesional</option>
-                        <option value="PRUEBA-TESTIMONIAL">Prueba Testimonial</option>
-                      </optgroup>
-                      <optgroup label="── Requerimiento ──">
-                        <option value="REQ-PAGO-TRIBUNAL">Requerimiento Pago Tribunal</option>
-                      </optgroup>
-                      <optgroup label="── Otro ──">
-                        <option value="OTRO" data-obs-required="1">Otro</option>
-                      </optgroup>
-                    </select>
-                    <span class="error-msg">Seleccione tipo</span>
-                  </div>
+            <!-- COL 1: Identificación -->
+            <div class="col-section">
+              <div class="col-header">Identificación</div>
+              <div class="col-grid">
+                <div class="field" id="fw-fecha_solicitud">
+                  <label>Fecha Solicitud</label>
+                  <input type="date" name="fecha_solicitud" id="f-fecha_solicitud">
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field" id="fw-n_solicitud">
+                  <label>N° Solicitud <span class="req">*</span></label>
+                  <input type="text" name="n_solicitud" id="f-n_solicitud" placeholder="2026-001523" autocomplete="off">
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field" id="fw-rol">
+                  <label>ROL <span class="req">*</span></label>
+                  <input type="text" name="rol" id="f-rol" placeholder="C-4521-2023" autocomplete="off" style="font-family:var(--mono); letter-spacing:.04em;">
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field" id="fw-tribunal">
+                  <label>Tribunal <span class="req">*</span></label>
+                  <select name="tribunal" id="f-tribunal">
+                    <option value="">— Seleccionar —</option>
+                    <option value="1° Juzgado de Letras de Antofagasta">1° Juzgado de Letras</option>
+                    <option value="2° Juzgado de Letras de Antofagasta">2° Juzgado de Letras</option>
+                    <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
+                    <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
+                  </select>
+                  <span class="error-msg">Seleccione tribunal</span>
+                </div>
+                <div class="field span2" id="fw-estudio">
+                  <label>Estudio Jurídico</label>
+                  <select name="estudio" id="f-estudio">
+                    <option value="">(seleccionar estudio)</option>
+                    <option value="Agecob">Agecob</option>
+                    <option value="BanPro">BanPro</option>
+                    <option value="CG Cobranzas Generales">CG Cobranzas Generales</option>
+                    <option value="Conseil">Conseil</option>
+                    <option value="Dell'Oro Abogados">Dell'Oro Abogados</option>
+                    <option value="Exhortos Frias">Exhortos Frias</option>
+                    <option value="Exhortos Chile">Exhortos Chile</option>
+                    <option value="Mellado y Cia">Mellado y Cia</option>
+                    <option value="Recsa">Recsa</option>
+                    <option value="Servicobranza">Servicobranza</option>
+                    <option value="Socofin">Socofin</option>
+                    <option value="Zapico">Zapico</option>
+                    <option value="Causa Particular">Causa Particular</option>
+                  </select>
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field span2">
+                  <label>Abogado / Procurador</label>
+                  <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre" autocomplete="off">
+                  <span class="hint">Opcional</span>
+                </div>
+                <div class="field span2" id="fw-tipo_diligencia">
+                  <label>Tipo Diligencia</label>
+                  <select name="tipo_diligencia" id="f-tipo_diligencia">
+                    <option value="">— Seleccionar —</option>
+                    <optgroup label="── Alzamiento ──">
+                      <option value="ALZAMIENTO-CBR">Alzamiento CBR</option>
+                      <option value="ALZAMIENTO-RVM">Alzamiento RVM</option>
+                      <option value="ALZAMIENTO-TESORERIA">Alzamiento Tesorería</option>
+                      <option value="ALZAMIENTO-OTROS" data-obs-required="1">Alzamiento Otros</option>
+                    </optgroup>
+                    <optgroup label="── Embargo ──">
+                      <option value="EMBARGO-CBR">Embargo CBR</option>
+                      <option value="EMBARGO-CUENTA-CORRIENTE">Embargo Cuenta Corriente</option>
+                      <option value="EMBARGO-FRUSTRADO">Embargo Frustrado</option>
+                      <option value="EMBARGO-OTROS" data-obs-required="1">Embargo Otros</option>
+                      <option value="EMBARGO-RVM">Embargo RVM</option>
+                      <option value="EMBARGO-TESORERIA">Embargo Tesorería</option>
+                    </optgroup>
+                    <optgroup label="── Notificación ──">
+                      <option value="NOT-CEDULA">Not. Cédula</option>
+                      <option value="NOT-CEDULA-ART52">Not. Cédula Art. 52</option>
+                      <option value="NOT-CUMPLIMIENTO-INCIDENTAL">Not. Cumplimiento Incidental</option>
+                      <option value="NOT-DEMANDA-ARRENDAMIENTO-GRAL">Not. Demanda Arrendamiento General</option>
+                      <option value="NOT-DEMANDA-ARRENDAMIENTO-MON">Not. Demanda Arrendamiento Monitorio</option>
+                      <option value="NOT-DEMANDA-COBRANZA-LABORAL">Not. Demanda Cobranza Laboral</option>
+                      <option value="NOT-DEMANDA-EJE-DESPOSEIMIENTO">Not. Demanda Ejecutiva Desposeimiento</option>
+                      <option value="NOT-DEMANDA-EJE-GENERAL">Not. Demanda Ejecutiva General</option>
+                      <option value="NOT-DEMANDA-EJE-HIPOTECARIA">Not. Demanda Ejecutiva Hipotecaria</option>
+                      <option value="NOT-DEMANDA-FAMILIA">Not. Demanda Familia</option>
+                      <option value="NOT-DEMANDA-ORDINARIA">Not. Demanda Ordinaria</option>
+                      <option value="NOT-DEMANDA-JUICIO-SUMARIO">Not. Demanda Juicio Sumario</option>
+                      <option value="NOT-GESTION-PREPARATORIA" data-obs-required="1">Not. Gestión Preparatoria</option>
+                      <option value="NOT-GESTION-VOLUNTARIA">Not. Gestión Voluntaria</option>
+                      <option value="NOT-MEDIDA-PRECAUTORIA">Not. Medida Precautoria</option>
+                      <option value="NOT-PROTECCION-TURNO">Not. Protección [TURNO]</option>
+                      <option value="NOT-RECIBE-CAUSA-PRUEBA">Not. Recibe la Causa a Prueba</option>
+                      <option value="NOT-SENTENCIA">Not. Sentencia</option>
+                    </optgroup>
+                    <optgroup label="── Prueba ──">
+                      <option value="PRUEBA-CONFESIONAL">Prueba Confesional</option>
+                      <option value="PRUEBA-TESTIMONIAL">Prueba Testimonial</option>
+                    </optgroup>
+                    <optgroup label="── Requerimiento ──">
+                      <option value="REQ-PAGO-TRIBUNAL">Requerimiento Pago Tribunal</option>
+                    </optgroup>
+                    <optgroup label="── Otro ──">
+                      <option value="OTRO" data-obs-required="1">Otro</option>
+                    </optgroup>
+                  </select>
+                  <span class="error-msg">Seleccione tipo</span>
                 </div>
               </div>
             </div>
 
-            <!-- Partes -->
-            <div class="card">
-              <div class="card-header"><span class="dot"></span>Partes del Juicio</div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="field span1" id="fw-demandante">
-                    <label>Demandante</label>
-                    <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
-                    <select name="demandante_select" id="f-demandante-select" style="display:none;"></select>
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1" id="fw-banco_representado" style="display:none;">
-                    <label>Banco representado <span class="req">*</span></label>
-                    <select name="banco_representado" id="f-banco_representado">
-                      <option value="">(seleccionar banco)</option>
-                      <option value="Banco Internacional">Banco Internacional</option>
-                      <option value="Scotiabank">Scotiabank</option>
-                      <option value="Itaú">Itaú</option>
-                    </select>
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1" id="fw-demandado">
-                    <label>Demandado</label>
-                    <input type="text" name="demandado" id="f-demandado" placeholder="Nombre completo" autocomplete="off">
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1">
-                    <label>RUT</label>
-                    <input type="text" name="rut" id="f-rut" placeholder="12.345.678-9" autocomplete="off" style="font-family:var(--mono);">
-                    <span class="hint">Opcional</span>
-                  </div>
-                  <div class="field span1">
-                    <label>Monto Mandamiento</label>
-                    <input type="text" name="mandamiento" id="f-mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
-                    <span class="hint">Opcional</span>
-                  </div>
-                  <div class="field span1">
-                    <label>Ciudad / Comuna</label>
-                    <input type="text" name="ciudad" id="f-ciudad" value="Antofagasta" autocomplete="off">
-                  </div>
-                  <div class="field span2" id="fw-notificar_a">
-                    <label>Notificar a <span class="req">*</span></label>
-                    <textarea name="notificar_a" id="f-notificar_a" rows="2"
-                      placeholder="Ej: BARBARA HENRIQUEZ CORNEJO, en su calidad de deudor principal"></textarea>
-                    <span class="hint">⚠ Una fila por notificado. Si hay aval, use una causa separada.</span>
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
+            <!-- COL 2: Partes del juicio -->
+            <div class="col-section">
+              <div class="col-header">Partes del juicio</div>
+              <div class="col-grid">
+                <div class="field span2" id="fw-demandante">
+                  <label>Demandante</label>
+                  <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
+                  <select name="demandante_select" id="f-demandante-select" style="display:none;"></select>
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field span2" id="fw-banco_representado" style="display:none;">
+                  <label>Banco representado <span class="req">*</span></label>
+                  <select name="banco_representado" id="f-banco_representado">
+                    <option value="">(seleccionar banco)</option>
+                    <option value="Banco Internacional">Banco Internacional</option>
+                    <option value="Scotiabank">Scotiabank</option>
+                    <option value="Itaú">Itaú</option>
+                  </select>
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field span2" id="fw-demandado">
+                  <label>Demandado <span class="req">*</span></label>
+                  <input type="text" name="demandado" id="f-demandado" placeholder="Nombre completo" autocomplete="off">
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field">
+                  <label>RUT</label>
+                  <input type="text" name="rut" id="f-rut" placeholder="12.345.678-9" autocomplete="off" style="font-family:var(--mono);">
+                  <span class="hint">Opcional</span>
+                </div>
+                <div class="field">
+                  <label>Monto Mandamiento</label>
+                  <input type="text" name="mandamiento" id="f-mandamiento" placeholder="$ 0" autocomplete="off" style="font-family:var(--mono);">
+                  <span class="hint">Opcional</span>
+                </div>
+                <div class="field span2" id="fw-notificar_a">
+                  <label>Notificar a <span class="req">*</span></label>
+                  <textarea name="notificar_a" id="f-notificar_a" style="height:52px;"
+                    placeholder="BARBARA HENRIQUEZ CORNEJO, en su calidad de deudor principal"></textarea>
+                  <span class="hint">Una fila por notificado</span>
+                  <span class="error-msg">Obligatorio</span>
                 </div>
               </div>
             </div>
 
-            <!-- Domicilio -->
-            <div class="card">
-              <div class="card-header"><span class="dot"></span>Domicilio</div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="field span2" id="fw-direccion">
-                    <label>Dirección <span class="req">*</span></label>
-                    <input type="text" name="direccion" id="f-direccion"
-                      placeholder="Ej: Av. O'Higgins 1234, dpto 502, Torre B" autocomplete="off">
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
-                  <div class="field span1">
-                    <label>Ciudad</label>
-                    <input type="text" value="Antofagasta" readonly>
-                  </div>
+            <!-- COL 3: Domicilio y adicionales -->
+            <div class="col-section">
+              <div class="col-header">Domicilio y adicionales</div>
+              <div class="col-grid">
+                <div class="field span2" id="fw-direccion">
+                  <label>Dirección <span class="req">*</span></label>
+                  <input type="text" name="direccion" id="f-direccion"
+                    placeholder="Av. O'Higgins 1234, dpto 502" autocomplete="off">
+                  <span class="error-msg">Obligatorio</span>
+                </div>
+                <div class="field">
+                  <label>Ciudad / Comuna</label>
+                  <input type="text" name="ciudad" id="f-ciudad" value="Antofagasta" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label>N° Pagaré</label>
+                  <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
+                </div>
+                <div class="field span2">
+                  <label>Piezas a Notificar</label>
+                  <textarea name="piezas" id="f-piezas" style="height:52px;"
+                    placeholder="Demanda, resolución, mandamiento"></textarea>
+                </div>
+                <div class="field span2" id="fw-observacion">
+                  <label>Observación <span id="obs-req-mark"></span></label>
+                  <textarea name="observacion" id="f-observacion" style="height:38px;" placeholder="Opcional"></textarea>
+                  <span class="error-msg">Requerido para este tipo de diligencia</span>
                 </div>
               </div>
             </div>
 
-            <!-- Adicionales -->
-            <div class="card">
-              <div class="card-header"><span class="dot"></span>Datos Adicionales</div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="field span2">
-                    <label>Piezas a Notificar</label>
-                    <textarea name="piezas" id="f-piezas" rows="2"
-                      placeholder="Ej: Demanda, resolución de fecha 12/03/2026, mandamiento de ejecución"></textarea>
-                  </div>
-                  <div class="field span1">
-                    <label>N° Pagaré</label>
-                    <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
-                  </div>
-                  <div class="field span2" id="fw-observacion">
-                    <label>Observación <span id="obs-req-mark"></span></label>
-                    <textarea name="observacion" id="f-observacion" rows="2" placeholder="Opcional"></textarea>
-                    <span class="error-msg">Requerido para este tipo de diligencia</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </div><!-- /form-grid-3col -->
 
           <!-- SIDEBAR -->
           <div class="form-sidebar">
             <div class="card">
-              <div class="card-header"><span class="dot"></span>ID Hex</div>
+              <div class="col-header">ID Hex</div>
               <div class="hex-display">
                 <span class="hex-label">Col. W — Identificador único</span>
                 <span class="hex-value empty" id="hex-display">Completar campos…</span>
@@ -1076,7 +1071,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               </div>
             </div>
             <div class="card">
-              <div class="card-header"><span class="dot"></span>Código QR</div>
+              <div class="col-header">Código QR</div>
               <div class="qr-panel">
                 <div id="qr-container">
                   <div id="qr-placeholder">Se genera al completar campos obligatorios</div>
@@ -1084,14 +1079,14 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               </div>
             </div>
             <div class="card">
-              <div class="card-header"><span class="dot"></span>Completitud</div>
-              <div style="padding:.75rem 1rem;">
+              <div class="col-header">Completitud</div>
+              <div style="padding:6px 10px;">
                 <div class="completeness">
                   <span>Campos obligatorios</span>
                   <span class="pct" id="f-pct">0%</span>
                 </div>
                 <div class="progress-wrap"><div class="progress-bar" id="f-progress"></div></div>
-                <div style="margin-top:.5rem; font-size:11px; color:var(--muted);" id="f-missing">Faltan campos.</div>
+                <div style="margin-top:4px; font-size:11px; color:var(--muted);" id="f-missing">Faltan campos.</div>
               </div>
             </div>
           </div>
