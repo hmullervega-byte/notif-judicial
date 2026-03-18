@@ -911,6 +911,16 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     </select>
                     <span class="error-msg">Obligatorio</span>
                   </div>
+                  <div class="field span1" id="fw-banco_representado" style="display:none;">
+                    <label>Banco representado <span class="req">*</span></label>
+                    <select name="banco_representado" id="f-banco_representado">
+                      <option value="">(seleccionar banco)</option>
+                      <option value="Banco Internacional">Banco Internacional</option>
+                      <option value="Scotiabank">Scotiabank</option>
+                      <option value="Itaú">Itaú</option>
+                    </select>
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
                   <div class="field span1">
                     <label>Abogado / Procurador</label>
                     <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre del abogado o procurador" autocomplete="off">
@@ -1819,6 +1829,13 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => { 
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
+// Banco representado: visible solo si estudio = "Exhortos Frias"
+document.getElementById('f-estudio').addEventListener('change', function() {
+  const esFrias = this.value === 'Exhortos Frias';
+  document.getElementById('fw-banco_representado').style.display = esFrias ? '' : 'none';
+  if (!esFrias) document.getElementById('f-banco_representado').value = '';
+});
+
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
 document.getElementById('f-rol').addEventListener('input', function() {
@@ -2019,6 +2036,12 @@ async function guardarCausa(estadoInicial) {
   let ok = true;
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
+  // Validación condicional: banco representado si Exhortos Frias
+  if (fval('estudio') === 'Exhortos Frias' && !fval('banco_representado')) {
+    showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
+    document.getElementById('fw-banco_representado').classList.add('has-error');
+    return;
+  }
 
   const accion = estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso';
 
@@ -2031,6 +2054,7 @@ async function guardarCausa(estadoInicial) {
       nro_solicitud:     fval('n_solicitud'),
       estudio_juridico:  fval('estudio'),
       abogado_procurador: fval('abogado_procurador'),
+      banco_representado: fval('banco_representado'),
       tipo_diligencia:   fval('tipo_diligencia'),
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
@@ -2143,6 +2167,7 @@ function poblarFormularioFisico(causa) {
     demandante:      causa.datos?.demandante || causa.demandante || '',
     estudio:         causa.datos?.estudio_juridico || causa.datos?.estudio || causa.estudio_juridico || causa.estudio || '',
     abogado_procurador: causa.datos?.abogado_procurador || causa.abogado_procurador || '',
+    banco_representado: causa.datos?.banco_representado || causa.banco_representado || '',
     demandado:       causa.datos?.demandado || causa.demandado || '',
     rut:             causa.datos?.rut || causa.rut || '',
     direccion:       causa.datos?.direccion || causa.direccion || '',
@@ -2205,6 +2230,7 @@ function poblarFormularioFisico(causa) {
       <tr><td class="lbl">Rut:</td><td class="val" colspan="5">${d.rut || ''}</td></tr>
       <tr><td class="lbl">Demandante:</td><td class="val" colspan="5">${d.demandante}</td></tr>
       <tr><td class="lbl">Estudio dte:</td><td class="val" colspan="5">${d.estudio}</td></tr>
+      ${d.banco_representado ? `<tr><td class="lbl">Banco rep.:</td><td class="val" colspan="5">${d.banco_representado}</td></tr>` : ''}
       ${d.abogado_procurador ? `<tr><td class="lbl">Abogado/Proc.:</td><td class="val" colspan="5">${d.abogado_procurador}</td></tr>` : ''}
 
       <!-- FECHA / HORA NOTIFICACIÓN -->
