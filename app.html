@@ -2179,10 +2179,8 @@ function poblarFormularioFisico(causa) {
           : d.mandamiento) : ''
       }</td></tr>
 
-      <!-- OBSERVACIÓN DILIGENCIA -->
-      <tr><td class="lbl-sm">Observación diligencia</td><td class="blank blank-tall" colspan="5"></td></tr>
-      <tr><td colspan="6" class="blank" style="height:16px;"></td></tr>
-      <tr><td class="lbl-sm">Monto pagado</td><td class="blank" colspan="5"></td></tr>
+      <!-- OBSERVACIÓN DILIGENCIA (3cm+) -->
+      <tr><td class="lbl-sm">Observación diligencia</td><td class="blank" colspan="5" style="height:115px;"></td></tr>
 
       <!-- PERSONA DOMICILIO -->
       <tr><td colspan="6" class="sec">PERSONA DEL DOMICILIO QUIEN ENTREGA INFORMACIÓN AL RECEPTOR</td></tr>
@@ -2216,16 +2214,6 @@ function poblarFormularioFisico(causa) {
       <span class="pf-chk" style="font-size:10pt;">ESTAMPADO</span>
       <span class="pf-chk" style="font-size:10pt;">INFORMADO</span>
     </div>
-    <div style="text-align:right; font-size:9pt; margin-top:4px;">
-      APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
-      NO APLICA: <span class="pf-chk"></span>
-    </div>
-
-    <div class="pf-firma-block">
-      <div class="linea"></div>
-      <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
-      <div class="cargo">RECEPTORA JUDICIAL</div>
-    </div>
 
     <div class="pf-footer">ID: ${d.hex}</div>
   </div>
@@ -2244,8 +2232,8 @@ function poblarFormularioFisico(causa) {
         <b>${d.notificar_a}</b>
       </div>
 
-      <div style="border:1.5px solid #000; height:150px; margin-top:20px; position:relative;">
-        <div style="position:absolute; bottom:8px; left:10px; font-family:'Times New Roman',Times,serif; font-size:11pt;">Firma:</div>
+      <div style="border:1.5px solid #000; height:190px; margin-top:20px; position:relative;">
+        <div style="position:absolute; top:6px; right:8px; font-size:8pt; color:#555;">Datos (Rut, Firma)</div>
       </div>
     </div>
   </div>
@@ -2285,12 +2273,6 @@ function poblarFormularioFisico(causa) {
         ***Importante: La receptora solo atiende en su oficina en el día y hora de la citación.
         Si llega en otro horario u otro día, lamentablemente, no será atendido,
         debido a que trabaja mayormente en terreno.***
-      </div>
-
-      <div class="firma-block">
-        <div class="linea"></div>
-        <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
-        <div class="cargo">RECEPTORA JUDICIAL</div>
       </div>
     </div>
   </div>` : ''}`;
