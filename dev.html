@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema Notif Judicial</title>
+<title>[DEV] Sistema Notif Judicial</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -1968,7 +1968,7 @@ async function guardarCausa(estadoInicial) {
 
   const accion = estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso';
 
-  // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
+  // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas-dev/
   const payload = {
     id_hex:  currentHex,
     estado:  estadoInicial,
@@ -1999,8 +1999,8 @@ async function guardarCausa(estadoInicial) {
     ]
   };
 
-  // Subir a Dropbox /causas/{id_hex}_CAUSA.json
-  const dbxPath = `/causas/${currentHex}_CAUSA.json`;
+  // Subir a Dropbox /causas-dev/{id_hex}_CAUSA.json
+  const dbxPath = `/causas-dev/${currentHex}_CAUSA.json`;
 
   // Verificar credenciales configuradas
   if (!DBX.isConfigured()) {
@@ -2339,7 +2339,7 @@ async function cargarCausasDropbox(forzar = false) {
 
   try {
     // Descargar INDEX.json (1 sola petición)
-    const index = await DBX.download('/causas/INDEX.json');
+    const index = await DBX.download('/causas-dev/INDEX.json');
 
     if (!index || !Array.isArray(index) || index.length === 0) {
       causas = [];
@@ -2406,7 +2406,7 @@ async function actualizarIndex() {
     ts_ingreso:       c.ts_ingreso || '',
   }));
   try {
-    await DBX.upload('/causas/INDEX.json', index);
+    await DBX.upload('/causas-dev/INDEX.json', index);
   } catch(e) {
     console.warn('Error actualizando INDEX.json:', e);
   }
@@ -2421,7 +2421,7 @@ async function cargarCausaCompleta(hex) {
   if (!DBX.isConfigured()) return null;
 
   try {
-    const data = await DBX.download(`/causas/${hex}_CAUSA.json`);
+    const data = await DBX.download(`/causas-dev/${hex}_CAUSA.json`);
     if (data) {
       c._causa_json = data;
       // Sincronizar estado por si cambió
@@ -2651,7 +2651,7 @@ async function guardarEdicion(hex) {
 
   if (DBX.isConfigured()) {
     try {
-      await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+      await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
       actualizarIndex();
       showToast(`✅ ${modificados.length} campo${modificados.length > 1 ? 's' : ''} actualizado${modificados.length > 1 ? 's' : ''}`, 'success');
     } catch(err) {
@@ -2782,7 +2782,7 @@ async function validarCausa(hex) {
   }
 
   try {
-    await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+    await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
     c.estado = 'validada';
     actualizarIndex();
     renderValidacion();
@@ -2848,7 +2848,7 @@ async function confirmarDevolver(hex) {
   btn.textContent = '⏳ Enviando...';
 
   try {
-    await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+    await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
     actualizarIndex();
     closeModal();
     renderValidacion();
@@ -2969,7 +2969,7 @@ async function generarRuta() {
       });
 
       if (DBX.isConfigured()) {
-        await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+        await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
       }
       c.estado = 'en_ruta';
       seleccion.push({
@@ -3148,7 +3148,7 @@ async function eliminarCausa(hex) {
 
   if (DBX.isConfigured()) {
     try {
-      await DBX.deleteFile(`/causas/${hex}_CAUSA.json`);
+      await DBX.deleteFile(`/causas-dev/${hex}_CAUSA.json`);
     } catch(err) {
       showToast('❌ Error al eliminar: ' + err.message, 'error');
       return;
