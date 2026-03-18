@@ -2207,36 +2207,40 @@ function poblarFormularioFisico(causa) {
       <div style="font-size:9pt; font-weight:700; margin-bottom:1px;">Notificar demanda</div>
       <div style="font-size:9pt; margin-bottom:4px;">${d.piezas || 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia'}</div>
     </div>
-    <div class="pf-estampe">
-      DON(ÑA) <b>${d.notificar_a}</b><br>
-      DOMICILIO: <b>${d.direccion}</b>, ${d.comuna}<br><br>
-      En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
-      en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
-      los antecedentes que obran en la causa rol <b>${d.rol}</b> del <b>${tribCorto}</b>
-      Juzgado de Letras de Antofagasta.
-    </div>
 
-    <div style="border-top:1px solid #000; margin-top:10px;"></div>
+    <div style="border-top:1px solid #000; margin-top:8px;"></div>
     <div class="pf-estampe-checks">
       <span class="pf-chk" style="font-size:10pt;">ESTAMPADO</span>
       <span class="pf-chk" style="font-size:10pt;">INFORMADO</span>
-    </div>
-    <div style="text-align:right; font-size:9pt; margin-top:4px;">
-      APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
-      NO APLICA: <span class="pf-chk"></span>
-    </div>
-
-    <div class="pf-firma-block">
-      <div class="linea"></div>
-      <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
-      <div class="cargo">RECEPTORA JUDICIAL</div>
     </div>
 
     <div class="pf-footer">ID: ${d.hex}</div>
   </div>
 
   <!-- ════════════════════════════════════════ -->
-  <!-- HOJA 2 — CITACIÓN / REQUERIMIENTO      -->
+  <!-- HOJA 2 — RECIBÍ DOCUMENTOS + FIRMA     -->
+  <!-- ════════════════════════════════════════ -->
+  <div class="pf-page">
+    <div class="pf-recibo">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:13pt; line-height:1.8; margin-bottom:20px;">
+        Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
+        Juzgado de Letras de Antofagasta</b>.
+      </div>
+
+      <div style="font-family:'Times New Roman',Times,serif; font-size:12pt; margin-bottom:40px;">
+        Nombre: <b>${d.notificar_a}</b>
+      </div>
+
+      <table class="pf-recibo-t">
+        <tr><td style="font-size:12pt; height:120px; vertical-align:bottom; padding-bottom:8px;">
+          Firma: _______________________________________________
+        </td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
   <!-- ════════════════════════════════════════ -->
   <div class="pf-page">
     <div class="pf-cita">
@@ -2265,30 +2269,6 @@ function poblarFormularioFisico(causa) {
         <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
         <div class="cargo">RECEPTORA JUDICIAL</div>
       </div>
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════ -->
-  <!-- HOJA 3 — FIRMA DEL REQUERIDO           -->
-  <!-- ════════════════════════════════════════ -->
-  <div class="pf-page">
-    <div class="pf-recibo">
-      <table class="pf-recibo-t">
-        <tr><td colspan="2" style="font-size:12pt; line-height:1.6;">
-          Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
-          Juzgado de Letras de Antofagasta</b>
-        </td></tr>
-        <tr><td colspan="2" style="height:40px;"></td></tr>
-        <tr><td colspan="2" style="height:40px;"></td></tr>
-        <tr>
-          <td style="font-size:12pt;"><b>${d.notificar_a}</b></td>
-          <td style="font-size:12pt;">Firma:</td>
-        </tr>
-        <tr>
-          <td style="height:50px;"></td>
-          <td style="font-size:12pt;">Firma:</td>
-        </tr>
-      </table>
     </div>
   </div>`;
 
