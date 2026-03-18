@@ -2223,12 +2223,12 @@ function poblarFormularioFisico(causa) {
   <!-- ════════════════════════════════════════ -->
   <div class="pf-page">
     <div class="pf-recibo" style="padding-top:30px;">
-      <div style="font-family:'Times New Roman',Times,serif; font-size:14pt; line-height:1.8; margin-bottom:30px; text-align:justify;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.8; margin-bottom:12px; text-align:justify;">
         Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
         Juzgado de Letras de Antofagasta</b>.
       </div>
 
-      <div style="font-family:'Times New Roman',Times,serif; font-size:11pt; text-align:center; margin-bottom:8px;">
+      <div style="font-family:'Times New Roman',Times,serif; font-size:10pt; text-align:center; margin-bottom:8px;">
         <b>${d.notificar_a}</b>
       </div>
 
@@ -2643,12 +2643,31 @@ async function guardarEdicion(hex) {
   verCausa(hex);
 }
 
-function imprimirCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c) { showToast('⚠ Causa no encontrada', 'warn'); return; }
+async function imprimirCausa(hex) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const datos = c._causa_json?.datos || c;
+  const causaCompleta = {
+    ...c,
+    tipo_diligencia:  datos.tipo_diligencia  || c.tipo_diligencia  || '',
+    rol:              datos.rol               || c.rol               || '',
+    tribunal:         datos.tribunal          || c.tribunal          || '',
+    notificar_a:      datos.notificar_a       || c.notificar_a       || datos.demandado || c.demandado || '',
+    direccion:        datos.direccion         || c.direccion         || '',
+    demandado:        datos.demandado         || c.demandado         || '',
+    demandante:       datos.demandante        || c.demandante        || '',
+    rut:              datos.rut               || c.rut               || '',
+    estudio_juridico: datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
+    monto_mandamiento:datos.monto_mandamiento || c.monto_mandamiento || '',
+    piezas:           datos.piezas            || c.piezas            || '',
+    nro_solicitud:    datos.nro_solicitud     || c.nro_solicitud     || '',
+    fecha_solicitud:  datos.fecha_solicitud   || c.fecha_solicitud   || '',
+    ciudad:           datos.ciudad            || c.ciudad            || 'Antofagasta',
+    id_hex:           c.id_hex,
+  };
   closeModal();
-  poblarFormularioFisico(c);
-  setTimeout(() => window.print(), 250);
+  poblarFormularioFisico(causaCompleta);
+  setTimeout(() => window.print(), 400);
 }
 
 // Carga _causa_json si no está en caché, retorna la causa o null
