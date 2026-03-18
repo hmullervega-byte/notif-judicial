@@ -557,78 +557,73 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 /* ── FORMULARIO FÍSICO IMPRIMIBLE ── */
 #print-form { display: none; }
 
-/* Page container */
 .pf-page {
   font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 10pt;
-  line-height: 1.35; width: 100%; box-sizing: border-box;
-  page-break-after: always; padding: 0;
+  line-height: 1.3; width: 100%; box-sizing: border-box;
+  page-break-after: always;
 }
 .pf-page:last-child { page-break-after: auto; }
 
-/* HOJA 1 — Header */
-.pf-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  border: 2px solid #000; padding: 6px 10px; margin-bottom: 0;
-}
-.pf-header-left { flex: 1; }
-.pf-title { font-size: 11pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.pf-header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.pf-solicitud { font-size: 9pt; text-align: right; }
-.pf-qr { width: 56px; height: 56px; flex-shrink: 0; }
-.pf-qr canvas, .pf-qr img { width: 56px !important; height: 56px !important; }
+/* Tabla principal */
+.pf-t { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.pf-t td, .pf-t th { border: 1px solid #000; padding: 2px 5px; vertical-align: middle; }
+.pf-t .lbl { font-size: 8pt; font-weight: 700; background: #e8e8e8; white-space: nowrap; width: 120px; }
+.pf-t .val { font-size: 10pt; font-weight: 600; }
+.pf-t .sec { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  background: #000; color: #fff; padding: 3px 6px; text-align: left; }
+.pf-t .blank { min-height: 20px; }
+.pf-t .blank-tall { min-height: 48px; }
+.pf-t .lbl-sm { font-size: 7pt; font-weight: 700; background: #e8e8e8; }
 
-/* Data table */
-.pf-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-.pf-table td { border: 1px solid #000; padding: 3px 6px; vertical-align: top; }
-.pf-table .pf-lbl { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #333; width: 110px; white-space: nowrap; background: #f0f0f0; }
-.pf-table .pf-val { font-weight: 600; }
-.pf-table .pf-lbl-sm { font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #555; background: #f0f0f0; }
+/* Header con QR */
+.pf-hdr { display: flex; align-items: flex-start; }
+.pf-hdr-title { flex: 1; font-size: 10pt; font-weight: 700; text-transform: uppercase; padding: 4px; }
+.pf-hdr-right { text-align: right; font-size: 8pt; padding: 4px; }
+.pf-qr { width: 58px; height: 58px; flex-shrink: 0; margin-left: 6px; }
+.pf-qr canvas, .pf-qr img { width: 58px !important; height: 58px !important; }
 
-/* Section headers */
-.pf-section {
-  font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-  background: #000; color: #fff; padding: 2px 6px; margin: 0;
-  border: 1px solid #000;
-}
+/* Checkboxes persona domicilio */
+.pf-chks { display: flex; flex-wrap: wrap; gap: 1px 10px; padding: 4px 6px; font-size: 9pt; }
+.pf-chk { display: inline-flex; align-items: center; gap: 3px; }
+.pf-chk::before { content: ''; display: inline-block; width: 11px; height: 11px; border: 1.5px solid #000; border-radius: 2px; }
+.pf-sep { color: #999; margin: 0 3px; }
 
-/* Blank line fields (for handwriting) */
-.pf-blank { border-bottom: 1px solid #000; min-height: 22px; padding: 2px 4px; font-size: 10pt; }
-.pf-blank-tall { min-height: 55px; }
+/* Texto pre-estampe (hoja 1 parte inferior) */
+.pf-estampe { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.5;
+  margin-top: 10px; text-align: justify; }
+.pf-estampe b { font-weight: 700; }
+.pf-estampe-checks { display: flex; gap: 30px; justify-content: flex-end; margin-top: 6px; font-size: 10pt; }
+.pf-firma-block { text-align: center; margin-top: 16px; }
+.pf-firma-block .linea { border-top: 1px solid #000; width: 280px; margin: 0 auto 2px; }
+.pf-firma-block .nombre { font-size: 10pt; font-weight: 700; }
+.pf-firma-block .cargo { font-size: 9pt; }
 
-/* Checkbox grid */
-.pf-checks { display: flex; flex-wrap: wrap; gap: 2px 8px; padding: 3px 6px; }
-.pf-chk { display: inline-flex; align-items: center; gap: 3px; font-size: 9pt; }
-.pf-chk::before { content: ''; display: inline-block; width: 11px; height: 11px; border: 1.5px solid #000; border-radius: 2px; flex-shrink: 0; }
+/* Hoja 2 — Citación */
+.pf-cita { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.7;
+  padding: 20px 0; text-align: justify; }
+.pf-cita-title { font-size: 14pt; font-weight: 700; text-align: center; text-transform: uppercase;
+  margin-bottom: 24px; letter-spacing: .05em; }
+.pf-cita b { font-weight: 700; }
+.pf-cita .blank { display: inline-block; border-bottom: 1px solid #000; min-width: 90px; }
+.pf-cita .aviso { font-size: 10pt; font-weight: 700; margin-top: 24px; border: 1.5px solid #000;
+  padding: 10px; line-height: 1.4; }
+.pf-cita .firma-block { text-align: center; margin-top: 40px; }
+.pf-cita .firma-block .linea { border-top: 1px solid #000; width: 280px; margin: 0 auto 2px; }
+.pf-cita .firma-block .nombre { font-size: 11pt; font-weight: 700; }
+.pf-cita .firma-block .cargo { font-size: 10pt; }
 
-/* Observation boxes */
-.pf-obs { border: 1px solid #000; min-height: 50px; padding: 4px 6px; }
-.pf-obs-label { font-size: 7pt; color: #999; }
+/* Hoja 3 — Firma requerido */
+.pf-recibo { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.8; padding: 30px 0; }
+.pf-recibo-t { width: 100%; border-collapse: collapse; margin-top: 30px; }
+.pf-recibo-t td { border: 1px solid #000; padding: 10px 12px; font-size: 12pt; vertical-align: top; min-height: 40px; }
 
-/* Footer */
-.pf-footer { font-size: 7pt; color: #888; text-align: center; border-top: 1px solid #ccc; padding-top: 3px; margin-top: 4px; }
-
-/* HOJA 2 — Citación */
-.pf-citacion { font-size: 11pt; line-height: 1.6; padding: 20px 10px; }
-.pf-citacion-title { font-size: 13pt; font-weight: 700; text-align: center; text-transform: uppercase; margin-bottom: 20px; }
-.pf-citacion p { margin: 0 0 14px; text-align: justify; }
-.pf-citacion .pf-underline { display: inline-block; border-bottom: 1px solid #000; min-width: 80px; }
-.pf-citacion .pf-bold { font-weight: 700; }
-.pf-citacion .pf-aviso { font-size: 9pt; margin-top: 30px; border: 1px solid #000; padding: 8px; line-height: 1.4; }
-.pf-citacion .pf-firma-line { border-top: 1px solid #000; width: 250px; margin: 40px auto 4px; }
-.pf-citacion .pf-firma-label { text-align: center; font-size: 9pt; font-weight: 700; }
-
-/* HOJA 3 — Firma */
-.pf-firma-page { font-size: 12pt; line-height: 1.8; padding: 40px 20px; text-align: center; }
-.pf-firma-page p { margin: 0 0 16px; text-align: justify; }
-.pf-firma-page .pf-firma-box { margin-top: 60px; text-align: left; }
-.pf-firma-page .pf-firma-box .pf-line { border-bottom: 1px solid #000; min-height: 30px; margin-bottom: 6px; padding-left: 80px; }
-.pf-firma-page .pf-firma-box .pf-line-label { font-size: 10pt; font-weight: 700; display: inline-block; width: 75px; }
+/* Footer ID */
+.pf-footer { font-size: 7pt; color: #888; text-align: center; margin-top: 6px; }
 
 @media print {
   body > *:not(#print-form) { display: none !important; }
   #print-form { display: block !important; }
   @page { size: letter; margin: 15mm; }
-  .pf-page { padding: 0; }
 }
 
 /* ════════════════════════════════════════
@@ -2126,138 +2121,184 @@ function poblarFormularioFisico(causa) {
     comuna:          'ANTOFAGASTA',
   };
 
-  // Tribunal corto para Hoja 3
-  const tribNum = (d.tribunal.match(/primer|segund|tercer|cuart|quint/i) || [''])[0];
-  const tribOrd = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
-  const tribCorto = (tribOrd[tribNum.toLowerCase()] || d.tribunal.split(' ')[0]);
+  // Tribunal corto: "Segundo", "Primer", etc.
+  const tribMatch = d.tribunal.match(/primer|segund|tercer|cuart|quint/i);
+  const tribMap = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
+  const tribCorto = tribMatch ? (tribMap[tribMatch[0].toLowerCase()] || tribMatch[0]) : d.tribunal.split(' ')[0];
 
-  // ── Determinar si aplica NOT44 (hojas 2 y 3) ──
-  const esNot44 = /NOT44/i.test(d.tipo_diligencia);
-
-  // ── HOJA 1 — Formulario principal ──
+  // ════════════════════════════════════════
+  // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
+  // ════════════════════════════════════════
   let html = `
-  <div class="pf-page" id="pf-hoja1">
-    <div class="pf-header">
-      <div class="pf-header-left">
-        <div class="pf-title">Ruta Interna - Formulario Proceso de Estampes</div>
-      </div>
-      <div class="pf-header-right">
-        <div class="pf-solicitud">
-          <div style="font-weight:700">FECHA SOLICITUD ${d.fecha_solicitud}</div>
-          <div>SOLICITUD ${d.n_solicitud}</div>
-        </div>
-        <div class="pf-qr" id="pf-qr"></div>
-      </div>
-    </div>
+  <div class="pf-page">
+    <table class="pf-t">
+      <!-- ENCABEZADO: título + fecha/solicitud + QR -->
+      <tr>
+        <td colspan="4" class="sec" style="background:#333; font-size:9pt; padding:5px 8px;">
+          RUTA INTERNA - FORMULARIO PROCESO DE ESTAMPES
+        </td>
+        <td colspan="2" rowspan="2" style="text-align:right; vertical-align:top; padding:4px 6px;">
+          <div style="font-size:8pt; font-weight:700;">FECHA SOLICITUD ${d.fecha_solicitud}</div>
+          <div style="font-size:8pt;">SOLICITUD&nbsp;&nbsp;${d.n_solicitud}</div>
+          <div class="pf-qr" id="pf-qr" style="margin-left:auto; margin-top:4px;"></div>
+        </td>
+      </tr>
+      <tr><td colspan="4" style="border-top:0; height:2px; padding:0;"></td></tr>
 
-    <table class="pf-table">
-      <tr><td class="pf-lbl">ROL</td><td class="pf-val" colspan="2">${d.rol}</td>
-          <td class="pf-lbl">Tribunal</td><td class="pf-val" colspan="2">${d.tribunal}</td></tr>
-      <tr><td class="pf-lbl">Demandado</td><td class="pf-val" colspan="5">${d.demandado}</td></tr>
-      <tr><td class="pf-lbl">RUT</td><td class="pf-val" colspan="5">${d.rut || '—'}</td></tr>
-      <tr><td class="pf-lbl">Demandante</td><td class="pf-val" colspan="5">${d.demandante}</td></tr>
-      <tr><td class="pf-lbl">Estudio Dte</td><td class="pf-val" colspan="5">${d.estudio}</td></tr>
+      <!-- DATOS CAUSA -->
+      <tr><td class="lbl">ROL</td><td class="val" colspan="2">${d.rol}</td>
+          <td class="lbl">TRIBUNAL</td><td class="val" colspan="2">${tribCorto}</td></tr>
+      <tr><td class="lbl">Demandado:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
+          <td class="val" colspan="3">${d.demandado}</td></tr>
+      <tr><td class="lbl">Rut:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
+          <td class="val" colspan="3">${d.rut || ''}</td></tr>
+      <tr><td class="lbl">Demandante:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
+          <td class="val" colspan="3">${d.demandante}</td></tr>
+      <tr><td class="lbl">Estudio dte:</td><td colspan="2" class="lbl" style="width:auto; background:none;"></td>
+          <td class="val" colspan="3">${d.estudio}</td></tr>
 
-      <tr><td colspan="6" class="pf-section">Tipo de Notificación</td></tr>
-      <tr><td class="pf-lbl-sm">Fecha y Hora<br>1° Not</td><td class="pf-blank" colspan="5"></td></tr>
-      <tr><td class="pf-lbl-sm">Fecha y Hora<br>2° Not</td><td class="pf-blank" colspan="5"></td></tr>
-      <tr><td class="pf-lbl-sm">Fecha Req.<br>de Pago</td><td class="pf-blank" colspan="5"></td></tr>
-      <tr><td class="pf-lbl">Monto Mandamiento</td><td class="pf-val" colspan="5">${d.mandamiento || '—'}</td></tr>
+      <!-- FECHA / HORA NOTIFICACIÓN -->
+      <tr><td class="lbl-sm">FECHA DE NOTIFICACION</td><td class="blank" colspan="5"></td></tr>
+      <tr><td class="lbl-sm">HORA</td><td class="blank" colspan="5"></td></tr>
 
-      <tr><td colspan="6" class="pf-section">Observación diligencia</td></tr>
-      <tr><td colspan="6" class="pf-blank pf-blank-tall"></td></tr>
+      <!-- NOTIFICAR A / DIRECCIÓN / COMUNA -->
+      <tr><td class="lbl">NOTIFICAR A:</td><td class="val" colspan="5">${d.notificar_a}</td></tr>
+      <tr><td class="lbl">DIRECCIÓN EXACTA:</td><td class="val" colspan="5">${d.direccion}</td></tr>
+      <tr><td class="lbl">COMUNA:</td><td class="val" colspan="2">${d.comuna}</td><td colspan="3"></td></tr>
 
-      <tr><td colspan="6" class="pf-section">Persona del domicilio quien entrega información al receptor</td></tr>
+      <!-- ESPACIO -->
+      <tr><td colspan="6" style="border:none; height:4px;"></td></tr>
+
+      <!-- TIPO DE NOTIFICACIÓN -->
+      <tr><td colspan="6" class="sec">TIPO DE NOTIFICACIÓN</td></tr>
+      <tr><td class="lbl-sm">Fecha y Hora 1°Not</td><td class="blank" colspan="5"></td></tr>
+      <tr><td class="lbl-sm">Fecha y Hora 2°Not</td><td class="blank" colspan="5"></td></tr>
+      <tr><td class="lbl-sm">Fecha Req. De Pago</td><td class="blank" colspan="5"></td></tr>
+      <tr><td class="lbl">Monto Mandamiento</td><td class="val" colspan="2">${d.mandamiento || ''}</td>
+          <td colspan="3"></td></tr>
+
+      <!-- OBSERVACIÓN DILIGENCIA -->
+      <tr><td class="lbl-sm">Observación diligencia</td><td class="blank blank-tall" colspan="5"></td></tr>
+      <tr><td colspan="6" class="blank" style="height:16px;"></td></tr>
+      <tr><td class="lbl-sm">Monto pagado</td><td class="blank" colspan="5"></td></tr>
+
+      <!-- PERSONA DOMICILIO -->
+      <tr><td colspan="6" class="sec">PERSONA DEL DOMICILIO QUIEN ENTREGA INFORMACIÓN AL RECEPTOR</td></tr>
     </table>
 
-    <div class="pf-checks" style="border:1px solid #000; border-top:0; padding:5px 6px;">
-      <span class="pf-chk">Hombre</span>
-      <span class="pf-chk">Mujer</span>
-      <span style="margin:0 6px; color:#999;">|</span>
+    <div class="pf-chks" style="border:1px solid #000; border-top:0;">
+      <span class="pf-chk">HOMBRE</span>
+      <span class="pf-chk">MUJER</span>
+      <span class="pf-sep">|</span>
       <span class="pf-chk">Conserje</span>
       <span class="pf-chk">Vecino(a)</span>
       <span class="pf-chk">Del Domicilio</span>
-      <span style="margin:0 6px; color:#999;">|</span>
-      <span style="font-size:9pt;">Persona copia: ____________________________</span>
+    </div>
+    <div style="border:1px solid #000; border-top:0; padding:3px 6px; font-size:9pt;">
+      PERSONA COPIA: _______________________________________________
     </div>
 
-    <table class="pf-table" style="margin-top:0;">
-      <tr><td colspan="6" class="pf-section">Otras observaciones del receptor</td></tr>
-      <tr><td colspan="6" class="pf-blank pf-blank-tall"></td></tr>
-
-      <tr><td class="pf-lbl">Notificar a</td><td class="pf-val" colspan="5">${d.notificar_a}</td></tr>
-      <tr><td class="pf-lbl">Dirección exacta</td><td class="pf-val" colspan="5">${d.direccion}</td></tr>
-      <tr><td class="pf-lbl">Comuna</td><td class="pf-val" colspan="5">${d.comuna}</td></tr>
+    <table class="pf-t" style="margin-top:0;">
+      <tr><td colspan="6" class="sec">OTRAS OBSERVACIONES DEL RECEPTOR</td></tr>
+      <tr><td colspan="6" class="blank blank-tall"></td></tr>
     </table>
 
-    <div class="pf-footer">
-      ID: <span id="pf-hex">${d.hex}</span> · Formulario generado desde Sistema Notif Judicial
+    <!-- TEXTO NOTIFICACIÓN PRE-IMPRESO -->
+    <div style="margin-top:6px; padding:4px 0; border-top:1px solid #000;">
+      <div style="font-size:9pt; font-weight:700; margin-bottom:2px;">Notificar demanda</div>
+    </div>
+    <div class="pf-estampe">
+      DON(ÑA) <b>${d.notificar_a}</b><br>
+      DOMICILIO: <b>${d.direccion}</b>, ${d.comuna}<br><br>
+      En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
+      en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
+      los antecedentes que obran en la causa rol <b>${d.rol}</b> del <b>${tribCorto}</b>
+      Juzgado de Letras de Antofagasta.
+    </div>
+
+    <div style="border-top:1px solid #000; margin-top:10px;"></div>
+    <div class="pf-estampe-checks">
+      <span class="pf-chk" style="font-size:10pt;">ESTAMPADO</span>
+      <span class="pf-chk" style="font-size:10pt;">INFORMADO</span>
+    </div>
+    <div style="text-align:right; font-size:9pt; margin-top:4px;">
+      APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
+      NO APLICA: <span class="pf-chk"></span>
+    </div>
+
+    <div class="pf-firma-block">
+      <div class="linea"></div>
+      <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
+      <div class="cargo">RECEPTORA JUDICIAL</div>
+    </div>
+
+    <div class="pf-footer">ID: ${d.hex}</div>
+  </div>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- HOJA 2 — CITACIÓN / REQUERIMIENTO      -->
+  <!-- ════════════════════════════════════════ -->
+  <div class="pf-page">
+    <div class="pf-cita">
+      <div class="pf-cita-title">Citación – Requerimiento</div>
+      <p>
+        Señor(a) <b>${d.notificar_a}</b>, queda citado para el
+        día<span class="blank">&nbsp;</span>2026,
+        a las <span class="blank" style="min-width:30px;">&nbsp;</span>:<span class="blank" style="min-width:30px;">&nbsp;</span> horas,
+        para que concurra a mi oficio de receptora judicial ubicado en
+        <b>Calle Baquedano #239, oficina N° 716, Antofagasta</b>,
+        a fin de requerirlo(a) de pago, por la suma señalada en autos,
+        más intereses y costas, bajo apercibimiento de darlo(a) por
+        requerido(a) en rebeldía si no comparece.
+      </p>
+
+      <div style="border-top:1px solid #000; margin-top:20px;"></div>
+
+      <div class="aviso">
+        ***Importante: La receptora solo atiende en su oficina en el día y hora de la citación.
+        Si llega en otro horario u otro día, lamentablemente, no será atendido,
+        debido a que trabaja mayormente en terreno.***
+      </div>
+
+      <div class="firma-block">
+        <div class="linea"></div>
+        <div class="nombre">MARIA JOSE CARREÑO MENDEZ</div>
+        <div class="cargo">RECEPTORA JUDICIAL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- HOJA 3 — FIRMA DEL REQUERIDO           -->
+  <!-- ════════════════════════════════════════ -->
+  <div class="pf-page">
+    <div class="pf-recibo">
+      <table class="pf-recibo-t">
+        <tr><td colspan="2" style="font-size:12pt; line-height:1.6;">
+          Recibí documentos en causa ROL <b>${d.rol}</b> del <b>${tribCorto}
+          Juzgado de Letras de Antofagasta</b>
+        </td></tr>
+        <tr><td colspan="2" style="height:40px;"></td></tr>
+        <tr><td colspan="2" style="height:40px;"></td></tr>
+        <tr>
+          <td style="font-size:12pt;"><b>${d.notificar_a}</b></td>
+          <td style="font-size:12pt;">Firma:</td>
+        </tr>
+        <tr>
+          <td style="height:50px;"></td>
+          <td style="font-size:12pt;">Firma:</td>
+        </tr>
+      </table>
     </div>
   </div>`;
 
-  // ── HOJA 2 — Citación / Requerimiento (solo NOT44) ──
-  if (esNot44) {
-    html += `
-    <div class="pf-page pf-citacion" id="pf-hoja2">
-      <div class="pf-citacion-title">Citación – Requerimiento</div>
-      <p>
-        Señor(a) <span class="pf-bold">${d.notificar_a}</span>,
-        queda citado para el día <span class="pf-underline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> 2026,
-        a las <span class="pf-underline">&nbsp;&nbsp;&nbsp;&nbsp;</span>:<span class="pf-underline">&nbsp;&nbsp;&nbsp;&nbsp;</span> horas,
-        para que concurra a mi oficio de receptora judicial ubicado en Calle Baquedano #239,
-        oficina N° 716, Antofagasta, a fin de requerirlo(a) de pago por la suma indicada
-        en el mandamiento de ejecución y embargo, más intereses y costas de la causa
-        ROL <span class="pf-bold">${d.rol}</span> del <span class="pf-bold">${d.tribunal}</span>.
-      </p>
-      <p>
-        En caso de no comparecer en el día y hora señalados, será declarado(a) como requerido(a)
-        de pago en rebeldía y se le practicará sin más trámite el embargo de bienes muebles de
-        su propiedad, designándose depositario(a) provisional de los bienes embargados.
-      </p>
-      <p>
-        Se le hace presente el plazo legal para oponer excepciones a la ejecución
-        (Art. 459 C.P.C. / Art. 733 C.P.C.).
-      </p>
-
-      <div class="pf-aviso">
-        <strong>***Importante:</strong> La receptora solo atiende en su oficina en el día y hora
-        de la citación. Si llega en otro horario u otro día no será atendido(a).
-      </div>
-
-      <div style="margin-top:40px;">
-        <div class="pf-firma-line"></div>
-        <div class="pf-firma-label">MARIA JOSE CARREÑO MENDEZ<br>RECEPTORA JUDICIAL</div>
-      </div>
-    </div>`;
-
-    // ── HOJA 3 — Firma del requerido (solo NOT44) ──
-    html += `
-    <div class="pf-page pf-firma-page" id="pf-hoja3">
-      <p>
-        Recibí documentos en causa ROL <strong>${d.rol}</strong> del
-        <strong>${tribCorto} Juzgado de Letras de Antofagasta</strong>.
-      </p>
-
-      <div class="pf-firma-box">
-        <div style="margin-bottom:30px;">
-          <span class="pf-line-label">Nombre:</span>
-          <span style="font-weight:700; font-size:12pt;">${d.notificar_a}</span>
-        </div>
-        <div>
-          <span class="pf-line-label">Firma:</span>
-          <span class="pf-line" style="display:inline-block; border-bottom:1px solid #000; width:300px;">&nbsp;</span>
-        </div>
-      </div>
-    </div>`;
-  }
-
   document.getElementById('print-form').innerHTML = html;
 
-  // QR code
+  // QR code en esquina superior derecha
   const qrEl = document.getElementById('pf-qr');
   if (qrEl) {
     qrEl.innerHTML = '';
-    new QRCode(qrEl, { text: d.hex, width: 56, height: 56,
+    new QRCode(qrEl, { text: d.hex, width: 58, height: 58,
       colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
   }
 }
