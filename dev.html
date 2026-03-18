@@ -911,6 +911,11 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     </select>
                     <span class="error-msg">Obligatorio</span>
                   </div>
+                  <div class="field span1">
+                    <label>Abogado / Procurador</label>
+                    <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre del abogado o procurador" autocomplete="off">
+                    <span class="hint">Opcional</span>
+                  </div>
                   <div class="field span1" id="fw-tipo_diligencia">
                     <label>Tipo Diligencia</label>
                     <select name="tipo_diligencia" id="f-tipo_diligencia">
@@ -2025,6 +2030,7 @@ async function guardarCausa(estadoInicial) {
       fecha_solicitud:   fval('fecha_solicitud'),
       nro_solicitud:     fval('n_solicitud'),
       estudio_juridico:  fval('estudio'),
+      abogado_procurador: fval('abogado_procurador'),
       tipo_diligencia:   fval('tipo_diligencia'),
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
@@ -2136,6 +2142,7 @@ function poblarFormularioFisico(causa) {
     tribunal:        causa.datos?.tribunal || causa.tribunal || '',
     demandante:      causa.datos?.demandante || causa.demandante || '',
     estudio:         causa.datos?.estudio_juridico || causa.datos?.estudio || causa.estudio_juridico || causa.estudio || '',
+    abogado_procurador: causa.datos?.abogado_procurador || causa.abogado_procurador || '',
     demandado:       causa.datos?.demandado || causa.demandado || '',
     rut:             causa.datos?.rut || causa.rut || '',
     direccion:       causa.datos?.direccion || causa.direccion || '',
@@ -2198,6 +2205,7 @@ function poblarFormularioFisico(causa) {
       <tr><td class="lbl">Rut:</td><td class="val" colspan="5">${d.rut || ''}</td></tr>
       <tr><td class="lbl">Demandante:</td><td class="val" colspan="5">${d.demandante}</td></tr>
       <tr><td class="lbl">Estudio dte:</td><td class="val" colspan="5">${d.estudio}</td></tr>
+      ${d.abogado_procurador ? `<tr><td class="lbl">Abogado/Proc.:</td><td class="val" colspan="5">${d.abogado_procurador}</td></tr>` : ''}
 
       <!-- FECHA / HORA NOTIFICACIÓN -->
       <tr><td class="lbl-sm">FECHA DE NOTIFICACION</td><td class="blank" colspan="5"></td></tr>
