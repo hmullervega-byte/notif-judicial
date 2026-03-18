@@ -911,16 +911,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     </select>
                     <span class="error-msg">Obligatorio</span>
                   </div>
-                  <div class="field span1" id="fw-banco_representado" style="display:none;">
-                    <label>Banco representado <span class="req">*</span></label>
-                    <select name="banco_representado" id="f-banco_representado">
-                      <option value="">(seleccionar banco)</option>
-                      <option value="Banco Internacional">Banco Internacional</option>
-                      <option value="Scotiabank">Scotiabank</option>
-                      <option value="Itaú">Itaú</option>
-                    </select>
-                    <span class="error-msg">Obligatorio</span>
-                  </div>
                   <div class="field span1">
                     <label>Abogado / Procurador</label>
                     <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre del abogado o procurador" autocomplete="off">
@@ -989,6 +979,16 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <div class="field span1" id="fw-demandante">
                     <label>Demandante</label>
                     <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
+                    <span class="error-msg">Obligatorio</span>
+                  </div>
+                  <div class="field span1" id="fw-banco_representado" style="display:none;">
+                    <label>Banco representado <span class="req">*</span></label>
+                    <select name="banco_representado" id="f-banco_representado">
+                      <option value="">(seleccionar banco)</option>
+                      <option value="Banco Internacional">Banco Internacional</option>
+                      <option value="Scotiabank">Scotiabank</option>
+                      <option value="Itaú">Itaú</option>
+                    </select>
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-demandado">
@@ -1829,12 +1829,17 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => { 
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
-// Banco representado: visible solo si estudio = "Exhortos Frias"
-document.getElementById('f-estudio').addEventListener('change', function() {
-  const esFrias = this.value === 'Exhortos Frias';
-  document.getElementById('fw-banco_representado').style.display = esFrias ? '' : 'none';
-  if (!esFrias) document.getElementById('f-banco_representado').value = '';
-});
+// Banco representado: visible solo si estudio = "Exhortos Frias" Y demandante contiene "TESORER"
+function evaluarBancoRepresentado() {
+  const estudio = fval('estudio');
+  const demandante = fval('demandante').toUpperCase();
+  const mostrar = estudio === 'Exhortos Frias' && demandante.includes('TESORER');
+  document.getElementById('fw-banco_representado').style.display = mostrar ? '' : 'none';
+  document.getElementById('f-banco_representado').required = mostrar;
+  if (!mostrar) document.getElementById('f-banco_representado').value = '';
+}
+document.getElementById('f-estudio').addEventListener('change', evaluarBancoRepresentado);
+document.getElementById('f-demandante').addEventListener('input', evaluarBancoRepresentado);
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -2037,7 +2042,7 @@ async function guardarCausa(estadoInicial) {
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
   // Validación condicional: banco representado si Exhortos Frias
-  if (fval('estudio') === 'Exhortos Frias' && !fval('banco_representado')) {
+  if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
     showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
     document.getElementById('fw-banco_representado').classList.add('has-error');
     return;
