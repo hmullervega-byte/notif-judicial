@@ -616,6 +616,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
   body > *:not(#print-form) { display: none !important; }
   #print-form { display: block !important; }
   @page { size: letter; margin: 15mm; }
+  .pf-page { page-break-inside: avoid; }
 }
 
 /* ════════════════════════════════════════
@@ -2235,41 +2236,43 @@ function poblarFormularioFisico(causa) {
   <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
   <!-- Solo si tipo_diligencia es ejecutiva    -->
   <!-- ════════════════════════════════════════ -->
-  ${esEjecutiva ? `<div class="pf-page">
-    <div style="font-family:'Times New Roman',Times,serif; font-size:12pt; line-height:1.6; text-align:justify;">
+  ${esEjecutiva ? `<div class="pf-page" style="page-break-inside:avoid; overflow:hidden;">
+    <div style="font-family:'Times New Roman',Times,serif; font-size:clamp(9pt,2.5vw,11pt); line-height:1.45; text-align:justify;">
 
-      <p style="margin:0 0 4px;">
+      <p style="margin:0 0 2px;">
         DON(ÑA) <b>${(d.notificar_a || '').toUpperCase()}</b>
       </p>
-      <p style="margin:0 0 12px;">
+      <p style="margin:0 0 6px;">
         DOMICILIO: <b>${(d.direccion || '').toUpperCase()}</b>, ${(d.comuna || 'ANTOFAGASTA').toUpperCase()}
       </p>
 
-      <p style="margin:0 0 8px;">
+      <p style="margin:0 0 4px;">
         En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
         en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
         los antecedentes que obran en la causa rol <b>${d.rol}</b> del
         <b>${tribCorto}</b> Juzgado de Letras de Antofagasta.
       </p>
 
-      <hr style="border:none; border-top:1px solid #000; margin:12px 0;">
+      <img src="timbre_receptora.jpg" style="width:130px; display:block; margin:6px 0;">
 
-      <div style="text-align:right; font-size:10pt; margin-bottom:4px;">
+      <hr style="border:none; border-top:1px solid #000; margin:6px 0;">
+
+      <div style="text-align:right; font-size:9pt; margin-bottom:2px;">
         APLICA: <span class="pf-chk"></span>&nbsp;&nbsp;&nbsp;&nbsp;
         NO APLICA: <span class="pf-chk"></span>
       </div>
-      <div style="text-align:center; margin-bottom:16px;">
-        <div style="font-size:10pt; font-weight:700;">MARIA JOSE CARREÑO MENDEZ</div>
-        <div style="font-size:9pt;">RECEPTORA JUDICIAL</div>
+      <div style="text-align:center; margin-bottom:8px;">
+        <div style="font-size:9pt; font-weight:700;">MARIA JOSE CARREÑO MENDEZ</div>
+        <div style="font-size:8pt;">RECEPTORA JUDICIAL</div>
       </div>
 
-      <hr style="border:none; border-top:2px solid #000; margin:20px 0;">
+      <hr style="border:none; border-top:2px solid #000; margin:8px 0;">
 
-      <div style="text-align:center; font-size:14pt; font-weight:700; margin:16px 0; letter-spacing:.05em;">
+      <div style="text-align:center; font-size:12pt; font-weight:700; margin:8px 0; letter-spacing:.05em;">
         CITACIÓN – REQUERIMIENTO
       </div>
 
-      <p style="margin:0 0 8px;">
+      <p style="margin:0 0 4px;">
         Señor(a) <b>${d.notificar_a}</b>, queda citado para el
         día __________ 2026, a las ___:___ horas,
         para que concurra a mi oficio de receptora judicial ubicado en
@@ -2279,13 +2282,14 @@ function poblarFormularioFisico(causa) {
         requerido(a) en rebeldía si no comparece.
       </p>
 
-      <hr style="border:none; border-top:1px solid #000; margin:16px 0;">
-      <div style="font-size:10pt; font-weight:700; padding:8px; border:1px solid #000; line-height:1.4;">
+      <img src="timbre_receptora.jpg" style="width:130px; display:block; margin:6px 0;">
+
+      <hr style="border:none; border-top:1px solid #000; margin:6px 0;">
+      <div style="font-size:9pt; font-weight:700; padding:6px; border:1px solid #000; line-height:1.3;">
         ***Importante: La receptora solo atiende en su oficina en el día y hora de la citación.
         Si llega en otro horario u otro día, lamentablemente, no será atendido,
         debido a que trabaja mayormente en terreno.***
       </div>
-      <hr style="border:none; border-top:1px solid #000; margin:16px 0;">
 
     </div>
   </div>` : ''}`;
