@@ -2118,8 +2118,9 @@ function poblarFormularioFisico(causa) {
   const tribMap = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
   const tribCorto = tribMatch ? (tribMap[tribMatch[0].toLowerCase()] || tribMatch[0]) : d.tribunal.split(' ')[0];
 
-  // Hoja 3 solo se imprime si tipo es NOT44-EJE o NOT44-ORD
-  const esNot44 = /NOT44/i.test(d.tipo_diligencia);
+  // Hoja 3 (citación/requerimiento) se imprime si es demanda ejecutiva
+  // Tipos ejecutivos: NOT-DEMANDA-EJE-GENERAL, NOT-DEMANDA-EJE-HIPOTECARIA, etc.
+  const esEjecutiva = /EJE/i.test(d.tipo_diligencia);
 
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
@@ -2232,9 +2233,9 @@ function poblarFormularioFisico(causa) {
 
   <!-- ════════════════════════════════════════ -->
   <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
-  <!-- SIEMPRE visible (debug: confirmar que se imprime) -->
+  <!-- Solo si tipo_diligencia es ejecutiva    -->
   <!-- ════════════════════════════════════════ -->
-  <div class="pf-page">
+  ${esEjecutiva ? `<div class="pf-page">
     <div style="font-family:'Times New Roman',Times,serif; font-size:12pt; line-height:1.6; text-align:justify;">
 
       <p style="margin:0 0 4px;">
@@ -2287,9 +2288,9 @@ function poblarFormularioFisico(causa) {
       <hr style="border:none; border-top:1px solid #000; margin:16px 0;">
 
     </div>
-  </div>`;
+  </div>` : ''}`;
 
-  console.log('DEBUG hoja3 — esNot44:', esNot44, '| tipo:', d.tipo_diligencia);
+  console.log('DEBUG hoja3 — esEjecutiva:', esEjecutiva, '| tipo:', d.tipo_diligencia);
 
   document.getElementById('print-form').innerHTML = html;
 
