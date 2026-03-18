@@ -979,6 +979,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <div class="field span1" id="fw-demandante">
                     <label>Demandante</label>
                     <input type="text" name="demandante" id="f-demandante" placeholder="Banco o institución" autocomplete="off">
+                    <select name="demandante_select" id="f-demandante-select" style="display:none;"></select>
                     <span class="error-msg">Obligatorio</span>
                   </div>
                   <div class="field span1" id="fw-banco_representado" style="display:none;">
@@ -1829,6 +1830,40 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => { 
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
+// ── Demandante dinámico: texto libre o desplegable según estudio ─────
+const DEMANDANTES_POR_ESTUDIO = {
+  'Recsa': [
+    'BANCO DEL ESTADO DE CHILE',
+    'BANCO ITAU CHILE',
+    'BANCO SANTANDER-CHILE',
+    'CLÍNICA SANTA MARÍA SPA',
+    'COOPERATIVA DE AHORRO Y CRÉDITO UNIÓN Y PATRIA LTDA',
+    'INSTITUTO DE DIAGNOSTICO S.A',
+    'ITAU CORPBANCA S.A',
+    'PROMOTORA CMR FALABELLA S.A',
+    'SOLVENTA CRÉDITOS LIMITADA',
+    'UNIVERSIDAD DE CHILE',
+  ],
+};
+
+function evaluarDemandante() {
+  const estudio = fval('estudio');
+  const input = document.getElementById('f-demandante');
+  const select = document.getElementById('f-demandante-select');
+  const lista = DEMANDANTES_POR_ESTUDIO[estudio];
+  if (lista) {
+    select.innerHTML = '<option value="">(seleccionar demandante)</option>' +
+      lista.map(d => `<option value="${d}">${d}</option>`).join('');
+    input.style.display = 'none';
+    select.style.display = '';
+  } else {
+    select.style.display = 'none';
+    select.value = '';
+    input.style.display = '';
+  }
+  evaluarBancoRepresentado();
+}
+
 // Banco representado: visible solo si estudio = "Exhortos Frias" Y demandante contiene "TESORER"
 function evaluarBancoRepresentado() {
   const estudio = fval('estudio');
@@ -1838,8 +1873,10 @@ function evaluarBancoRepresentado() {
   document.getElementById('f-banco_representado').required = mostrar;
   if (!mostrar) document.getElementById('f-banco_representado').value = '';
 }
-document.getElementById('f-estudio').addEventListener('change', evaluarBancoRepresentado);
+
+document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); });
 document.getElementById('f-demandante').addEventListener('input', evaluarBancoRepresentado);
+document.getElementById('f-demandante-select').addEventListener('change', evaluarBancoRepresentado);
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -1884,6 +1921,10 @@ function autocompletarPiezas() {
 }
 
 function fval(name) {
+  if (name === 'demandante') {
+    const sel = document.getElementById('f-demandante-select');
+    if (sel && sel.style.display !== 'none') return sel.value.trim();
+  }
   const el = document.getElementById('f-' + name);
   return el ? el.value.trim() : '';
 }
@@ -2041,6 +2082,12 @@ async function guardarCausa(estadoInicial) {
   let ok = true;
   REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
   if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
+  // Validación condicional: demandante en modo desplegable
+  if (DEMANDANTES_POR_ESTUDIO[fval('estudio')] && !fval('demandante')) {
+    showToast('⚠ Selecciona el demandante', 'warn');
+    document.getElementById('fw-demandante').classList.add('has-error');
+    return;
+  }
   // Validación condicional: banco representado si Exhortos Frias
   if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
     showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
