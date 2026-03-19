@@ -439,13 +439,13 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 
 /* TABLA */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
 thead th {
   background: #f8fafc; color: var(--muted);
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; padding: .5rem .75rem;
   text-align: left; border-bottom: 1.5px solid var(--border);
-  white-space: nowrap;
+  white-space: nowrap; overflow: hidden; resize: horizontal;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:hover { background: #f8fafc; }
@@ -1041,8 +1041,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <label>Ciudad / Comuna</label>
                   <input type="text" name="ciudad" id="f-ciudad" value="Antofagasta" autocomplete="off">
                 </div>
-                <div class="field">
-                  <label>N° Pagaré</label>
+                <div class="field" id="fw-nro_pagare">
+                  <label>N° Pagaré / N° Operación <span class="req req-pagare" style="display:none;">*</span></label>
                   <input type="text" name="n_pagare" id="f-n_pagare" placeholder="Opcional" autocomplete="off" style="font-family:var(--mono);">
                 </div>
                 <div class="field span2">
@@ -1065,7 +1065,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="card">
               <div class="col-header">ID Hex</div>
               <div class="hex-display">
-                <span class="hex-label">Col. W — Identificador único</span>
+                <span class="hex-label">IDENTIFICADOR ÚNICO</span>
                 <span class="hex-value empty" id="hex-display">Completar campos…</span>
                 <div id="hex-status" class="hex-pending">◌ Esperando campos</div>
               </div>
@@ -1111,7 +1111,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <span class="search-icon">🔍</span>
             <input type="text" id="search-causas" placeholder="Buscar por ROL, nombre, RUT o dirección...">
           </div>
-          <select id="filter-tipo" style="min-width:180px;">
+          <select id="filter-tipo" style="min-width:160px;">
             <option value="">Todos los tipos</option>
             <option value="NOT">Notificaciones</option>
             <option value="EMBARGO">Embargos</option>
@@ -1130,6 +1130,37 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="estampada">Estampada</option>
             <option value="boleta_emitida">Boleta emitida</option>
           </select>
+          <button class="btn btn-secondary btn-sm" id="btn-limpiar-filtros" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
+        </div>
+        <div class="filter-bar" style="margin-top:6px;">
+          <select id="filter-estudio" style="min-width:160px;">
+            <option value="">Todos los estudios</option>
+            <option value="Agecob">Agecob</option>
+            <option value="BanPro">BanPro</option>
+            <option value="CG Cobranzas Generales">CG Cobranzas Generales</option>
+            <option value="Conseil">Conseil</option>
+            <option value="Dell'Oro Abogados">Dell'Oro Abogados</option>
+            <option value="Exhortos Frias">Exhortos Frias</option>
+            <option value="Exhortos Chile">Exhortos Chile</option>
+            <option value="Mellado y Cia">Mellado y Cia</option>
+            <option value="Recsa">Recsa</option>
+            <option value="Servicobranza">Servicobranza</option>
+            <option value="Socofin">Socofin</option>
+            <option value="Zapico">Zapico</option>
+            <option value="Causa Particular">Causa Particular</option>
+          </select>
+          <select id="filter-tribunal" style="min-width:140px;">
+            <option value="">Todos los tribunales</option>
+            <option value="1°">Primer</option>
+            <option value="2°">Segundo</option>
+            <option value="3°">Tercer</option>
+            <option value="4°">Cuarto</option>
+          </select>
+          <input type="text" id="filter-demandante" placeholder="Buscar demandante..." style="min-width:160px; max-width:200px;">
+          <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Desde</label>
+          <input type="date" id="filter-fecha-desde" style="max-width:140px;">
+          <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Hasta</label>
+          <input type="date" id="filter-fecha-hasta" style="max-width:140px;">
         </div>
 
         <div class="card">
@@ -1137,20 +1168,23 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
-                  <th style="width:100px;">ROL</th>
-                  <th style="width:30px;">Trib.</th>
-                  <th style="min-width:140px;">Demandante</th>
-                  <th style="min-width:140px;">Demandado</th>
-                  <th style="width:90px;">Tipo</th>
-                  <th>Estudio</th>
-                  <th style="width:90px;">Estado</th>
-                  <th style="width:80px;">Fecha</th>
-                  <th style="width:60px;">Acciones</th>
+                  <th style="width:75px;">ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th style="width:130px;">Demandante</th>
+                  <th style="width:130px;">Demandado</th>
+                  <th style="width:90px;">RUT</th>
+                  <th style="width:180px;">Dirección</th>
+                  <th style="width:80px;">Tipo</th>
+                  <th style="width:100px;">Estudio</th>
+                  <th style="width:80px;">Estado</th>
+                  <th style="width:70px;">Fecha</th>
+                  <th style="width:120px;">ID</th>
+                  <th style="width:55px;">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="9">
+                  <td colspan="12">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -1918,9 +1952,23 @@ function evaluarBancoRepresentado() {
   if (!mostrar) document.getElementById('f-banco_representado').value = '';
 }
 
-document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); });
-document.getElementById('f-demandante').addEventListener('input', evaluarBancoRepresentado);
-document.getElementById('f-demandante-select').addEventListener('change', evaluarBancoRepresentado);
+// N° Pagaré / N° Operación: obligatorio según estudio + demandante
+function evaluarPagare() {
+  const estudio = fval('estudio');
+  const demandante = fval('demandante').toUpperCase();
+  const bancosRecsa = ['BANCO ITAU CHILE', 'ITAU CORPBANCA S.A', 'BANCO SANTANDER-CHILE'];
+  const obligatorio =
+    (estudio === "Dell'Oro Abogados") ||
+    (estudio === 'Recsa' && bancosRecsa.some(b => demandante.includes(b)));
+  document.getElementById('f-n_pagare').required = obligatorio;
+  const req = document.querySelector('.req-pagare');
+  if (req) req.style.display = obligatorio ? 'inline' : 'none';
+  document.getElementById('f-n_pagare').placeholder = obligatorio ? 'Obligatorio' : 'Opcional';
+}
+
+document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante').addEventListener('input', () => { evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante-select').addEventListener('change', () => { evaluarBancoRepresentado(); evaluarPagare(); });
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -2136,6 +2184,12 @@ async function guardarCausa(estadoInicial) {
   if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
     showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
     document.getElementById('fw-banco_representado').classList.add('has-error');
+    return;
+  }
+  // Validación condicional: N° Pagaré / N° Operación
+  if (document.getElementById('f-n_pagare').required && !fval('n_pagare')) {
+    showToast('⚠ Ingresa el N° Pagaré / N° Operación para este estudio y demandante', 'warn');
+    document.getElementById('fw-nro_pagare').classList.add('has-error');
     return;
   }
 
@@ -2624,6 +2678,11 @@ function renderCausas() {
   const search  = document.getElementById('search-causas').value.toLowerCase();
   const fTipo   = document.getElementById('filter-tipo').value;
   const fEstado = document.getElementById('filter-estado').value;
+  const fEstudio = document.getElementById('filter-estudio').value;
+  const fTribunal = document.getElementById('filter-tribunal').value;
+  const fDemandante = document.getElementById('filter-demandante').value.toLowerCase();
+  const fDesde  = document.getElementById('filter-fecha-desde').value;
+  const fHasta  = document.getElementById('filter-fecha-hasta').value;
   const estadosVisibles = currentUser ? ESTADOS_POR_PERFIL[currentUser.perfil] : null;
 
   let filtered = causas.filter(c => {
@@ -2639,10 +2698,18 @@ function renderCausas() {
       c.n_solicitud?.toLowerCase().includes(search) ||
       c.nro_solicitud?.toLowerCase().includes(search) ||
       c.estudio?.toLowerCase().includes(search) ||
-      c.estudio_juridico?.toLowerCase().includes(search);
+      c.estudio_juridico?.toLowerCase().includes(search) ||
+      c.id_hex?.toLowerCase().includes(search);
     const matchTipo   = !fTipo   || c.tipo_diligencia?.startsWith(fTipo);
     const matchEstado = !fEstado || c.estado === fEstado;
-    return matchSearch && matchTipo && matchEstado;
+    const est = (c.estudio || c.estudio_juridico || '');
+    const matchEstudio = !fEstudio || est === fEstudio;
+    const matchTribunal = !fTribunal || (c.tribunal || '').includes(fTribunal);
+    const matchDemandante = !fDemandante || (c.demandante || '').toLowerCase().includes(fDemandante);
+    const fs = c.fecha_solicitud || '';
+    const matchDesde = !fDesde || fs >= fDesde;
+    const matchHasta = !fHasta || fs <= fHasta;
+    return matchSearch && matchTipo && matchEstado && matchEstudio && matchTribunal && matchDemandante && matchDesde && matchHasta;
   });
 
   document.getElementById('causas-count').textContent =
@@ -2650,7 +2717,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -2661,14 +2728,17 @@ function renderCausas() {
 
   tbody.innerHTML = filtered.map(c => `
     <tr>
-      <td class="mono" style="white-space:nowrap;">${c.rol || '—'}</td>
-      <td style="text-align:center; font-size:12px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante}">${c.demandante || '—'}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.rut || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="font-size:12px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
+      <td style="font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
@@ -2682,6 +2752,24 @@ function renderCausas() {
 document.getElementById('search-causas').addEventListener('input', renderCausas);
 document.getElementById('filter-tipo').addEventListener('change', renderCausas);
 document.getElementById('filter-estado').addEventListener('change', renderCausas);
+document.getElementById('filter-estudio').addEventListener('change', renderCausas);
+document.getElementById('filter-tribunal').addEventListener('change', renderCausas);
+document.getElementById('filter-demandante').addEventListener('input', renderCausas);
+document.getElementById('filter-fecha-desde').addEventListener('change', renderCausas);
+document.getElementById('filter-fecha-hasta').addEventListener('change', renderCausas);
+
+// CAMBIO 5 — Limpiar filtros
+document.getElementById('btn-limpiar-filtros').addEventListener('click', () => {
+  document.getElementById('search-causas').value = '';
+  document.getElementById('filter-tipo').value = '';
+  document.getElementById('filter-estado').value = '';
+  document.getElementById('filter-estudio').value = '';
+  document.getElementById('filter-tribunal').value = '';
+  document.getElementById('filter-demandante').value = '';
+  document.getElementById('filter-fecha-desde').value = '';
+  document.getElementById('filter-fecha-hasta').value = '';
+  renderCausas();
+});
 
 function verCausa(hex) {
   const c = causas.find(x => x.id_hex === hex);
@@ -2697,6 +2785,7 @@ function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
