@@ -3628,7 +3628,15 @@ function switchRutaTab(tab) {
   document.getElementById('tab-ver').classList.toggle('active', tab === 'ver');
   document.getElementById('panel-asignar').style.display = tab === 'asignar' ? '' : 'none';
   document.getElementById('panel-ver').style.display = tab === 'ver' ? '' : 'none';
-  if (tab === 'ver') renderRutaDia();
+  if (tab === 'ver') {
+    // Auto-seleccionar hoy si no hay día seleccionado
+    if (!calRutaSelected) {
+      calRutaSelected = new Date().toISOString().slice(0, 10);
+      renderCalRuta();
+      document.getElementById('btn-export-dia').style.display = '';
+    }
+    renderRutaDia();
+  }
 }
 
 // ── Calendario ──
@@ -3702,8 +3710,18 @@ async function cargarRuta() {
   }
   rutaSeleccionadas.clear();
   document.getElementById('ruta-check-all').checked = false;
+  // Preservar día seleccionado al recargar
+  const prevSel = calRutaSelected;
   initCalRuta();
+  if (prevSel) {
+    calRutaSelected = prevSel;
+    renderCalRuta();
+  }
   renderRuta();
+  // Si estamos en la pestaña "ver", re-renderizar
+  if (document.getElementById('panel-ver').style.display !== 'none') {
+    renderRutaDia();
+  }
 }
 
 // ── Render tabla asignar ──
