@@ -393,7 +393,7 @@ input:focus, select:focus, textarea:focus {
 textarea { resize: vertical; min-height: 40px; }
 select { cursor: pointer; }
 input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed; }
-.has-error input, .has-error select, .has-error textarea { border-color: var(--red); background: var(--red-lt); }
+.has-error input, .has-error select, .has-error textarea { border: 2px solid #ef4444; background: #fef2f2; }
 .error-msg { font-size: 11px; color: var(--red); display: none; margin-top: 1px; }
 .has-error .error-msg { display: block; }
 .hint { font-size: 11px; color: var(--muted); margin-top: 1px; }
@@ -439,17 +439,24 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 
 /* TABLA */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   background: #f8fafc; color: var(--muted);
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; padding: .5rem .75rem;
   text-align: left; border-bottom: 1.5px solid var(--border);
-  white-space: nowrap; overflow: hidden; resize: horizontal;
+  white-space: nowrap; overflow: hidden;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:hover { background: #f8fafc; }
 tbody td { padding: .55rem .75rem; vertical-align: middle; }
+/* Columna acciones sticky a la derecha */
+th.col-acc, td.col-acc {
+  position: sticky; right: 0; background: #fff; z-index: 1;
+  box-shadow: -2px 0 4px rgba(0,0,0,.06);
+}
+thead th.col-acc { background: #f8fafc; }
+tbody tr:hover td.col-acc { background: #f8fafc; }
 tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
 /* STATS */
@@ -888,12 +895,14 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Ingresar Causa</div>
             <div class="page-sub">Complete todos los campos obligatorios</div>
           </div>
-          <div style="display:flex; gap:.5rem;">
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+            <button class="btn btn-secondary btn-sm" id="btn-repetir" style="display:none;">↺ Repetir</button>
             <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
             <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
             <button class="btn btn-primary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
             <button class="btn btn-danger btn-sm" id="btn-guardar-enviar" disabled style="font-weight:700;">📤 Enviar a Receptora</button>
           </div>
+          <div id="aviso-repeticion" style="display:none; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:4px; padding:4px 10px; font-size:12px; margin-top:4px; text-align:right;">⚠ Modifica al menos un campo obligatorio antes de guardar</div>
         </div>
 
         <div class="form-layout">
@@ -950,10 +959,18 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   </select>
                   <span class="error-msg">Obligatorio</span>
                 </div>
-                <div class="field span2">
+                <div class="field span2" id="fw-abogado_procurador">
                   <label>Abogado / Procurador</label>
                   <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre" autocomplete="off">
-                  <span class="hint">Opcional</span>
+                  <select id="f-abogado_procurador-select" style="display:none;">
+                    <option value="">(seleccionar abogado)</option>
+                    <option value="MIRIAM FUENTES">MIRIAM FUENTES</option>
+                    <option value="CATALINA FUENTES">CATALINA FUENTES</option>
+                    <option value="__otro__">Otro (escribir nombre)</option>
+                  </select>
+                  <input type="text" id="f-abogado_procurador-otro" placeholder="Nombre del abogado" style="display:none; margin-top:4px;" autocomplete="off">
+                  <span class="hint" id="hint-abogado">Opcional</span>
+                  <span class="error-msg">Selecciona el abogado/procurador de Socofin</span>
                 </div>
                 <div class="field span2" id="fw-tipo_diligencia">
                   <label>Tipo Diligencia</label>
@@ -1195,18 +1212,18 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
-                  <th style="width:75px;">ROL</th>
+                  <th style="width:80px;">ROL</th>
                   <th style="width:22px;">T</th>
-                  <th style="width:130px;">Demandante</th>
-                  <th style="width:130px;">Demandado</th>
-                  <th style="width:90px;">RUT</th>
-                  <th style="width:180px;">Dirección</th>
-                  <th style="width:80px;">Tipo</th>
-                  <th style="width:100px;">Estudio</th>
-                  <th style="width:80px;">Estado</th>
-                  <th style="width:70px;">Fecha</th>
-                  <th style="width:120px;">ID</th>
-                  <th style="width:55px;">Acc.</th>
+                  <th style="min-width:100px;">Demandante</th>
+                  <th style="min-width:100px;">Demandado</th>
+                  <th style="width:85px;">RUT</th>
+                  <th style="min-width:120px;">Dirección</th>
+                  <th style="width:70px;">Tipo</th>
+                  <th style="width:80px;">Estudio</th>
+                  <th style="width:70px;">Estado</th>
+                  <th style="width:65px;">Fecha</th>
+                  <th style="width:100px;">ID</th>
+                  <th style="width:55px;" class="col-acc">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
@@ -1246,7 +1263,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <th>Dirección</th>
                   <th>Ingresado por</th>
                   <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th class="col-acc">Acciones</th>
                 </tr>
               </thead>
               <tbody id="validacion-body">
@@ -1302,6 +1319,19 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div class="ruta-main">
             <!-- Panel ASIGNAR -->
             <div id="panel-asignar">
+              <div class="filter-bar" style="margin-bottom:8px; flex-wrap:wrap;">
+                <input type="text" id="ruta-filter-search" placeholder="Buscar ROL, ID, dirección, demandado, demandante, notificar a…" style="flex:1; min-width:200px; font-size:12px;">
+                <select id="ruta-filter-tipo" style="min-width:130px; font-size:12px;">
+                  <option value="">Todos los tipos</option>
+                  <option value="NOT">Notificaciones</option>
+                  <option value="EMBARGO">Embargos</option>
+                  <option value="ALZAMIENTO">Alzamientos</option>
+                  <option value="PRUEBA">Pruebas</option>
+                  <option value="REQ">Requerimientos</option>
+                  <option value="OTRO">Otros</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosRuta()" title="Limpiar filtros">✕ Limpiar</button>
+              </div>
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
                 <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
@@ -1321,7 +1351,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:70px;">F. Sol.</th>
                         <th style="width:70px;">F. Ruta</th>
                         <th style="width:110px;">ID</th>
-                        <th style="width:55px;">Acc.</th>
+                        <th style="width:55px;" class="col-acc">Acc.</th>
                       </tr>
                     </thead>
                     <tbody id="ruta-body">
@@ -1356,7 +1386,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:80px;">Tipo</th>
                         <th style="width:70px;">F. Sol.</th>
                         <th style="width:110px;">ID</th>
-                        <th style="width:55px;">Acc.</th>
+                        <th style="width:55px;" class="col-acc">Acc.</th>
                       </tr>
                     </thead>
                     <tbody id="ruta-dia-body">
@@ -1369,6 +1399,83 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
         </div>
       </div><!-- /view-ruta -->
+
+      <!-- ── GESTIÓN DIRECTA ── -->
+      <div class="view" id="view-gestion">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Gestión Directa</div>
+            <div class="page-sub" id="gestion-count">Cargando...</div>
+          </div>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarGestion()">🔄 Recargar</button>
+          </div>
+        </div>
+
+        <!-- Tabs: Pendientes / Terminadas -->
+        <div class="ruta-tabs">
+          <div class="ruta-tab active" id="tab-gestion-pend" onclick="switchGestionTab('pendientes')">Pendientes</div>
+          <div class="ruta-tab" id="tab-gestion-term" onclick="switchGestionTab('terminadas')">Terminadas</div>
+        </div>
+
+        <!-- Panel PENDIENTES -->
+        <div id="panel-gestion-pend">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:75px;">ROL</th>
+                    <th style="width:22px;">T</th>
+                    <th style="width:110px;">Demandante</th>
+                    <th style="width:110px;">Demandado</th>
+                    <th style="width:80px;">RUT</th>
+                    <th style="width:110px;">Notificar a</th>
+                    <th style="width:80px;">Tipo</th>
+                    <th style="max-width:130px;">Piezas</th>
+                    <th style="width:70px;">Estado</th>
+                    <th style="width:70px;">Ingreso</th>
+                    <th style="width:110px;">ID</th>
+                    <th style="width:100px;" class="col-acc">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="gestion-pend-body">
+                  <tr><td colspan="12"><div class="empty-state"><span class="icon">📋</span><p>Sin diligencias de gestión directa pendientes.</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel TERMINADAS -->
+        <div id="panel-gestion-term" style="display:none;">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:75px;">ROL</th>
+                    <th style="width:22px;">T</th>
+                    <th style="width:110px;">Demandante</th>
+                    <th style="width:110px;">Demandado</th>
+                    <th style="width:80px;">RUT</th>
+                    <th style="width:110px;">Notificar a</th>
+                    <th style="width:80px;">Tipo</th>
+                    <th style="max-width:130px;">Piezas</th>
+                    <th style="width:70px;">Estado</th>
+                    <th style="width:70px;">Ingreso</th>
+                    <th style="width:110px;">ID</th>
+                    <th style="width:55px;" class="col-acc">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="gestion-term-body">
+                  <tr><td colspan="12"><div class="empty-state"><span class="icon">✅</span><p>Sin diligencias terminadas.</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view-gestion -->
 
     </main>
   </div><!-- /app-body -->
@@ -1656,6 +1763,7 @@ const PERFILES = {
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
+      { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
     ]
   },
   darth: {
@@ -1667,6 +1775,7 @@ const PERFILES = {
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
+      { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
       { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
     ]
   }
@@ -1677,6 +1786,15 @@ const PERFILES = {
 // ══════════════════════════════════════════════
 let currentUser = null;
 let causas = []; // array de causas en memoria (luego vendrá de Dropbox)
+
+// Tipos de gestión directa — NO van en ruta
+const TIPOS_GESTION_DIRECTA = new Set([
+  'ALZAMIENTO-CBR','ALZAMIENTO-RVM','ALZAMIENTO-TESORERIA','ALZAMIENTO-OTROS',
+  'EMBARGO-CBR','EMBARGO-CUENTA-CORRIENTE','EMBARGO-FRUSTRADO','EMBARGO-OTROS',
+  'EMBARGO-RVM','EMBARGO-TESORERIA','PRUEBA-CONFESIONAL','PRUEBA-TESTIMONIAL',
+  'REQ-PAGO-TRIBUNAL'
+]);
+function esGestionDirecta(tipo) { return TIPOS_GESTION_DIRECTA.has((tipo||'').toUpperCase()); }
 
 // ══════════════════════════════════════════════
 // LOGIN
@@ -1796,6 +1914,7 @@ function showView(viewId) {
   if (viewId === 'view-validacion') cargarValidacion();
   if (viewId === 'view-ruta') cargarRuta();
   if (viewId === 'view-dashboard') buildDashboard();
+  if (viewId === 'view-gestion') cargarGestion();
 }
 
 // ══════════════════════════════════════════════
@@ -1926,7 +2045,7 @@ function buildDashboard() {
 // ══════════════════════════════════════════════
 // FORMULARIO INGRESO
 // ══════════════════════════════════════════════
-const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','notificar_a','direccion'];
+const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','demandado','notificar_a','direccion'];
 const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
 
 let currentHex = null;
@@ -1943,7 +2062,27 @@ document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso se
   });
 
 // Tipo diligencia → observación obligatoria + autocompletar piezas
-document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); });
+// Autocompletar notificar_a y dirección para CBR
+function autocompletarCBR() {
+  const tipo = fval('tipo_diligencia');
+  if (tipo !== 'ALZAMIENTO-CBR' && tipo !== 'EMBARGO-CBR') return;
+  const CBR_NOTIF = 'SR. CONSERVADOR DE BIENES RAÍCES DE ANTOFAGASTA';
+  const CBR_DIR = 'Gral. Manuel Baquedano N°229';
+  const notifEl = document.getElementById('f-notificar_a');
+  const dirEl = document.getElementById('f-direccion');
+  const tieneContenido = notifEl.value.trim() || dirEl.value.trim();
+  if (tieneContenido) {
+    if (!confirm('¿Sobreescribir Notificar a y Dirección con los valores del CBR?')) return;
+  }
+  notifEl.value = CBR_NOTIF;
+  notifEl.dispatchEvent(new Event('input', { bubbles: true }));
+  notifEl.dispatchEvent(new Event('change', { bubbles: true }));
+  dirEl.value = CBR_DIR;
+  dirEl.dispatchEvent(new Event('input', { bubbles: true }));
+  dirEl.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); autocompletarCBR(); });
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
@@ -2054,9 +2193,47 @@ function evaluarPagare() {
   document.getElementById('f-n_pagare').placeholder = obligatorio ? 'Obligatorio' : 'Opcional';
 }
 
-document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); });
+// Abogado/Procurador: selector para Socofin, texto libre para el resto
+function evaluarAbogado() {
+  const estudio = fval('estudio');
+  const input = document.getElementById('f-abogado_procurador');
+  const select = document.getElementById('f-abogado_procurador-select');
+  const otro = document.getElementById('f-abogado_procurador-otro');
+  const hint = document.getElementById('hint-abogado');
+  if (estudio === 'Socofin') {
+    input.style.display = 'none';
+    select.style.display = '';
+    hint.textContent = 'Obligatorio';
+    // Si el input tenía valor y coincide con una opción, seleccionarla
+    const prev = input.value.trim();
+    if (prev) {
+      const match = Array.from(select.options).find(o => o.value === prev);
+      if (match) select.value = prev;
+      else { select.value = '__otro__'; otro.style.display = ''; otro.value = prev; }
+    }
+  } else {
+    select.style.display = 'none';
+    otro.style.display = 'none';
+    select.value = '';
+    otro.value = '';
+    input.style.display = '';
+    hint.textContent = 'Opcional';
+    document.getElementById('fw-abogado_procurador').classList.remove('has-error');
+  }
+}
+document.getElementById('f-abogado_procurador-select').addEventListener('change', function() {
+  const otro = document.getElementById('f-abogado_procurador-otro');
+  if (this.value === '__otro__') { otro.style.display = ''; otro.focus(); }
+  else { otro.style.display = 'none'; otro.value = ''; }
+  document.getElementById('fw-abogado_procurador').classList.remove('has-error');
+});
+document.getElementById('f-abogado_procurador-otro').addEventListener('input', function() {
+  document.getElementById('fw-abogado_procurador').classList.remove('has-error');
+});
+
+document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); evaluarAbogado(); });
 document.getElementById('f-demandante').addEventListener('input', () => { evaluarBancoRepresentado(); evaluarPagare(); });
-document.getElementById('f-demandante-select').addEventListener('change', () => { evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante-select').addEventListener('change', () => { document.getElementById('fw-demandante').classList.remove('has-error'); evaluarBancoRepresentado(); evaluarPagare(); });
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -2096,8 +2273,8 @@ function autocompletarPiezas() {
   const tipo = fval('tipo_diligencia');
   const piezas = document.getElementById('f-piezas');
   if (tipo !== 'NOT-DEMANDA-EJE-GENERAL' || piezas.value.trim()) return;
-  if (rol.startsWith('C-')) piezas.value = PIEZAS_EJE_C;
-  else if (rol.startsWith('E-')) piezas.value = PIEZAS_EJE_E;
+  if (rol.startsWith('C-')) { piezas.value = PIEZAS_EJE_C; piezas.dispatchEvent(new Event('input', { bubbles: true })); }
+  else if (rol.startsWith('E-')) { piezas.value = PIEZAS_EJE_E; piezas.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 
 function fval(name) {
@@ -2105,11 +2282,21 @@ function fval(name) {
     const sel = document.getElementById('f-demandante-select');
     if (sel && sel.style.display !== 'none') return sel.value.trim();
   }
+  if (name === 'abogado_procurador') {
+    const sel = document.getElementById('f-abogado_procurador-select');
+    if (sel && sel.style.display !== 'none') {
+      if (sel.value === '__otro__') return document.getElementById('f-abogado_procurador-otro').value.trim();
+      return sel.value.trim();
+    }
+  }
   const el = document.getElementById('f-' + name);
   return el ? el.value.trim() : '';
 }
 
 function onFieldChange(name) {
+  // Limpiar error visual al escribir en cualquier campo
+  const wrapper = document.getElementById('fw-' + name);
+  if (wrapper && fval(name)) wrapper.classList.remove('has-error');
   if (REQUIRED_FIELDS.includes(name)) validateField(name);
   updateProgress();
   if (HEX_FIELDS.includes(name)) {
@@ -2129,9 +2316,28 @@ function validateField(name) {
   wrapper.classList.remove('has-error'); return true;
 }
 
+function _camposObligatoriosActivos() {
+  const campos = [...REQUIRED_FIELDS];
+  const estudio = fval('estudio');
+  const demandante = fval('demandante').toUpperCase();
+  // Demandante obligatorio si estudio tiene lista desplegable
+  if (DEMANDANTES_POR_ESTUDIO[estudio]) campos.push('demandante');
+  // Abogado obligatorio para Socofin
+  if (estudio === 'Socofin') campos.push('abogado_procurador');
+  // Banco representado obligatorio para Exhortos Frias + TESORER
+  if (estudio === 'Exhortos Frias' && demandante.includes('TESORER')) campos.push('banco_representado');
+  // Pagaré obligatorio para Dell'Oro o Recsa con bancos específicos
+  const bancosRecsa = ['BANCO ITAU CHILE', 'ITAU CORPBANCA S.A', 'BANCO SANTANDER-CHILE'];
+  if (estudio === "Dell'Oro Abogados" || (estudio === 'Recsa' && bancosRecsa.some(b => demandante.includes(b)))) {
+    campos.push('n_pagare');
+  }
+  return campos;
+}
+
 function updateProgress() {
-  const filled = REQUIRED_FIELDS.filter(id => fval(id).length > 0);
-  const pct = Math.round(filled.length / REQUIRED_FIELDS.length * 100);
+  const campos = _camposObligatoriosActivos();
+  const filled = campos.filter(id => fval(id).length > 0);
+  const pct = campos.length > 0 ? Math.round(filled.length / campos.length * 100) : 100;
   document.getElementById('f-progress').style.width = pct + '%';
   document.getElementById('f-pct').textContent = pct + '%';
 
@@ -2139,11 +2345,13 @@ function updateProgress() {
     'fecha_solicitud':'Fecha', 'n_solicitud':'N° Sol.', 'rol':'ROL',
     'tribunal':'Tribunal', 'tipo_diligencia':'Tipo', 'estudio':'Estudio',
     'demandante':'Demandante', 'demandado':'Demandado',
-    'notificar_a':'Notificar a', 'direccion':'Dirección'
+    'notificar_a':'Notificar a', 'direccion':'Dirección',
+    'abogado_procurador':'Abogado', 'banco_representado':'Banco rep.',
+    'n_pagare':'N° Pagaré'
   };
-  const missing = REQUIRED_FIELDS.filter(id => fval(id).length === 0);
+  const missing = campos.filter(id => fval(id).length === 0);
   const missingEl = document.getElementById('f-missing');
-  if (missing.length === 0) {
+  if (missing.length === 0 && !_modoRepeticion) {
     missingEl.textContent = '✓ Campos completos';
     missingEl.style.color = 'var(--green)';
     document.getElementById('btn-guardar').disabled = false;
@@ -2205,35 +2413,18 @@ function generateQR(hex) {
 
 // Observación condicional
 function updateObsRequired() {
-  const sel = document.getElementById('f-tipo_diligencia');
-  const opt = sel.options[sel.selectedIndex];
-  const req = opt && opt.getAttribute('data-obs-required') === '1';
+  // Observación siempre opcional — nunca obligatorio
   const obsEl   = document.getElementById('f-observacion');
   const markEl  = document.getElementById('obs-req-mark');
   const wrapper = document.getElementById('fw-observacion');
-
-  if (req) {
-    obsEl.setAttribute('data-obs-req', '1');
-    obsEl.placeholder = 'Requerido — especifique el detalle';
-    markEl.innerHTML = '<span class="req">*</span>';
-    if (!REQUIRED_FIELDS.includes('observacion')) REQUIRED_FIELDS.push('observacion');
-  } else {
-    obsEl.removeAttribute('data-obs-req');
-    obsEl.placeholder = 'Opcional';
-    markEl.innerHTML = '';
-    wrapper.classList.remove('has-error');
-    const idx = REQUIRED_FIELDS.indexOf('observacion');
-    if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
-  }
+  obsEl.removeAttribute('data-obs-req');
+  obsEl.placeholder = 'Opcional';
+  markEl.innerHTML = '';
+  wrapper.classList.remove('has-error');
+  const idx = REQUIRED_FIELDS.indexOf('observacion');
+  if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
   updateProgress();
 }
-
-document.getElementById('f-observacion').addEventListener('input', () => {
-  if (document.getElementById('f-observacion').getAttribute('data-obs-req')) {
-    validateField('observacion');
-    updateProgress();
-  }
-});
 
 // Init formulario
 document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
@@ -2245,48 +2436,44 @@ document.getElementById('btn-guardar').addEventListener('click', () => guardarCa
 document.getElementById('btn-guardar-enviar').addEventListener('click', () => enviarAReceptora());
 
 function enviarAReceptora() {
-  const obs = fval('observacion');
-  if (!obs) {
-    showToast('⚠ Escriba un comentario en Observación para la Receptora', 'warn');
-    const wrapper = document.getElementById('fw-observacion');
-    if (wrapper) wrapper.classList.add('has-error');
-    document.getElementById('f-observacion').focus();
-    return;
-  }
-  const wrapper = document.getElementById('fw-observacion');
-  if (wrapper) wrapper.classList.remove('has-error');
   guardarCausa('pendiente_validacion');
 }
 
 async function guardarCausa(estadoInicial) {
+  // Validar TODOS los campos obligatorios y marcar todos los errores
+  const campos = _camposObligatoriosActivos();
+  const wrapperMap = { 'n_pagare': 'fw-nro_pagare' };
   let ok = true;
-  REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
-  if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
-  // Validación condicional: demandante en modo desplegable
-  if (DEMANDANTES_POR_ESTUDIO[fval('estudio')] && !fval('demandante')) {
-    showToast('⚠ Selecciona el demandante', 'warn');
-    document.getElementById('fw-demandante').classList.add('has-error');
-    return;
-  }
-  // Validación condicional: banco representado si Exhortos Frias
-  if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
-    showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
-    document.getElementById('fw-banco_representado').classList.add('has-error');
-    return;
-  }
-  // Validación condicional: N° Pagaré / N° Operación
-  if (document.getElementById('f-n_pagare').required && !fval('n_pagare')) {
-    showToast('⚠ Ingresa el N° Pagaré / N° Operación para este estudio y demandante', 'warn');
-    document.getElementById('fw-nro_pagare').classList.add('has-error');
+  let primerError = null;
+  campos.forEach(id => {
+    const wrapperId = wrapperMap[id] || ('fw-' + id);
+    const wrapper = document.getElementById(wrapperId);
+    if (!fval(id)) {
+      ok = false;
+      if (wrapper) {
+        wrapper.classList.add('has-error');
+        if (!primerError) primerError = wrapper;
+      }
+    } else if (wrapper) {
+      wrapper.classList.remove('has-error');
+    }
+  });
+  if (!ok || !currentHex) {
+    showToast('⚠ Completar campos obligatorios', 'warn');
+    if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
-  const accion = estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso';
+  // Cambio 6: tipos de gestión directa siempre van con estado especial
+  const tipoDigSel = fval('tipo_diligencia');
+  const esGD = esGestionDirecta(tipoDigSel);
+  const estadoFinal = esGD ? 'gestion_directa_receptora' : estadoInicial;
+  const accion = esGD ? 'ingreso_gestion_directa' : (estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso');
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
     id_hex:  currentHex,
-    estado:  estadoInicial,
+    estado:  estadoFinal,
     datos: {
       fecha_solicitud:   fval('fecha_solicitud'),
       nro_solicitud:     fval('n_solicitud'),
@@ -2324,6 +2511,8 @@ async function guardarCausa(estadoInicial) {
     showToast('⚠ Credenciales Dropbox no configuradas — modo demo', 'warn');
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha });
+    localStorage.setItem('ultima_causa_ingresada', JSON.stringify(payload.datos));
+    _mostrarBtnRepetir();
     buildDashboard();
     limpiarFormulario();
     showView('view-causas');
@@ -2347,6 +2536,8 @@ async function guardarCausa(estadoInicial) {
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha,
       _causa_json: payload });
+    localStorage.setItem('ultima_causa_ingresada', JSON.stringify(payload.datos));
+    _mostrarBtnRepetir();
     actualizarIndex();
     buildDashboard();
     limpiarFormulario();
@@ -2371,6 +2562,8 @@ document.getElementById('btn-limpiar').addEventListener('click', () => {
 });
 
 function limpiarFormulario() {
+  _modoRepeticion = false;
+  document.getElementById('aviso-repeticion').style.display = 'none';
   document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso select, #view-ingreso textarea')
     .forEach(el => {
       if (el.type === 'date') el.value = new Date().toISOString().slice(0,10);
@@ -2388,7 +2581,131 @@ function limpiarFormulario() {
   updateProgress();
   recalcHex();
   document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-ciudad').value = 'Antofagasta';
 }
+
+// ── REPETIR ÚLTIMA CAUSA ──
+let _modoRepeticion = false;
+
+function _mostrarBtnRepetir() {
+  const hay = localStorage.getItem('ultima_causa_ingresada');
+  document.getElementById('btn-repetir').style.display = hay ? '' : 'none';
+}
+_mostrarBtnRepetir();
+
+function _entrarModoRepeticion() {
+  _modoRepeticion = true;
+  document.getElementById('btn-guardar').disabled = true;
+  document.getElementById('btn-guardar-enviar').disabled = true;
+  document.getElementById('aviso-repeticion').style.display = '';
+}
+
+function _salirModoRepeticion() {
+  if (!_modoRepeticion) return;
+  _modoRepeticion = false;
+  document.getElementById('aviso-repeticion').style.display = 'none';
+  updateProgress(); // re-evalúa si habilitar botones
+}
+
+// Monitorear cambios en campos obligatorios para salir de modo repetición
+function _onCampoObligatorioChange() {
+  if (_modoRepeticion) _salirModoRepeticion();
+}
+
+document.getElementById('btn-repetir').addEventListener('click', () => {
+  const raw = localStorage.getItem('ultima_causa_ingresada');
+  if (!raw) return;
+  const d = JSON.parse(raw);
+
+  // Limpiar primero
+  limpiarFormulario();
+
+  // Mapear campos del formulario
+  const mapeo = {
+    'f-fecha_solicitud': d.fecha_solicitud,
+    'f-n_solicitud': d.nro_solicitud || d.n_solicitud,
+    'f-rol': d.rol,
+    'f-tribunal': d.tribunal,
+    'f-estudio': d.estudio_juridico || d.estudio,
+    'f-demandante': d.demandante,
+    'f-demandado': d.demandado,
+    'f-rut': d.rut,
+    'f-direccion': d.direccion,
+    'f-notificar_a': d.notificar_a,
+    'f-ciudad': d.ciudad || 'Antofagasta',
+    'f-mandamiento': d.monto_mandamiento,
+    'f-tipo_diligencia': d.tipo_diligencia,
+    'f-piezas': d.piezas,
+    'f-n_pagare': d.nro_pagare || d.n_pagare,
+    'f-observacion': d.comentario || d.observacion,
+  };
+
+  // Primero setear estudio para que evaluarDemandante configure el select
+  const estudioEl = document.getElementById('f-estudio');
+  if (estudioEl && mapeo['f-estudio']) {
+    estudioEl.value = mapeo['f-estudio'];
+    estudioEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Setear demandante (puede ser select o input)
+  const demSel = document.getElementById('f-demandante-select');
+  if (demSel && demSel.style.display !== 'none' && d.demandante) {
+    demSel.value = d.demandante;
+    demSel.dispatchEvent(new Event('change', { bubbles: true }));
+  } else if (d.demandante) {
+    const demInp = document.getElementById('f-demandante');
+    demInp.value = d.demandante;
+    demInp.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Setear abogado (puede ser select para Socofin o input)
+  const abSel = document.getElementById('f-abogado_procurador-select');
+  const abInp = document.getElementById('f-abogado_procurador');
+  const abOtro = document.getElementById('f-abogado_procurador-otro');
+  if (d.abogado_procurador) {
+    if (abSel && abSel.style.display !== 'none') {
+      const match = Array.from(abSel.options).find(o => o.value === d.abogado_procurador);
+      if (match) { abSel.value = d.abogado_procurador; }
+      else { abSel.value = '__otro__'; abOtro.style.display = ''; abOtro.value = d.abogado_procurador; }
+      abSel.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      abInp.value = d.abogado_procurador;
+      abInp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  // Setear resto de campos
+  Object.entries(mapeo).forEach(([id, val]) => {
+    if (!val || id === 'f-estudio' || id === 'f-demandante') return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // Limpiar ID hex y QR — se recalculará al modificar campos
+  currentHex = null;
+  clearQR();
+  recalcHex();
+  updateProgress();
+
+  // Entrar en modo repetición
+  _entrarModoRepeticion();
+
+  // Escuchar cambios en campos obligatorios para salir del modo
+  const camposMonitor = _camposObligatoriosActivos();
+  camposMonitor.forEach(id => {
+    const el = document.getElementById('f-' + id) ||
+               document.getElementById('f-' + id + '-select');
+    if (el) {
+      el.addEventListener('input', _onCampoObligatorioChange, { once: true });
+      el.addEventListener('change', _onCampoObligatorioChange, { once: true });
+    }
+  });
+
+  showToast('↺ Datos de última causa cargados — modifica antes de guardar', 'info');
+});
 
 document.getElementById('btn-imprimir').addEventListener('click', () => {
   if (!currentHex) { showToast('⚠ Complete los campos para generar el QR', 'warn'); return; }
@@ -2749,8 +3066,14 @@ async function cargarCausaCompleta(hex) {
     const data = await DBX.download(`/causas/${hex}_CAUSA.json`);
     if (data) {
       c._causa_json = data;
-      // Sincronizar estado por si cambió
+      // Sincronizar estado y campos que no están en INDEX.json
       c.estado = data.estado;
+      if (data.datos) {
+        c.piezas = data.datos.piezas || '';
+        c.abogado_procurador = data.datos.abogado_procurador || '';
+        c.observacion = data.datos.comentario || '';
+        c.comentario = data.datos.comentario || '';
+      }
     }
     return data;
   } catch(err) {
@@ -2831,7 +3154,7 @@ function renderCausas() {
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
         ${currentUser?.perfil === 'darth' ? `<button class="btn btn-danger btn-sm btn-icon" title="Eliminar causa" onclick="eliminarCausa('${c.id_hex}')">🗑</button>` : ''}
@@ -2863,8 +3186,8 @@ document.getElementById('btn-limpiar-filtros').addEventListener('click', () => {
   renderCausas();
 });
 
-function verCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
+async function verCausa(hex) {
+  const c = await asegurarCausaCompleta(hex);
   if (!c) return;
   document.getElementById('modal-title').textContent = 'Causa — ' + (c.rol || hex.slice(0,8));
   document.getElementById('modal-body').innerHTML = `
@@ -2872,18 +3195,20 @@ function verCausa(hex) {
       <div style="flex:1;">
         <div id="modal-campos" style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
           <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol || '—'}</strong></div>
+          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud || c.nro_solicitud || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
-          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
+          ${c.abogado_procurador ? `<div><span style="color:var(--muted); font-size:11px;">ABOGADO / PROCURADOR</span><br>${c.abogado_procurador}</div>` : ''}
           <div><span style="color:var(--muted); font-size:11px;">FECHA RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
+          <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
@@ -2895,16 +3220,28 @@ function verCausa(hex) {
   const qrEl = document.getElementById('modal-qr');
   try { new QRCode(qrEl, { text: c.id_hex, width: 100, height: 100, colorDark:'#0d1b2a', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
 
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>
-    <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
-    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
-  `;
+  // Protección estado "cerrada": solo Darth puede editar/reabrir
+  const esCerrada = c.estado === 'cerrada';
+  const esDarth = currentUser?.perfil === 'darth';
+  let footerHtml = '';
+  if (esCerrada) {
+    if (esDarth) {
+      footerHtml += `<button class="btn btn-warning btn-sm" onclick="reabrirCausa('${c.id_hex}')" title="Reabrir causa cerrada">🔓 Reabrir causa</button>`;
+      footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
+    }
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  } else {
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  }
+  document.getElementById('modal-footer').innerHTML = footerHtml;
   document.getElementById('modal-overlay').classList.add('active');
 }
 
-function editarCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
+async function editarCausa(hex) {
+  const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
   // Clonar opciones del select tribunal del formulario
@@ -2934,7 +3271,7 @@ function editarCausa(hex) {
   }
 
   const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;';
-  const inp = 'font-size:13px; margin-top:2px;';
+  const inp = 'font-size:13px; margin-top:2px; width:100%;';
 
   const camposTexto = [
     ['rol', 'ROL', c.rol],
@@ -2943,6 +3280,7 @@ function editarCausa(hex) {
     ['demandado', 'Demandado', c.demandado],
     ['rut', 'RUT', c.rut],
     ['estudio', 'Estudio', c.estudio || c.estudio_juridico],
+    ['abogado_procurador', 'Abogado/Procurador', c.abogado_procurador],
     ['direccion', 'Dirección', c.direccion, true],
     ['notificar_a', 'Notificar a', c.notificar_a, true],
     ['piezas', 'Piezas', c.piezas, true],
@@ -2950,17 +3288,46 @@ function editarCausa(hex) {
   ];
 
   let html = '';
+  // Fecha solicitud
+  html += `<div><label style="${lbl}">Fecha Solicitud</label><input type="date" id="edit-fecha_solicitud" value="${c.fecha_solicitud || ''}" style="${inp}"></div>`;
   // Tribunal select
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
   // Tipo diligencia select
   html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
+  // Estado select (solo Darth)
+  if (currentUser?.perfil === 'darth') {
+    const estados = [
+      ['ingresada','Ingresada'],
+      ['pendiente_validacion','Pendiente validación'],
+      ['validada','Validada'],
+      ['en_ruta','En ruta'],
+      ['gestion_directa_receptora','Gestión Directa'],
+      ['resultado_registrado','Resultado registrado'],
+      ['lista_para_estampe','Lista para estampe'],
+      ['estampada','Estampada'],
+      ['boleta_emitida','Boleta emitida'],
+      ['cerrada','Cerrada'],
+    ];
+    const estadoOpts = estados.map(([v,l]) =>
+      `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
+    ).join('');
+    html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}">${estadoOpts}</select></div>`;
+  } else {
+    html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
+  }
   // Campos texto
-  html += camposTexto.map(([key, label, val, span]) =>
-    `<div class="${span ? 'span2' : ''}">
+  html += camposTexto.map(([key, label, val, span]) => {
+    if (key === 'piezas') {
+      return `<div class="span2">
+        <label style="${lbl}">${label}</label>
+        <textarea id="edit-${key}" style="${inp}; min-height:80px; resize:vertical; width:100%;" oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">${(val||'').replace(/</g,'&lt;')}</textarea>
+      </div>`;
+    }
+    return `<div class="${span ? 'span2' : ''}">
       <label style="${lbl}">${label}</label>
       <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="${inp}">
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 
   document.getElementById('modal-campos').innerHTML = html;
 
@@ -2974,8 +3341,8 @@ async function guardarEdicion(hex) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
-  const camposEditables = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
-    'estudio','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
+  const camposEditables = ['fecha_solicitud','rol','n_solicitud','tribunal','demandante','demandado','rut',
+    'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
   const modificados = [];
   const payload = c._causa_json;
 
@@ -2998,18 +3365,40 @@ async function guardarEdicion(hex) {
     }
   });
 
-  if (modificados.length === 0) {
+  // Estado (solo Darth)
+  const editEstadoEl = document.getElementById('edit-estado');
+  let cambioEstado = false;
+  if (editEstadoEl) {
+    const nuevoEstado = editEstadoEl.value;
+    if (nuevoEstado !== payload.estado) {
+      const estadoAnterior = payload.estado;
+      payload.estado = nuevoEstado;
+      c.estado = nuevoEstado;
+      cambioEstado = true;
+      payload.historial.push({
+        accion: 'cambio_estado',
+        estado_anterior: estadoAnterior,
+        estado_nuevo: nuevoEstado,
+        fecha: new Date().toISOString(),
+        usuario: currentUser.nombre
+      });
+    }
+  }
+
+  if (modificados.length === 0 && !cambioEstado) {
     showToast('Sin cambios', 'info');
     verCausa(hex);
     return;
   }
 
-  payload.historial.push({
-    accion: 'edicion',
-    fecha:  new Date().toISOString(),
-    usuario: currentUser.nombre,
-    campos_modificados: modificados
-  });
+  if (modificados.length > 0) {
+    payload.historial.push({
+      accion: 'edicion',
+      fecha:  new Date().toISOString(),
+      usuario: currentUser.nombre,
+      campos_modificados: modificados
+    });
+  }
 
   if (DBX.isConfigured()) {
     try {
@@ -3113,7 +3502,7 @@ function renderValidacion() {
       <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
       <td style="font-size:12px;">${usuario}</td>
       <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
-      <td style="white-space:nowrap; display:flex; gap:.35rem;">
+      <td class="col-acc" style="white-space:nowrap; display:flex; gap:.35rem;">
         <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
         <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
         <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
@@ -3239,7 +3628,15 @@ function switchRutaTab(tab) {
   document.getElementById('tab-ver').classList.toggle('active', tab === 'ver');
   document.getElementById('panel-asignar').style.display = tab === 'asignar' ? '' : 'none';
   document.getElementById('panel-ver').style.display = tab === 'ver' ? '' : 'none';
-  if (tab === 'ver') renderRutaDia();
+  if (tab === 'ver') {
+    // Auto-seleccionar hoy si no hay día seleccionado
+    if (!calRutaSelected) {
+      calRutaSelected = new Date().toISOString().slice(0, 10);
+      renderCalRuta();
+      document.getElementById('btn-export-dia').style.display = '';
+    }
+    renderRutaDia();
+  }
 }
 
 // ── Calendario ──
@@ -3313,17 +3710,49 @@ async function cargarRuta() {
   }
   rutaSeleccionadas.clear();
   document.getElementById('ruta-check-all').checked = false;
+  // Preservar día seleccionado al recargar
+  const prevSel = calRutaSelected;
   initCalRuta();
+  if (prevSel) {
+    calRutaSelected = prevSel;
+    renderCalRuta();
+  }
   renderRuta();
+  // Si estamos en la pestaña "ver", re-renderizar
+  if (document.getElementById('panel-ver').style.display !== 'none') {
+    renderRutaDia();
+  }
 }
 
 // ── Render tabla asignar ──
+function limpiarFiltrosRuta() {
+  document.getElementById('ruta-filter-search').value = '';
+  document.getElementById('ruta-filter-tipo').value = '';
+  renderRuta();
+}
+document.getElementById('ruta-filter-search').addEventListener('input', renderRuta);
+document.getElementById('ruta-filter-tipo').addEventListener('change', renderRuta);
+
 function renderRuta() {
-  const validadas = causas.filter(c => c.estado === 'validada');
+  // Excluir tipos de gestión directa de la selección de ruta
+  let validadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
+
+  // Aplicar filtros
+  const fSearch = document.getElementById('ruta-filter-search').value.toLowerCase();
+  const fTipo = document.getElementById('ruta-filter-tipo').value;
+  if (fSearch) validadas = validadas.filter(c =>
+    (c.rol||'').toLowerCase().includes(fSearch) ||
+    (c.id_hex||'').toLowerCase().includes(fSearch) ||
+    (c.direccion||'').toLowerCase().includes(fSearch) ||
+    (c.demandado||'').toLowerCase().includes(fSearch) ||
+    (c.demandante||'').toLowerCase().includes(fSearch) ||
+    (c.notificar_a||'').toLowerCase().includes(fSearch)
+  );
+  if (fTipo) validadas = validadas.filter(c => (c.tipo_diligencia||'').startsWith(fTipo));
+
   document.getElementById('ruta-count').textContent =
     `${validadas.length} para asignar · ${enRuta.length} en ruta`;
-  // botón export está en panel-ver, se controla en renderRutaDia()
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
@@ -3348,7 +3777,7 @@ function renderRuta() {
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
@@ -3397,7 +3826,7 @@ function renderRutaDia() {
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
@@ -3657,7 +4086,9 @@ function _calleNumero(dir) {
   // Cortar en primera coma
   let limpia = dir.split(/\s*,\s*/)[0];
   // Cortar antes de cualquier indicador de depto/edificio/casa/torre
-  limpia = limpia.replace(/\s+(dpto|depto|dept|dto|dt|ed|edif|edificio|block|bloque|torre|of|oficina|casa|piso|esc|interior|int)\b.*/i, '');
+  limpia = limpia.replace(/\s+(dpto|depto|dept|dto|dt|ed|edif|edificio|block|bloque|torre|casa|piso|esc|interior|int)\b.*/i, '');
+  // Cortar antes de código de block/casa tipo H42, B12, etc. (letra + número al final)
+  limpia = limpia.replace(/\s+[A-Z]\d+\s*$/i, '');
   return limpia.trim();
 }
 
@@ -3834,6 +4265,8 @@ function estadoBadge(estado) {
     'lista_para_estampe':   ['tag-purple','Lista para estampe'],
     'estampada':            ['tag-green','Estampada'],
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
+    'cerrada':              ['tag-gray','Cerrada'],
+    'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
   return `<span class="tag ${cls}">${label}</span>`;
@@ -3865,6 +4298,159 @@ updateTime();
 
 // ══════════════════════════════════════════════
 // CSS ANIMACIÓN SHAKE (login)
+// ══════════════════════════════════════════════
+// GESTIÓN DIRECTA
+// ══════════════════════════════════════════════
+
+function switchGestionTab(tab) {
+  document.getElementById('tab-gestion-pend').classList.toggle('active', tab === 'pendientes');
+  document.getElementById('tab-gestion-term').classList.toggle('active', tab === 'terminadas');
+  document.getElementById('panel-gestion-pend').style.display = tab === 'pendientes' ? '' : 'none';
+  document.getElementById('panel-gestion-term').style.display = tab === 'terminadas' ? '' : 'none';
+}
+
+async function cargarGestion() {
+  if (!_causasCargadas) await cargarCausasDropbox();
+  renderGestion();
+}
+
+function _fechaIngreso(c) {
+  if (c._causa_json?.historial?.length > 0) {
+    const f = c._causa_json.historial[0].fecha;
+    if (f) return f.slice(0, 10);
+  }
+  return c.fecha_solicitud || '';
+}
+
+function renderGestion() {
+  const todas = causas.filter(c => esGestionDirecta(c.tipo_diligencia));
+  const pendientes = todas.filter(c => c.estado !== 'cerrada');
+  const terminadas = todas.filter(c => c.estado === 'cerrada');
+
+  document.getElementById('gestion-count').textContent =
+    `${pendientes.length} pendientes · ${terminadas.length} terminadas`;
+
+  // Pendientes
+  const tbPend = document.getElementById('gestion-pend-body');
+  if (pendientes.length === 0) {
+    tbPend.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">📋</span><p>Sin diligencias de gestión directa pendientes.</p></div></td></tr>`;
+  } else {
+    tbPend.innerHTML = pendientes.map(c => _gestionRow(c, false)).join('');
+  }
+
+  // Terminadas
+  const tbTerm = document.getElementById('gestion-term-body');
+  if (terminadas.length === 0) {
+    tbTerm.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">✅</span><p>Sin diligencias terminadas.</p></div></td></tr>`;
+  } else {
+    tbTerm.innerHTML = terminadas.map(c => _gestionRow(c, true)).join('');
+  }
+}
+
+function _gestionRow(c, esTerminada) {
+  const notifA = c.notificar_a || c.demandado || '—';
+  const piezas = c.piezas || '—';
+  const fechaIng = _fechaIngreso(c);
+  const acciones = esTerminada
+    ? `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>`
+    : `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+       <button class="btn btn-success btn-sm btn-icon" title="Marcar terminada" onclick="marcarGestionTerminada('${c.id_hex}')">✓</button>`;
+  return `<tr>
+    <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+    <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+    <td class="mono" style="font-size:11px;">${c.rut || '—'}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${notifA}">${notifA}</td>
+    <td>${tipoBadge(c.tipo_diligencia)}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; font-size:12px;" title="${piezas}">${piezas}</td>
+    <td>${estadoBadge(c.estado)}</td>
+    <td class="mono" style="font-size:11px;">${fmtFecha(fechaIng)}</td>
+    <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+    <td class="col-acc" style="white-space:nowrap;">${acciones}</td>
+  </tr>`;
+}
+
+async function marcarGestionTerminada(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+
+  // Confirmación
+  document.getElementById('modal-title').textContent = 'Confirmar cierre';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:8px;">
+      <strong>${c.rol || hex.slice(0,8)}</strong> — ${tipoBadge(c.tipo_diligencia)}
+    </p>
+    <p style="font-size:13px;">¿Confirmas que esta diligencia está terminada? El estado cambiará a <strong>Cerrada</strong>.</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-success btn-sm" onclick="confirmarCierreGestion('${hex}')">Confirmar cierre</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function reabrirCausa(hex) {
+  if (currentUser?.perfil !== 'darth') { showToast('Solo Darth puede reabrir causas cerradas', 'warn'); return; }
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  closeModal();
+
+  const payload = c._causa_json || await asegurarCausaCompleta(hex);
+  if (!payload) { showToast('No se pudo cargar la causa', 'warn'); return; }
+  const json = c._causa_json || payload._causa_json || payload;
+
+  json.estado = 'validada';
+  if (!json.historial) json.historial = [];
+  json.historial.push({
+    accion: 'reabierta',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre || currentUser.username
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas/${hex}_CAUSA.json`, json);
+    c.estado = 'validada';
+    c._causa_json = json;
+    await actualizarIndex();
+    renderGestion();
+    showToast('Causa reabierta (estado → validada)', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Error al reabrir: ' + e.message, 'warn');
+  }
+}
+
+async function confirmarCierreGestion(hex) {
+  closeModal();
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+
+  const payload = c._causa_json || await asegurarCausaCompleta(hex);
+  if (!payload) { showToast('No se pudo cargar la causa', 'warn'); return; }
+  const json = c._causa_json || payload._causa_json || payload;
+
+  json.estado = 'cerrada';
+  if (!json.historial) json.historial = [];
+  json.historial.push({
+    accion: 'cierre_gestion_directa',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre || currentUser.username
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas/${hex}_CAUSA.json`, json);
+    c.estado = 'cerrada';
+    c._causa_json = json;
+    await actualizarIndex();
+    renderGestion();
+    showToast('Diligencia marcada como terminada', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Error al cerrar diligencia: ' + e.message, 'warn');
+  }
+}
+
 // ══════════════════════════════════════════════
 const styleEl = document.createElement('style');
 styleEl.textContent = `
