@@ -439,13 +439,13 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 
 /* TABLA */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
 thead th {
   background: #f8fafc; color: var(--muted);
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; padding: .5rem .75rem;
   text-align: left; border-bottom: 1.5px solid var(--border);
-  white-space: nowrap;
+  white-space: nowrap; overflow: hidden; resize: horizontal;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:hover { background: #f8fafc; }
@@ -1168,22 +1168,23 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
-                  <th style="width:100px;">ROL</th>
-                  <th style="width:30px;">Trib.</th>
-                  <th style="min-width:130px;">Demandante</th>
-                  <th style="min-width:130px;">Demandado</th>
-                  <th style="max-width:180px;">Dirección</th>
-                  <th style="width:90px;">Tipo</th>
-                  <th>Estudio</th>
-                  <th style="width:90px;">Estado</th>
-                  <th style="width:80px;">Fecha</th>
+                  <th style="width:75px;">ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th style="width:130px;">Demandante</th>
+                  <th style="width:130px;">Demandado</th>
+                  <th style="width:90px;">RUT</th>
+                  <th style="width:180px;">Dirección</th>
+                  <th style="width:80px;">Tipo</th>
+                  <th style="width:100px;">Estudio</th>
+                  <th style="width:80px;">Estado</th>
+                  <th style="width:70px;">Fecha</th>
                   <th style="width:120px;">ID</th>
-                  <th style="width:60px;">Acciones</th>
+                  <th style="width:55px;">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="11">
+                  <td colspan="12">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -2716,7 +2717,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -2727,16 +2728,17 @@ function renderCausas() {
 
   tbody.innerHTML = filtered.map(c => `
     <tr>
-      <td class="mono" style="white-space:nowrap;">${c.rol || '—'}</td>
-      <td style="text-align:center; font-size:12px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
-      <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
-      <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
-      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.rut || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="font-size:12px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
+      <td style="font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
-      <td class="mono" style="font-size:11px; letter-spacing:.03em;">${c.id_hex || '—'}</td>
+      <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
@@ -2783,6 +2785,7 @@ function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
+          <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
