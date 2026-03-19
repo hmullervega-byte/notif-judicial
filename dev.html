@@ -699,7 +699,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 #config-test-result.ok  { color: #4ade80; }
 #config-test-result.err { color: #f87171; }
 
-/* ── RUTA: toolbar + checkboxes ── */
+/* ── RUTA: toolbar + checkboxes + calendario ── */
 .ruta-toolbar {
   display: flex; align-items: center; gap: 1rem;
   padding: .75rem 0; flex-wrap: wrap;
@@ -707,6 +707,33 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .ruta-toolbar .counter { font-size: 13px; color: var(--muted); font-weight: 500; }
 .ruta-toolbar .counter strong { color: var(--text); }
 .ruta-check { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
+
+.ruta-layout { display: flex; gap: 12px; align-items: flex-start; }
+.ruta-layout > .ruta-main { flex: 1; min-width: 0; }
+.ruta-sidebar { width: 240px; flex-shrink: 0; }
+
+/* Mini calendario */
+.cal-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r8); overflow: hidden; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid var(--border); }
+.cal-nav button { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--muted); padding: 2px 6px; border-radius: 4px; }
+.cal-nav button:hover { background: #e2e8f0; }
+.cal-nav .cal-month { font-size: 13px; font-weight: 600; color: var(--navy); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; padding: 6px; gap: 2px; }
+.cal-grid .cal-dow { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 2px 0; }
+.cal-grid .cal-day { font-size: 12px; padding: 4px 0; border-radius: 4px; cursor: pointer; position: relative; color: var(--text); }
+.cal-grid .cal-day:hover { background: #e2e8f0; }
+.cal-grid .cal-day.empty { cursor: default; }
+.cal-grid .cal-day.empty:hover { background: none; }
+.cal-grid .cal-day.today { font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--blue); }
+.cal-grid .cal-day.has-ruta { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+.cal-grid .cal-day.selected { background: var(--blue); color: #fff; font-weight: 700; }
+.cal-grid .cal-day.has-ruta.selected { background: #1d4ed8; }
+
+/* Tabs ruta */
+.ruta-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 8px; }
+.ruta-tab { padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.ruta-tab:hover { color: var(--text); }
+.ruta-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
 </style>
 </head>
@@ -1244,40 +1271,92 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Seleccionar Ruta</div>
             <div class="page-sub" id="ruta-count">Cargando...</div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarRuta()">🔄 Recargar</button>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarRuta()">🔄 Recargar</button>
+          </div>
         </div>
 
-        <div class="ruta-toolbar">
-          <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
-          <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
-          <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptiroute()" style="display:none;">📤 Export Optiroute</button>
+        <!-- Tabs: Asignar / Ver rutas -->
+        <div class="ruta-tabs">
+          <div class="ruta-tab active" id="tab-asignar" onclick="switchRutaTab('asignar')">Asignar a ruta</div>
+          <div class="ruta-tab" id="tab-ver" onclick="switchRutaTab('ver')">Ver rutas por día</div>
         </div>
 
-        <div class="card">
-          <div class="table-wrap">
-            <table id="tabla-ruta">
-              <thead>
-                <tr>
-                  <th style="width:36px;"><input type="checkbox" class="ruta-check" id="ruta-check-all" onchange="toggleAllRuta(this.checked)"></th>
-                  <th>N° Sol.</th>
-                  <th>ROL</th>
-                  <th>Demandado</th>
-                  <th>Tipo</th>
-                  <th>Dirección</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody id="ruta-body">
-                <tr>
-                  <td colspan="7">
-                    <div class="empty-state">
-                      <span class="icon">🗺</span>
-                      <p>No hay causas validadas disponibles para ruta.</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="ruta-layout">
+          <!-- SIDEBAR: Calendario -->
+          <div class="ruta-sidebar">
+            <div class="cal-card">
+              <div class="cal-nav">
+                <button onclick="calNavRuta(-1)">&lt;</button>
+                <span class="cal-month" id="cal-ruta-month"></span>
+                <button onclick="calNavRuta(1)">&gt;</button>
+              </div>
+              <div class="cal-grid" id="cal-ruta-grid"></div>
+            </div>
+            <div style="margin-top:8px;">
+              <button class="btn btn-success btn-sm" id="btn-export-dia" onclick="exportOptirouteDia()" style="display:none; width:100%;">📤 Exportar día</button>
+            </div>
+          </div>
+
+          <!-- MAIN: Tabla -->
+          <div class="ruta-main">
+            <!-- Panel ASIGNAR -->
+            <div id="panel-asignar">
+              <div class="ruta-toolbar">
+                <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
+                <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
+                <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptiroute()" style="display:none;">📤 Export todas en ruta</button>
+              </div>
+              <div class="card">
+                <div class="table-wrap">
+                  <table id="tabla-ruta">
+                    <thead>
+                      <tr>
+                        <th style="width:30px;"><input type="checkbox" class="ruta-check" id="ruta-check-all" onchange="toggleAllRuta(this.checked)"></th>
+                        <th style="width:75px;">ROL</th>
+                        <th style="width:22px;">T</th>
+                        <th style="width:120px;">Demandante</th>
+                        <th style="width:120px;">Notificar a</th>
+                        <th>Dirección</th>
+                        <th style="width:80px;">Tipo</th>
+                        <th style="width:70px;">F. Sol.</th>
+                        <th style="width:70px;">F. Ruta</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ruta-body">
+                      <tr><td colspan="9"><div class="empty-state"><span class="icon">🗺</span><p>No hay causas validadas disponibles para ruta.</p></div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel VER RUTAS POR DÍA -->
+            <div id="panel-ver" style="display:none;">
+              <div class="ruta-toolbar">
+                <span class="counter" id="ruta-dia-info">Selecciona un día en el calendario</span>
+              </div>
+              <div class="card">
+                <div class="table-wrap">
+                  <table id="tabla-ruta-dia">
+                    <thead>
+                      <tr>
+                        <th style="width:75px;">ROL</th>
+                        <th style="width:22px;">T</th>
+                        <th style="width:120px;">Demandante</th>
+                        <th style="width:120px;">Notificar a</th>
+                        <th>Dirección</th>
+                        <th style="width:80px;">Tipo</th>
+                        <th style="width:70px;">F. Sol.</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ruta-dia-body">
+                      <tr><td colspan="7"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta en el calendario.</p></div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div><!-- /view-ruta -->
@@ -2636,6 +2715,7 @@ async function actualizarIndex() {
     notificar_a:      c.notificar_a || '',
     demandante:       c.demandante || '',
     ciudad:           c.ciudad || 'Antofagasta',
+    fecha_ruta:       c.fecha_ruta || '',
     ts_ingreso:       c.ts_ingreso || '',
   }));
   try {
@@ -3132,37 +3212,107 @@ async function confirmarDevolver(hex) {
 }
 
 // ══════════════════════════════════════════════
-// SELECCIÓN DE RUTA + EXPORT OPTIROUTE
+// SELECCIÓN DE RUTA + CALENDARIO + EXPORT
 // ══════════════════════════════════════════════
 let rutaSeleccionadas = new Set();
+let calRutaYear, calRutaMonth, calRutaSelected = null;
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// ── Tabs ──
+function switchRutaTab(tab) {
+  document.getElementById('tab-asignar').classList.toggle('active', tab === 'asignar');
+  document.getElementById('tab-ver').classList.toggle('active', tab === 'ver');
+  document.getElementById('panel-asignar').style.display = tab === 'asignar' ? '' : 'none';
+  document.getElementById('panel-ver').style.display = tab === 'ver' ? '' : 'none';
+  if (tab === 'ver') renderRutaDia();
+}
+
+// ── Calendario ──
+function initCalRuta() {
+  const hoy = new Date();
+  calRutaYear = hoy.getFullYear();
+  calRutaMonth = hoy.getMonth();
+  renderCalRuta();
+}
+function calNavRuta(delta) {
+  calRutaMonth += delta;
+  if (calRutaMonth < 0) { calRutaMonth = 11; calRutaYear--; }
+  if (calRutaMonth > 11) { calRutaMonth = 0; calRutaYear++; }
+  renderCalRuta();
+}
+function _fechaRuta(c) {
+  // Buscar fecha_ruta en historial (accion=seleccion_ruta)
+  const h = (c._causa_json?.historial || c.historial || []).filter(e => e.accion === 'seleccion_ruta');
+  if (h.length > 0) {
+    const fr = h[h.length - 1].fecha_ruta || h[h.length - 1].fecha || '';
+    return fr.slice(0, 10);
+  }
+  return c.fecha_ruta || '';
+}
+function _diasConRuta() {
+  const dias = new Set();
+  causas.filter(c => c.estado === 'en_ruta' || c.fecha_ruta).forEach(c => {
+    const fr = _fechaRuta(c) || c.fecha_ruta || '';
+    if (fr) dias.add(fr);
+  });
+  return dias;
+}
+function renderCalRuta() {
+  document.getElementById('cal-ruta-month').textContent = `${MESES_ES[calRutaMonth]} ${calRutaYear}`;
+  const grid = document.getElementById('cal-ruta-grid');
+  const dows = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  const primer = new Date(calRutaYear, calRutaMonth, 1);
+  let diaInicio = primer.getDay(); // 0=dom
+  diaInicio = diaInicio === 0 ? 6 : diaInicio - 1; // lun=0
+  const totalDias = new Date(calRutaYear, calRutaMonth + 1, 0).getDate();
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const diasRuta = _diasConRuta();
+  for (let i = 0; i < diaInicio; i++) html += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= totalDias; d++) {
+    const iso = `${calRutaYear}-${String(calRutaMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const esHoy = iso === hoyStr;
+    const tieneRuta = diasRuta.has(iso);
+    const esSel = calRutaSelected === iso;
+    const cls = ['cal-day', esHoy ? 'today' : '', tieneRuta ? 'has-ruta' : '', esSel ? 'selected' : ''].filter(Boolean).join(' ');
+    html += `<div class="${cls}" onclick="selCalRuta('${iso}')">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function selCalRuta(iso) {
+  calRutaSelected = calRutaSelected === iso ? null : iso;
+  renderCalRuta();
+  document.getElementById('btn-export-dia').style.display = calRutaSelected ? '' : 'none';
+  if (document.getElementById('panel-ver').style.display !== 'none') renderRutaDia();
+}
+
+// ── Cargar ──
 async function cargarRuta() {
   if (!_causasCargadas && DBX.isConfigured()) {
     const tbody = document.getElementById('ruta-body');
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
     </div></td></tr>`;
     await cargarCausasDropbox();
   }
   rutaSeleccionadas.clear();
   document.getElementById('ruta-check-all').checked = false;
+  initCalRuta();
   renderRuta();
 }
 
+// ── Render tabla asignar ──
 function renderRuta() {
   const validadas = causas.filter(c => c.estado === 'validada');
-  document.getElementById('ruta-count').textContent =
-    `${validadas.length} causa${validadas.length !== 1 ? 's' : ''} disponible${validadas.length !== 1 ? 's' : ''} para ruta`;
-
-  // Mostrar botón export si hay causas en_ruta
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
+  document.getElementById('ruta-count').textContent =
+    `${validadas.length} para asignar · ${enRuta.length} en ruta`;
   document.getElementById('btn-export-optiroute').style.display = enRuta.length > 0 ? '' : 'none';
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
-      <span class="icon">🗺</span>
-      <p>${enRuta.length > 0 ? 'Todas las causas validadas ya están en ruta.' : 'No hay causas validadas disponibles para ruta.'}</p>
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">🗺</span>
+      <p>${enRuta.length > 0 ? 'Todas las causas validadas ya están en ruta.' : 'No hay causas validadas disponibles.'}</p>
     </div></td></tr>`;
     document.getElementById('btn-generar-ruta').disabled = true;
     return;
@@ -3173,26 +3323,57 @@ function renderRuta() {
       <td><input type="checkbox" class="ruta-check" data-hex="${c.id_hex}"
            ${rutaSeleccionadas.has(c.id_hex) ? 'checked' : ''}
            onchange="toggleRutaCheck('${c.id_hex}', this.checked)"></td>
-      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || c.nro_solicitud || '—'}</td>
-      <td class="mono">${c.rol || '—'}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.notificar_a || ''}">${c.notificar_a || c.demandado || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
-      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</td>
     </tr>`).join('');
-
   actualizarContadorRuta();
+  renderCalRuta();
 }
 
+// ── Render tabla ver por día ──
+function renderRutaDia() {
+  const tbody = document.getElementById('ruta-dia-body');
+  if (!calRutaSelected) {
+    document.getElementById('ruta-dia-info').textContent = 'Selecciona un día en el calendario';
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta.</p></div></td></tr>`;
+    return;
+  }
+  const del_dia = causas.filter(c => {
+    const fr = _fechaRuta(c) || c.fecha_ruta || '';
+    return fr === calRutaSelected;
+  });
+  const fmtSel = calRutaSelected.split('-').reverse().join('/');
+  document.getElementById('ruta-dia-info').innerHTML = `<strong>${del_dia.length}</strong> causa${del_dia.length !== 1 ? 's' : ''} en ruta del <strong>${fmtSel}</strong>`;
+  if (del_dia.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="icon">📅</span><p>Sin causas en ruta para el ${fmtSel}.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = del_dia.map(c => `
+    <tr>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.notificar_a || ''}">${c.notificar_a || c.demandado || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
+    </tr>`).join('');
+}
+
+// ── Checkboxes ──
 function toggleRutaCheck(hex, checked) {
   if (checked) rutaSeleccionadas.add(hex);
   else rutaSeleccionadas.delete(hex);
   actualizarContadorRuta();
-  // Sync select-all checkbox
   const validadas = causas.filter(c => c.estado === 'validada');
   document.getElementById('ruta-check-all').checked = rutaSeleccionadas.size === validadas.length && validadas.length > 0;
 }
-
 function toggleAllRuta(checked) {
   const validadas = causas.filter(c => c.estado === 'validada');
   rutaSeleccionadas.clear();
@@ -3200,7 +3381,6 @@ function toggleAllRuta(checked) {
   document.querySelectorAll('#ruta-body .ruta-check').forEach(cb => cb.checked = checked);
   actualizarContadorRuta();
 }
-
 function actualizarContadorRuta() {
   const n = rutaSeleccionadas.size;
   document.getElementById('ruta-sel-count').innerHTML =
@@ -3208,60 +3388,62 @@ function actualizarContadorRuta() {
   document.getElementById('btn-generar-ruta').disabled = n === 0;
 }
 
+// ── Generar ruta con fecha ──
 async function generarRuta() {
   if (rutaSeleccionadas.size === 0) return;
+
+  // Preguntar fecha de ruta
+  const hoy = new Date().toISOString().slice(0, 10);
+  document.getElementById('modal-title').textContent = 'Fecha de la ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:10px;">¿Para qué día se asignan estas <strong>${rutaSeleccionadas.size}</strong> causas?</p>
+    <input type="date" id="input-fecha-ruta" value="${hoy}" style="width:100%;">
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="confirmarGenerarRuta()">Confirmar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function confirmarGenerarRuta() {
+  const fechaRuta = document.getElementById('input-fecha-ruta').value;
+  if (!fechaRuta) { showToast('⚠ Selecciona una fecha', 'warn'); return; }
+  closeModal();
 
   const btn = document.getElementById('btn-generar-ruta');
   btn.disabled = true;
   btn.textContent = '⏳ Generando...';
-
   const ahora = new Date().toISOString();
   const seleccion = [];
 
   try {
-    // Cargar _causa_json de todas las seleccionadas
-    for (const hex of rutaSeleccionadas) {
-      await cargarCausaCompleta(hex);
-    }
+    for (const hex of rutaSeleccionadas) { await cargarCausaCompleta(hex); }
 
     for (const hex of rutaSeleccionadas) {
       const c = causas.find(x => x.id_hex === hex);
       if (!c || !c._causa_json) continue;
-
       const payload = c._causa_json;
       payload.estado = 'en_ruta';
+      payload.fecha_ruta = fechaRuta;
       payload.historial.push({
-        accion:  'seleccion_ruta',
-        fecha:   ahora,
-        usuario: currentUser.nombre
+        accion: 'seleccion_ruta', fecha: ahora, fecha_ruta: fechaRuta, usuario: currentUser.nombre
       });
-
-      if (DBX.isConfigured()) {
-        await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
-      }
+      if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
       c.estado = 'en_ruta';
-      seleccion.push({
-        id_hex:    hex,
-        rol:       c.rol,
-        direccion: c.direccion,
-        demandado: c.demandado
-      });
+      c.fecha_ruta = fechaRuta;
+      seleccion.push({ id_hex: hex, rol: c.rol, direccion: c.direccion, demandado: c.demandado, fecha_ruta: fechaRuta });
     }
 
     if (DBX.isConfigured()) {
-      await DBX.upload('/estados/ruta.json', {
-        fecha:   ahora,
-        usuario: currentUser.nombre,
-        causas:  seleccion
-      });
+      await DBX.upload('/estados/ruta.json', { fecha: ahora, fecha_ruta: fechaRuta, usuario: currentUser.nombre, causas: seleccion });
     }
 
     rutaSeleccionadas.clear();
     actualizarIndex();
     renderRuta();
     buildDashboard();
-    showToast(`🗺 Ruta generada con ${seleccion.length} causa${seleccion.length !== 1 ? 's' : ''}`, 'success');
-
+    showToast(`🗺 Ruta ${fechaRuta.split('-').reverse().join('/')} con ${seleccion.length} causa${seleccion.length !== 1 ? 's' : ''}`, 'success');
   } catch(err) {
     console.error('Error generando ruta:', err);
     showToast('❌ Error al generar ruta: ' + err.message, 'error');
@@ -3271,38 +3453,31 @@ async function generarRuta() {
   }
 }
 
-function exportOptiroute() {
-  const enRuta = causas.filter(c => c.estado === 'en_ruta');
-  if (enRuta.length === 0) {
-    showToast('⚠ No hay causas en ruta para exportar', 'warn');
-    return;
-  }
-
+// ── Export Optiroute ──
+function _buildOptiroute(lista) {
   const headers = ['nombre','dirección','departamento','extra','comuna','correo','teléfono','demanda','referencia_pedido','proveedor'];
-  const rows = enRuta.map(c => [
-    c.rol || '',
-    c.direccion || '',
-    '',
-    '',
-    'Antofagasta',
-    '',
-    '',
-    '',
-    '',
-    ''
-  ]);
-
+  const rows = lista.map(c => [c.rol||'', c.direccion||'', '', '', 'Antofagasta', '', '', '', '', '']);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
+  return wb;
+}
+function exportOptiroute() {
+  const enRuta = causas.filter(c => c.estado === 'en_ruta');
+  if (enRuta.length === 0) { showToast('⚠ No hay causas en ruta', 'warn'); return; }
   const hoy = new Date();
-  const dd = String(hoy.getDate()).padStart(2, '0');
-  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-  const filename = `${dd}-${mm}-${hoy.getFullYear()} Optiroute.xlsx`;
-
-  XLSX.writeFile(wb, filename);
+  const filename = `${String(hoy.getDate()).padStart(2,'0')}-${String(hoy.getMonth()+1).padStart(2,'0')}-${hoy.getFullYear()} Optiroute.xlsx`;
+  XLSX.writeFile(_buildOptiroute(enRuta), filename);
   showToast(`📤 Exportado: ${filename} (${enRuta.length} causas)`, 'success');
+}
+function exportOptirouteDia() {
+  if (!calRutaSelected) return;
+  const del_dia = causas.filter(c => { const fr = _fechaRuta(c) || c.fecha_ruta || ''; return fr === calRutaSelected; });
+  if (del_dia.length === 0) { showToast('⚠ Sin causas en esa fecha', 'warn'); return; }
+  const partes = calRutaSelected.split('-');
+  const filename = `${partes[2]}-${partes[1]}-${partes[0]} Optiroute.xlsx`;
+  XLSX.writeFile(_buildOptiroute(del_dia), filename);
+  showToast(`📤 Exportado: ${filename} (${del_dia.length} causas)`, 'success');
 }
 
 // ══════════════════════════════════════════════
