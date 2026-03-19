@@ -3281,6 +3281,8 @@ async function editarCausa(hex) {
   ];
 
   let html = '';
+  // Fecha solicitud
+  html += `<div><label style="${lbl}">Fecha Solicitud</label><input type="date" id="edit-fecha_solicitud" value="${c.fecha_solicitud || ''}" style="${inp}"></div>`;
   // Tribunal select
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
   // Tipo diligencia select
@@ -3332,7 +3334,7 @@ async function guardarEdicion(hex) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
-  const camposEditables = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
+  const camposEditables = ['fecha_solicitud','rol','n_solicitud','tribunal','demandante','demandado','rut',
     'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
   const modificados = [];
   const payload = c._causa_json;
