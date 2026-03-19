@@ -1216,21 +1216,19 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                 <tr>
                   <th style="width:80px;">ROL</th>
                   <th style="width:22px;">T</th>
-                  <th style="min-width:100px;">Demandante</th>
-                  <th style="min-width:100px;">Demandado</th>
-                  <th style="width:85px;">RUT</th>
-                  <th style="min-width:120px;">Dirección</th>
+                  <th style="min-width:90px;">Demandante</th>
+                  <th style="min-width:90px;">Demandado</th>
+                  <th style="min-width:100px;">Dirección</th>
                   <th style="width:70px;">Tipo</th>
-                  <th style="width:80px;">Estudio</th>
                   <th style="width:70px;">Estado</th>
                   <th style="width:65px;">Fecha</th>
-                  <th style="width:100px;">ID</th>
+                  <th style="width:90px;">ID</th>
                   <th style="width:55px;" class="col-acc">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="12">
+                  <td colspan="10">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -1242,6 +1240,39 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
         </div>
       </div><!-- /view-causas -->
+
+      <!-- ── CAUSAS DEVUELTAS ── -->
+      <div class="view" id="view-devueltas">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Causas Devueltas</div>
+            <div class="page-sub" id="devueltas-count">Cargando...</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarDevueltas()">🔄 Recargar</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="tabla-devueltas">
+              <thead>
+                <tr>
+                  <th style="width:80px;">ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th style="min-width:100px;">Demandado</th>
+                  <th style="min-width:100px;">Dirección</th>
+                  <th style="width:80px;">Tipo</th>
+                  <th style="min-width:140px;">Motivo devolución</th>
+                  <th style="width:70px;">Fecha dev.</th>
+                  <th style="width:100px;">ID</th>
+                  <th style="width:80px;" class="col-acc">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="devueltas-body">
+                <tr><td colspan="9"><div class="empty-state"><span class="icon">✅</span><p>No hay causas devueltas pendientes.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-devueltas -->
 
       <!-- ── VALIDACIÓN JEDI ── -->
       <div class="view" id="view-validacion">
@@ -1754,6 +1785,7 @@ const PERFILES = {
       { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
       { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
       { id: 'causas',     icon: '📂', label: 'Mis Causas',     view: 'view-causas'    },
+      { id: 'devueltas',  icon: '↩',  label: 'Devueltas',      view: 'view-devueltas' },
       { id: 'ruta',       icon: '🗺', label: 'Ruta', view: 'view-ruta'    },
     ]
   },
@@ -1776,6 +1808,7 @@ const PERFILES = {
       { id: 'ingreso',     icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'     },
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
+      { id: 'devueltas',   icon: '↩',  label: 'Devueltas',      view: 'view-devueltas'  },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
       { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
       { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
@@ -1917,6 +1950,7 @@ function showView(viewId) {
   if (viewId === 'view-ruta') cargarRuta();
   if (viewId === 'view-dashboard') buildDashboard();
   if (viewId === 'view-gestion') cargarGestion();
+  if (viewId === 'view-devueltas') cargarDevueltas();
 }
 
 // ══════════════════════════════════════════════
@@ -3136,7 +3170,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -3151,13 +3185,11 @@ function renderCausas() {
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.rut || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
-      <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+      <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
@@ -4158,6 +4190,44 @@ function exportOptirouteDia() {
   const filename = `${partes[2]}-${partes[1]}-${partes[0]} Optiroute.xlsx`;
   XLSX.writeFile(_buildOptiroute(del_dia), filename);
   showToast(`📤 Exportado: ${filename} (${del_dia.length} causas)`, 'success');
+}
+
+// ══════════════════════════════════════════════
+// CAUSAS DEVUELTAS
+// ══════════════════════════════════════════════
+async function cargarDevueltas() {
+  if (!_causasCargadas) await cargarCausasDropbox();
+  renderDevueltas();
+}
+function renderDevueltas() {
+  const devueltas = causas.filter(c => c.estado === 'devuelta');
+  document.getElementById('devueltas-count').textContent =
+    `${devueltas.length} causa${devueltas.length !== 1 ? 's' : ''} devuelta${devueltas.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById('devueltas-body');
+  if (devueltas.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">✅</span><p>No hay causas devueltas pendientes.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = devueltas.map(c => {
+    const hist = c._causa_json?.historial || [];
+    const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
+    const motivo = dev?.comentario || '—';
+    const fechaDev = dev?.fecha ? dev.fecha.slice(0,10) : '—';
+    return `<tr>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; font-size:12px; color:#9a3412;" title="${motivo}">${motivo}</td>
+      <td class="mono" style="font-size:11px;">${fmtFecha(fechaDev)}</td>
+      <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+      <td class="col-acc" style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+        <button class="btn btn-secondary btn-sm btn-icon" title="Editar" onclick="editarCausa('${c.id_hex}')">✏</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════
