@@ -393,7 +393,7 @@ input:focus, select:focus, textarea:focus {
 textarea { resize: vertical; min-height: 40px; }
 select { cursor: pointer; }
 input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed; }
-.has-error input, .has-error select, .has-error textarea { border-color: var(--red); background: var(--red-lt); }
+.has-error input, .has-error select, .has-error textarea { border: 2px solid #ef4444; background: #fef2f2; }
 .error-msg { font-size: 11px; color: var(--red); display: none; margin-top: 1px; }
 .has-error .error-msg { display: block; }
 .hint { font-size: 11px; color: var(--muted); margin-top: 1px; }
@@ -1311,9 +1311,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <!-- Panel ASIGNAR -->
             <div id="panel-asignar">
               <div class="filter-bar" style="margin-bottom:8px; flex-wrap:wrap;">
-                <input type="text" id="ruta-filter-rol" placeholder="ROL" style="width:90px; font-size:12px;">
-                <input type="text" id="ruta-filter-id" placeholder="ID hex" style="width:110px; font-size:12px;">
-                <input type="text" id="ruta-filter-dir" placeholder="Dirección" style="width:140px; font-size:12px;">
+                <input type="text" id="ruta-filter-search" placeholder="Buscar ROL, ID, dirección, demandado, demandante, notificar a…" style="flex:1; min-width:200px; font-size:12px;">
                 <select id="ruta-filter-tipo" style="min-width:130px; font-size:12px;">
                   <option value="">Todos los tipos</option>
                   <option value="NOT">Notificaciones</option>
@@ -2214,11 +2212,15 @@ document.getElementById('f-abogado_procurador-select').addEventListener('change'
   const otro = document.getElementById('f-abogado_procurador-otro');
   if (this.value === '__otro__') { otro.style.display = ''; otro.focus(); }
   else { otro.style.display = 'none'; otro.value = ''; }
+  document.getElementById('fw-abogado_procurador').classList.remove('has-error');
+});
+document.getElementById('f-abogado_procurador-otro').addEventListener('input', function() {
+  document.getElementById('fw-abogado_procurador').classList.remove('has-error');
 });
 
 document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); evaluarAbogado(); });
 document.getElementById('f-demandante').addEventListener('input', () => { evaluarBancoRepresentado(); evaluarPagare(); });
-document.getElementById('f-demandante-select').addEventListener('change', () => { evaluarBancoRepresentado(); evaluarPagare(); });
+document.getElementById('f-demandante-select').addEventListener('change', () => { document.getElementById('fw-demandante').classList.remove('has-error'); evaluarBancoRepresentado(); evaluarPagare(); });
 
 // ── Formateo automático de campos ──────────────────────────────────
 // ROL: letra inicial siempre en mayúscula
@@ -2279,6 +2281,9 @@ function fval(name) {
 }
 
 function onFieldChange(name) {
+  // Limpiar error visual al escribir en cualquier campo
+  const wrapper = document.getElementById('fw-' + name);
+  if (wrapper && fval(name)) wrapper.classList.remove('has-error');
   if (REQUIRED_FIELDS.includes(name)) validateField(name);
   updateProgress();
   if (HEX_FIELDS.includes(name)) {
@@ -2540,6 +2545,7 @@ function limpiarFormulario() {
   updateProgress();
   recalcHex();
   document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-ciudad').value = 'Antofagasta';
 }
 
 document.getElementById('btn-imprimir').addEventListener('click', () => {
@@ -3127,6 +3133,24 @@ async function editarCausa(hex) {
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
   // Tipo diligencia select
   html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
+  // Estado select (solo Darth)
+  if (currentUser?.perfil === 'darth') {
+    const estados = [
+      ['pendiente_validacion','Pendiente validación'],
+      ['validada','Validada'],
+      ['en_ruta','En ruta'],
+      ['gestion_directa_receptora','Gestión Directa'],
+      ['resultado_registrado','Resultado registrado'],
+      ['lista_para_estampe','Lista para estampe'],
+      ['estampada','Estampada'],
+      ['boleta_emitida','Boleta emitida'],
+      ['cerrada','Cerrada'],
+    ];
+    const estadoOpts = estados.map(([v,l]) =>
+      `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
+    ).join('');
+    html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}">${estadoOpts}</select></div>`;
+  }
   // Campos texto
   html += camposTexto.map(([key, label, val, span]) => {
     if (key === 'piezas') {
@@ -3177,18 +3201,40 @@ async function guardarEdicion(hex) {
     }
   });
 
-  if (modificados.length === 0) {
+  // Estado (solo Darth)
+  const editEstadoEl = document.getElementById('edit-estado');
+  let cambioEstado = false;
+  if (editEstadoEl) {
+    const nuevoEstado = editEstadoEl.value;
+    if (nuevoEstado !== payload.estado) {
+      const estadoAnterior = payload.estado;
+      payload.estado = nuevoEstado;
+      c.estado = nuevoEstado;
+      cambioEstado = true;
+      payload.historial.push({
+        accion: 'cambio_estado',
+        estado_anterior: estadoAnterior,
+        estado_nuevo: nuevoEstado,
+        fecha: new Date().toISOString(),
+        usuario: currentUser.nombre
+      });
+    }
+  }
+
+  if (modificados.length === 0 && !cambioEstado) {
     showToast('Sin cambios', 'info');
     verCausa(hex);
     return;
   }
 
-  payload.historial.push({
-    accion: 'edicion',
-    fecha:  new Date().toISOString(),
-    usuario: currentUser.nombre,
-    campos_modificados: modificados
-  });
+  if (modificados.length > 0) {
+    payload.historial.push({
+      accion: 'edicion',
+      fecha:  new Date().toISOString(),
+      usuario: currentUser.nombre,
+      campos_modificados: modificados
+    });
+  }
 
   if (DBX.isConfigured()) {
     try {
@@ -3498,14 +3544,11 @@ async function cargarRuta() {
 
 // ── Render tabla asignar ──
 function limpiarFiltrosRuta() {
-  document.getElementById('ruta-filter-rol').value = '';
-  document.getElementById('ruta-filter-id').value = '';
-  document.getElementById('ruta-filter-dir').value = '';
+  document.getElementById('ruta-filter-search').value = '';
   document.getElementById('ruta-filter-tipo').value = '';
   renderRuta();
 }
-['ruta-filter-rol','ruta-filter-id','ruta-filter-dir'].forEach(id =>
-  document.getElementById(id).addEventListener('input', renderRuta));
+document.getElementById('ruta-filter-search').addEventListener('input', renderRuta);
 document.getElementById('ruta-filter-tipo').addEventListener('change', renderRuta);
 
 function renderRuta() {
@@ -3514,13 +3557,16 @@ function renderRuta() {
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
 
   // Aplicar filtros
-  const fRol = document.getElementById('ruta-filter-rol').value.toLowerCase();
-  const fId  = document.getElementById('ruta-filter-id').value.toLowerCase();
-  const fDir = document.getElementById('ruta-filter-dir').value.toLowerCase();
+  const fSearch = document.getElementById('ruta-filter-search').value.toLowerCase();
   const fTipo = document.getElementById('ruta-filter-tipo').value;
-  if (fRol)  validadas = validadas.filter(c => (c.rol||'').toLowerCase().includes(fRol));
-  if (fId)   validadas = validadas.filter(c => (c.id_hex||'').toLowerCase().includes(fId));
-  if (fDir)  validadas = validadas.filter(c => (c.direccion||'').toLowerCase().includes(fDir));
+  if (fSearch) validadas = validadas.filter(c =>
+    (c.rol||'').toLowerCase().includes(fSearch) ||
+    (c.id_hex||'').toLowerCase().includes(fSearch) ||
+    (c.direccion||'').toLowerCase().includes(fSearch) ||
+    (c.demandado||'').toLowerCase().includes(fSearch) ||
+    (c.demandante||'').toLowerCase().includes(fSearch) ||
+    (c.notificar_a||'').toLowerCase().includes(fSearch)
+  );
   if (fTipo) validadas = validadas.filter(c => (c.tipo_diligencia||'').startsWith(fTipo));
 
   document.getElementById('ruta-count').textContent =
