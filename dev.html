@@ -433,6 +433,7 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 .tag-blue   { background: #dbeafe; color: #1d4ed8; }
 .tag-green  { background: #dcfce7; color: #15803d; }
 .tag-yellow { background: #fef9c3; color: #a16207; }
+.tag-orange { background: #ffedd5; color: #c2410c; }
 .tag-red    { background: #fee2e2; color: #b91c1c; }
 .tag-gray   { background: #f1f5f9; color: #475569; }
 .tag-purple { background: #ede9fe; color: #6d28d9; }
@@ -1167,6 +1168,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <select id="filter-estado">
             <option value="">Todos los estados</option>
             <option value="pendiente_validacion">Pendiente validación</option>
+            <option value="devuelta">Devuelta</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
             <option value="resultado_registrado">Resultado registrado</option>
@@ -2468,7 +2470,9 @@ async function guardarCausa(estadoInicial) {
   const tipoDigSel = fval('tipo_diligencia');
   const esGD = esGestionDirecta(tipoDigSel);
   const estadoFinal = esGD ? 'gestion_directa_receptora' : estadoInicial;
-  const accion = esGD ? 'ingreso_gestion_directa' : (estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso');
+  const accion = esGD ? 'ingreso_gestion_directa'
+    : estadoInicial === 'validada' ? 'ingreso_validado'
+    : 'enviado_validacion';
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas-dev/
   const payload = {
@@ -3211,6 +3215,14 @@ async function verCausa(hex) {
           <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
+        ${(() => {
+          if (c.estado === 'devuelta') {
+            const hist = c._causa_json?.historial || [];
+            const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
+            if (dev) return `<div style="margin-top:.75rem; padding:.5rem .75rem; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`;
+          }
+          return '';
+        })()}
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
       </div>
       <div id="modal-qr" style="width:100px; height:100px; flex-shrink:0;"></div>
@@ -3229,6 +3241,12 @@ async function verCausa(hex) {
       footerHtml += `<button class="btn btn-warning btn-sm" onclick="reabrirCausa('${c.id_hex}')" title="Reabrir causa cerrada">🔓 Reabrir causa</button>`;
       footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
     }
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  } else if (c.estado === 'devuelta') {
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar y corregir">✏ Editar</button>`;
+    footerHtml += `<button class="btn btn-primary btn-sm" onclick="corregirYValidar('${c.id_hex}')" title="Corregir y guardar como validada">💾 Corregir y Validar</button>`;
+    footerHtml += `<button class="btn btn-danger btn-sm" onclick="corregirYReenviar('${c.id_hex}')" title="Corregir y reenviar a Receptora">📤 Reenviar a Receptora</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
   } else {
@@ -3299,6 +3317,7 @@ async function editarCausa(hex) {
     const estados = [
       ['ingresada','Ingresada'],
       ['pendiente_validacion','Pendiente validación'],
+      ['devuelta','Devuelta'],
       ['validada','Validada'],
       ['en_ruta','En ruta'],
       ['gestion_directa_receptora','Gestión Directa'],
@@ -3413,6 +3432,35 @@ async function guardarEdicion(hex) {
 
   verCausa(hex);
 }
+
+async function _corregirDevuelta(hex, nuevoEstado, accion) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  payload.estado = nuevoEstado;
+  c.estado = nuevoEstado;
+  payload.historial.push({
+    accion: accion,
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre
+  });
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+      actualizarIndex();
+      const msg = nuevoEstado === 'validada' ? '💾 Causa corregida y validada' : '📤 Causa corregida y reenviada';
+      showToast(msg, 'success');
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      return;
+    }
+  }
+  renderCausas();
+  renderNotificaciones();
+  closeModal();
+}
+async function corregirYValidar(hex) { return _corregirDevuelta(hex, 'validada', 'corregida_validada'); }
+async function corregirYReenviar(hex) { return _corregirDevuelta(hex, 'pendiente_validacion', 'corregida_reenviada'); }
 
 async function imprimirCausa(hex) {
   const c = await asegurarCausaCompleta(hex);
@@ -3579,6 +3627,8 @@ async function confirmarDevolver(hex) {
   if (!c) return;
 
   const payload = c._causa_json;
+  payload.estado = 'devuelta';
+  c.estado = 'devuelta';
   payload.historial.push({
     accion:     'devuelta',
     fecha:      new Date().toISOString(),
@@ -4133,19 +4183,20 @@ function calcNotificaciones() {
   const notifs = [];
 
   if (perfil === 'padawan') {
-    // Causas devueltas: solo se detectan si _causa_json ya está cargado
+    // Causas devueltas: solo las que siguen en estado devuelta
     causas.forEach(c => {
-      if (!c._causa_json?.historial) return;
-      const devueltas = c._causa_json.historial.filter(h => h.accion === 'devuelta');
-      devueltas.forEach(h => {
+      if (c.estado !== 'devuelta') return;
+      const hist = c._causa_json?.historial || [];
+      const ultimaDev = [...hist].reverse().find(h => h.accion === 'devuelta');
+      if (ultimaDev) {
         notifs.push({
           icon: '↩',
           title: `Causa devuelta: ${c.rol || c.id_hex?.slice(0,8)}`,
-          desc:  h.comentario || 'Sin comentario',
-          fecha: h.fecha,
+          desc:  ultimaDev.comentario || 'Sin comentario',
+          fecha: ultimaDev.fecha,
           hex:   c.id_hex
         });
-      });
+      }
     });
   }
 
@@ -4266,6 +4317,7 @@ function estadoBadge(estado) {
     'estampada':            ['tag-green','Estampada'],
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
     'cerrada':              ['tag-gray','Cerrada'],
+    'devuelta':             ['tag-orange','Devuelta'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
