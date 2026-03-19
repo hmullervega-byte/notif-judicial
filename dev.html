@@ -1336,13 +1336,17 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div id="panel-ver" style="display:none;">
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-dia-info">Selecciona un día en el calendario</span>
-                <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptirouteDia()" style="display:none;">📤 Exportar Optiroute del día</button>
+                <span class="counter" id="ruta-dia-sel-count" style="display:none;"></span>
+                <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptirouteDia()" style="display:none;">📤 Exportar día</button>
+                <button class="btn btn-primary btn-sm" id="btn-reasignar-sel" onclick="reasignarSeleccionadas()" style="display:none;">📅 Reasignar día</button>
+                <button class="btn btn-danger btn-sm" id="btn-quitar-sel" onclick="quitarSeleccionadasDeRuta()" style="display:none;">↩ Quitar de ruta</button>
               </div>
               <div class="card">
                 <div class="table-wrap">
                   <table id="tabla-ruta-dia">
                     <thead>
                       <tr>
+                        <th style="width:30px;"><input type="checkbox" class="ruta-check" id="ruta-dia-check-all" onchange="toggleAllRutaDia(this.checked)"></th>
                         <th style="width:75px;">ROL</th>
                         <th style="width:22px;">T</th>
                         <th style="width:120px;">Demandante</th>
@@ -1355,7 +1359,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                       </tr>
                     </thead>
                     <tbody id="ruta-dia-body">
-                      <tr><td colspan="9"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta en el calendario.</p></div></td></tr>
+                      <tr><td colspan="10"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta en el calendario.</p></div></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -2891,10 +2895,6 @@ function verCausa(hex) {
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>
     <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
-    ${c.estado === 'en_ruta' ? `
-    <button class="btn btn-primary btn-sm" onclick="reasignarRuta('${c.id_hex}')" title="Cambiar fecha de ruta">📅 Reasignar día</button>
-    <button class="btn btn-danger btn-sm" onclick="quitarDeRuta('${c.id_hex}')" title="Volver a estado validada">↩ Quitar de ruta</button>
-    ` : ''}
     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
   `;
   document.getElementById('modal-overlay').classList.add('active');
@@ -3226,6 +3226,7 @@ async function confirmarDevolver(hex) {
 // SELECCIÓN DE RUTA + CALENDARIO + EXPORT
 // ══════════════════════════════════════════════
 let rutaSeleccionadas = new Set();
+let rutaDiaSeleccionadas = new Set();
 let calRutaYear, calRutaMonth, calRutaSelected = null;
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -3356,9 +3357,16 @@ function renderRuta() {
 function renderRutaDia() {
   const tbody = document.getElementById('ruta-dia-body');
   const btnExp = document.getElementById('btn-export-optiroute');
+  const btnReasignar = document.getElementById('btn-reasignar-sel');
+  const btnQuitar = document.getElementById('btn-quitar-sel');
+  const selCount = document.getElementById('ruta-dia-sel-count');
+  rutaDiaSeleccionadas.clear();
+  if (document.getElementById('ruta-dia-check-all')) document.getElementById('ruta-dia-check-all').checked = false;
+  _actualizarBotonesRutaDia();
+
   if (!calRutaSelected) {
     document.getElementById('ruta-dia-info').textContent = 'Selecciona un día en el calendario';
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta.</p></div></td></tr>`;
     if (btnExp) btnExp.style.display = 'none';
     return;
   }
@@ -3370,11 +3378,13 @@ function renderRutaDia() {
   document.getElementById('ruta-dia-info').innerHTML = `<strong>${del_dia.length}</strong> causa${del_dia.length !== 1 ? 's' : ''} en ruta del <strong>${fmtSel}</strong>`;
   if (btnExp) btnExp.style.display = del_dia.length > 0 ? '' : 'none';
   if (del_dia.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">📅</span><p>Sin causas en ruta para el ${fmtSel}.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><span class="icon">📅</span><p>Sin causas en ruta para el ${fmtSel}.</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = del_dia.map(c => `
     <tr>
+      <td><input type="checkbox" class="ruta-check" data-hex="${c.id_hex}"
+           onchange="toggleRutaDiaCheck('${c.id_hex}', this.checked)"></td>
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
@@ -3388,6 +3398,119 @@ function renderRutaDia() {
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
     </tr>`).join('');
+}
+
+function toggleRutaDiaCheck(hex, checked) {
+  if (checked) rutaDiaSeleccionadas.add(hex);
+  else rutaDiaSeleccionadas.delete(hex);
+  _actualizarBotonesRutaDia();
+}
+function toggleAllRutaDia(checked) {
+  rutaDiaSeleccionadas.clear();
+  if (checked) {
+    document.querySelectorAll('#ruta-dia-body .ruta-check').forEach(cb => {
+      cb.checked = true;
+      rutaDiaSeleccionadas.add(cb.dataset.hex);
+    });
+  } else {
+    document.querySelectorAll('#ruta-dia-body .ruta-check').forEach(cb => cb.checked = false);
+  }
+  _actualizarBotonesRutaDia();
+}
+function _actualizarBotonesRutaDia() {
+  const n = rutaDiaSeleccionadas.size;
+  const selCount = document.getElementById('ruta-dia-sel-count');
+  const btnR = document.getElementById('btn-reasignar-sel');
+  const btnQ = document.getElementById('btn-quitar-sel');
+  if (n > 0) {
+    selCount.style.display = '';
+    selCount.innerHTML = `<strong>${n}</strong> seleccionada${n !== 1 ? 's' : ''}`;
+    btnR.style.display = '';
+    btnQ.style.display = '';
+  } else {
+    selCount.style.display = 'none';
+    btnR.style.display = 'none';
+    btnQ.style.display = 'none';
+  }
+}
+
+// ── Reasignar seleccionadas a otro día ──
+function reasignarSeleccionadas() {
+  if (rutaDiaSeleccionadas.size === 0) return;
+  document.getElementById('modal-title').textContent = 'Reasignar día de ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:10px;"><strong>${rutaDiaSeleccionadas.size}</strong> causa${rutaDiaSeleccionadas.size !== 1 ? 's' : ''} seleccionada${rutaDiaSeleccionadas.size !== 1 ? 's' : ''}</p>
+    <label style="font-size:12px; font-weight:600;">Nueva fecha de ruta:</label>
+    <input type="date" id="input-reasignar-fecha" value="${calRutaSelected || new Date().toISOString().slice(0,10)}" style="width:100%; margin-top:4px;">
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="confirmarReasignarSeleccionadas()">Confirmar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function confirmarReasignarSeleccionadas() {
+  const nuevaFecha = document.getElementById('input-reasignar-fecha').value;
+  if (!nuevaFecha) { showToast('⚠ Selecciona una fecha', 'warn'); return; }
+  closeModal();
+  let ok = 0;
+  for (const hex of rutaDiaSeleccionadas) {
+    const c = await asegurarCausaCompleta(hex);
+    if (!c) continue;
+    const payload = c._causa_json;
+    payload.fecha_ruta = nuevaFecha;
+    payload.historial.push({ accion: 'reasignacion_ruta', fecha: new Date().toISOString(), fecha_ruta: nuevaFecha, usuario: currentUser.nombre });
+    try {
+      if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+      c.fecha_ruta = nuevaFecha;
+      ok++;
+    } catch(e) { console.error(e); }
+  }
+  rutaDiaSeleccionadas.clear();
+  actualizarIndex();
+  renderRuta(); renderRutaDia(); renderCalRuta();
+  showToast(`📅 ${ok} causa${ok !== 1 ? 's' : ''} reasignada${ok !== 1 ? 's' : ''} al ${nuevaFecha.split('-').reverse().join('/')}`, 'success');
+}
+
+// ── Quitar seleccionadas de ruta ──
+function quitarSeleccionadasDeRuta() {
+  if (rutaDiaSeleccionadas.size === 0) return;
+  document.getElementById('modal-title').textContent = 'Quitar de ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:10px;">
+      ¿Quitar <strong>${rutaDiaSeleccionadas.size}</strong> causa${rutaDiaSeleccionadas.size !== 1 ? 's' : ''} de la ruta?
+    </p>
+    <p style="font-size:12px; color:var(--muted);">Volverán al estado <strong>Validada</strong> y podrán reasignarse.</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-danger btn-sm" onclick="confirmarQuitarSeleccionadas()">↩ Quitar de ruta</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function confirmarQuitarSeleccionadas() {
+  closeModal();
+  let ok = 0;
+  for (const hex of rutaDiaSeleccionadas) {
+    const c = await asegurarCausaCompleta(hex);
+    if (!c) continue;
+    const payload = c._causa_json;
+    payload.estado = 'validada';
+    payload.fecha_ruta = '';
+    payload.historial.push({ accion: 'quitada_de_ruta', fecha: new Date().toISOString(), usuario: currentUser.nombre });
+    try {
+      if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+      c.estado = 'validada';
+      c.fecha_ruta = '';
+      ok++;
+    } catch(e) { console.error(e); }
+  }
+  rutaDiaSeleccionadas.clear();
+  actualizarIndex();
+  renderRuta(); renderRutaDia(); renderCalRuta(); renderCausas();
+  showToast(`↩ ${ok} causa${ok !== 1 ? 's' : ''} quitada${ok !== 1 ? 's' : ''} de ruta — vuelven a Validada`, 'success');
 }
 
 // ── Checkboxes ──
@@ -3478,90 +3601,6 @@ async function confirmarGenerarRuta() {
 }
 
 // ── Export Optiroute ──
-// ── Reasignar día de ruta ──
-async function reasignarRuta(hex) {
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c) return;
-  document.getElementById('modal-title').textContent = 'Reasignar día de ruta';
-  document.getElementById('modal-body').innerHTML = `
-    <p style="font-size:13px; margin-bottom:6px;"><strong>${c.rol}</strong> — ${c.demandado || ''}</p>
-    <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">Fecha actual: <strong>${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</strong></p>
-    <label style="font-size:12px; font-weight:600;">Nueva fecha de ruta:</label>
-    <input type="date" id="input-reasignar-fecha" value="${c.fecha_ruta || new Date().toISOString().slice(0,10)}" style="width:100%; margin-top:4px;">
-  `;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary btn-sm" onclick="confirmarReasignar('${hex}')">Confirmar</button>
-  `;
-}
-
-async function confirmarReasignar(hex) {
-  const nuevaFecha = document.getElementById('input-reasignar-fecha').value;
-  if (!nuevaFecha) { showToast('⚠ Selecciona una fecha', 'warn'); return; }
-  const c = await asegurarCausaCompleta(hex);
-  if (!c) return;
-  const payload = c._causa_json;
-  payload.fecha_ruta = nuevaFecha;
-  payload.historial.push({
-    accion: 'reasignacion_ruta', fecha: new Date().toISOString(),
-    fecha_ruta: nuevaFecha, usuario: currentUser.nombre
-  });
-  try {
-    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
-    c.fecha_ruta = nuevaFecha;
-    actualizarIndex();
-    closeModal();
-    renderRuta();
-    renderRutaDia();
-    renderCalRuta();
-    showToast(`📅 Reasignada al ${nuevaFecha.split('-').reverse().join('/')}`, 'success');
-  } catch(err) {
-    showToast('❌ Error: ' + err.message, 'error');
-  }
-}
-
-// ── Quitar de ruta (volver a validada) ──
-async function quitarDeRuta(hex) {
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c) return;
-  document.getElementById('modal-title').textContent = 'Quitar de ruta';
-  document.getElementById('modal-body').innerHTML = `
-    <p style="font-size:13px; margin-bottom:10px;">
-      ¿Quitar <strong>${c.rol}</strong> de la ruta del <strong>${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</strong>?
-    </p>
-    <p style="font-size:12px; color:var(--muted);">La causa volverá al estado <strong>Validada</strong> y podrá reasignarse a otra ruta.</p>
-  `;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-danger btn-sm" onclick="confirmarQuitarDeRuta('${hex}')">↩ Quitar de ruta</button>
-  `;
-}
-
-async function confirmarQuitarDeRuta(hex) {
-  const c = await asegurarCausaCompleta(hex);
-  if (!c) return;
-  const payload = c._causa_json;
-  payload.estado = 'validada';
-  payload.fecha_ruta = '';
-  payload.historial.push({
-    accion: 'quitada_de_ruta', fecha: new Date().toISOString(), usuario: currentUser.nombre
-  });
-  try {
-    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
-    c.estado = 'validada';
-    c.fecha_ruta = '';
-    actualizarIndex();
-    closeModal();
-    renderRuta();
-    renderRutaDia();
-    renderCalRuta();
-    renderCausas();
-    showToast('↩ Causa quitada de ruta — vuelve a Validada', 'success');
-  } catch(err) {
-    showToast('❌ Error: ' + err.message, 'error');
-  }
-}
-
 // Extraer solo calle + numeración (sin depto/casa/torre/edif/block)
 function _calleNumero(dir) {
   if (!dir) return '';
