@@ -888,12 +888,14 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div class="page-title">Ingresar Causa</div>
             <div class="page-sub">Complete todos los campos obligatorios</div>
           </div>
-          <div style="display:flex; gap:.5rem;">
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+            <button class="btn btn-secondary btn-sm" id="btn-repetir" style="display:none;">↺ Repetir</button>
             <button class="btn btn-danger btn-sm" id="btn-limpiar">🗑 Limpiar</button>
             <button class="btn btn-secondary btn-sm" id="btn-imprimir" disabled>🖨 Imprimir</button>
             <button class="btn btn-primary btn-sm" id="btn-guardar" disabled>💾 Guardar</button>
             <button class="btn btn-danger btn-sm" id="btn-guardar-enviar" disabled style="font-weight:700;">📤 Enviar a Receptora</button>
           </div>
+          <div id="aviso-repeticion" style="display:none; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:4px; padding:4px 10px; font-size:12px; margin-top:4px; text-align:right;">⚠ Modifica al menos un campo obligatorio antes de guardar</div>
         </div>
 
         <div class="form-layout">
@@ -2342,7 +2344,7 @@ function updateProgress() {
   };
   const missing = campos.filter(id => fval(id).length === 0);
   const missingEl = document.getElementById('f-missing');
-  if (missing.length === 0) {
+  if (missing.length === 0 && !_modoRepeticion) {
     missingEl.textContent = '✓ Campos completos';
     missingEl.style.color = 'var(--green)';
     document.getElementById('btn-guardar').disabled = false;
@@ -2502,6 +2504,8 @@ async function guardarCausa(estadoInicial) {
     showToast('⚠ Credenciales Dropbox no configuradas — modo demo', 'warn');
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha });
+    localStorage.setItem('ultima_causa_ingresada', JSON.stringify(payload.datos));
+    _mostrarBtnRepetir();
     buildDashboard();
     limpiarFormulario();
     showView('view-causas');
@@ -2525,6 +2529,8 @@ async function guardarCausa(estadoInicial) {
     causas.push({ id_hex: currentHex, estado: payload.estado,
       ...payload.datos, ts_ingreso: payload.historial[0].fecha,
       _causa_json: payload });
+    localStorage.setItem('ultima_causa_ingresada', JSON.stringify(payload.datos));
+    _mostrarBtnRepetir();
     actualizarIndex();
     buildDashboard();
     limpiarFormulario();
@@ -2549,6 +2555,8 @@ document.getElementById('btn-limpiar').addEventListener('click', () => {
 });
 
 function limpiarFormulario() {
+  _modoRepeticion = false;
+  document.getElementById('aviso-repeticion').style.display = 'none';
   document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso select, #view-ingreso textarea')
     .forEach(el => {
       if (el.type === 'date') el.value = new Date().toISOString().slice(0,10);
@@ -2568,6 +2576,129 @@ function limpiarFormulario() {
   document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
   document.getElementById('f-ciudad').value = 'Antofagasta';
 }
+
+// ── REPETIR ÚLTIMA CAUSA ──
+let _modoRepeticion = false;
+
+function _mostrarBtnRepetir() {
+  const hay = localStorage.getItem('ultima_causa_ingresada');
+  document.getElementById('btn-repetir').style.display = hay ? '' : 'none';
+}
+_mostrarBtnRepetir();
+
+function _entrarModoRepeticion() {
+  _modoRepeticion = true;
+  document.getElementById('btn-guardar').disabled = true;
+  document.getElementById('btn-guardar-enviar').disabled = true;
+  document.getElementById('aviso-repeticion').style.display = '';
+}
+
+function _salirModoRepeticion() {
+  if (!_modoRepeticion) return;
+  _modoRepeticion = false;
+  document.getElementById('aviso-repeticion').style.display = 'none';
+  updateProgress(); // re-evalúa si habilitar botones
+}
+
+// Monitorear cambios en campos obligatorios para salir de modo repetición
+function _onCampoObligatorioChange() {
+  if (_modoRepeticion) _salirModoRepeticion();
+}
+
+document.getElementById('btn-repetir').addEventListener('click', () => {
+  const raw = localStorage.getItem('ultima_causa_ingresada');
+  if (!raw) return;
+  const d = JSON.parse(raw);
+
+  // Limpiar primero
+  limpiarFormulario();
+
+  // Mapear campos del formulario
+  const mapeo = {
+    'f-fecha_solicitud': d.fecha_solicitud,
+    'f-n_solicitud': d.nro_solicitud || d.n_solicitud,
+    'f-rol': d.rol,
+    'f-tribunal': d.tribunal,
+    'f-estudio': d.estudio_juridico || d.estudio,
+    'f-demandante': d.demandante,
+    'f-demandado': d.demandado,
+    'f-rut': d.rut,
+    'f-direccion': d.direccion,
+    'f-notificar_a': d.notificar_a,
+    'f-ciudad': d.ciudad || 'Antofagasta',
+    'f-mandamiento': d.monto_mandamiento,
+    'f-tipo_diligencia': d.tipo_diligencia,
+    'f-piezas': d.piezas,
+    'f-n_pagare': d.nro_pagare || d.n_pagare,
+    'f-observacion': d.comentario || d.observacion,
+  };
+
+  // Primero setear estudio para que evaluarDemandante configure el select
+  const estudioEl = document.getElementById('f-estudio');
+  if (estudioEl && mapeo['f-estudio']) {
+    estudioEl.value = mapeo['f-estudio'];
+    estudioEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Setear demandante (puede ser select o input)
+  const demSel = document.getElementById('f-demandante-select');
+  if (demSel && demSel.style.display !== 'none' && d.demandante) {
+    demSel.value = d.demandante;
+    demSel.dispatchEvent(new Event('change', { bubbles: true }));
+  } else if (d.demandante) {
+    const demInp = document.getElementById('f-demandante');
+    demInp.value = d.demandante;
+    demInp.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Setear abogado (puede ser select para Socofin o input)
+  const abSel = document.getElementById('f-abogado_procurador-select');
+  const abInp = document.getElementById('f-abogado_procurador');
+  const abOtro = document.getElementById('f-abogado_procurador-otro');
+  if (d.abogado_procurador) {
+    if (abSel && abSel.style.display !== 'none') {
+      const match = Array.from(abSel.options).find(o => o.value === d.abogado_procurador);
+      if (match) { abSel.value = d.abogado_procurador; }
+      else { abSel.value = '__otro__'; abOtro.style.display = ''; abOtro.value = d.abogado_procurador; }
+      abSel.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      abInp.value = d.abogado_procurador;
+      abInp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  // Setear resto de campos
+  Object.entries(mapeo).forEach(([id, val]) => {
+    if (!val || id === 'f-estudio' || id === 'f-demandante') return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // Limpiar ID hex y QR — se recalculará al modificar campos
+  currentHex = null;
+  clearQR();
+  recalcHex();
+  updateProgress();
+
+  // Entrar en modo repetición
+  _entrarModoRepeticion();
+
+  // Escuchar cambios en campos obligatorios para salir del modo
+  const camposMonitor = _camposObligatoriosActivos();
+  camposMonitor.forEach(id => {
+    const el = document.getElementById('f-' + id) ||
+               document.getElementById('f-' + id + '-select');
+    if (el) {
+      el.addEventListener('input', _onCampoObligatorioChange, { once: true });
+      el.addEventListener('change', _onCampoObligatorioChange, { once: true });
+    }
+  });
+
+  showToast('↺ Datos de última causa cargados — modifica antes de guardar', 'info');
+});
 
 document.getElementById('btn-imprimir').addEventListener('click', () => {
   if (!currentHex) { showToast('⚠ Complete los campos para generar el QR', 'warn'); return; }
