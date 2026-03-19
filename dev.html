@@ -1305,7 +1305,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
                 <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
-                <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptiroute()" style="display:none;">📤 Export todas en ruta</button>
               </div>
               <div class="card">
                 <div class="table-wrap">
@@ -1337,6 +1336,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <div id="panel-ver" style="display:none;">
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-dia-info">Selecciona un día en el calendario</span>
+                <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptirouteDia()" style="display:none;">📤 Exportar Optiroute del día</button>
               </div>
               <div class="card">
                 <div class="table-wrap">
@@ -3312,7 +3312,7 @@ function renderRuta() {
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
   document.getElementById('ruta-count').textContent =
     `${validadas.length} para asignar · ${enRuta.length} en ruta`;
-  document.getElementById('btn-export-optiroute').style.display = enRuta.length > 0 ? '' : 'none';
+  // botón export está en panel-ver, se controla en renderRutaDia()
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
@@ -3349,9 +3349,11 @@ function renderRuta() {
 // ── Render tabla ver por día ──
 function renderRutaDia() {
   const tbody = document.getElementById('ruta-dia-body');
+  const btnExp = document.getElementById('btn-export-optiroute');
   if (!calRutaSelected) {
     document.getElementById('ruta-dia-info').textContent = 'Selecciona un día en el calendario';
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">📅</span><p>Selecciona un día con ruta.</p></div></td></tr>`;
+    if (btnExp) btnExp.style.display = 'none';
     return;
   }
   const del_dia = causas.filter(c => {
@@ -3360,6 +3362,7 @@ function renderRutaDia() {
   });
   const fmtSel = calRutaSelected.split('-').reverse().join('/');
   document.getElementById('ruta-dia-info').innerHTML = `<strong>${del_dia.length}</strong> causa${del_dia.length !== 1 ? 's' : ''} en ruta del <strong>${fmtSel}</strong>`;
+  if (btnExp) btnExp.style.display = del_dia.length > 0 ? '' : 'none';
   if (del_dia.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">📅</span><p>Sin causas en ruta para el ${fmtSel}.</p></div></td></tr>`;
     return;
@@ -3469,21 +3472,23 @@ async function confirmarGenerarRuta() {
 }
 
 // ── Export Optiroute ──
+// Extraer solo calle + numeración (sin depto/casa/torre/edif/block)
+function _calleNumero(dir) {
+  if (!dir) return '';
+  // Cortar en separadores comunes de depto/casa
+  let limpia = dir.split(/\s*[,]\s*/)[0]; // toma solo antes de la primera coma
+  // Quitar depto/dpto/dept/of/oficina/casa/torre/edif/block al final
+  limpia = limpia.replace(/\s+(dpto|depto|dept|of|oficina|casa|torre|edif|block|piso|esc)\b.*/i, '');
+  return limpia.trim();
+}
+
 function _buildOptiroute(lista) {
   const headers = ['nombre','dirección','departamento','extra','comuna','correo','teléfono','demanda','referencia_pedido','proveedor'];
-  const rows = lista.map(c => [c.rol||'', c.direccion||'', '', '', 'Antofagasta', '', '', '', '', '']);
+  const rows = lista.map(c => [c.rol||'', _calleNumero(c.direccion), '', '', 'Antofagasta', '', '', '', '', '']);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   return wb;
-}
-function exportOptiroute() {
-  const enRuta = causas.filter(c => c.estado === 'en_ruta');
-  if (enRuta.length === 0) { showToast('⚠ No hay causas en ruta', 'warn'); return; }
-  const hoy = new Date();
-  const filename = `${String(hoy.getDate()).padStart(2,'0')}-${String(hoy.getMonth()+1).padStart(2,'0')}-${hoy.getFullYear()} Optiroute.xlsx`;
-  XLSX.writeFile(_buildOptiroute(enRuta), filename);
-  showToast(`📤 Exportado: ${filename} (${enRuta.length} causas)`, 'success');
 }
 function exportOptirouteDia() {
   if (!calRutaSelected) return;
