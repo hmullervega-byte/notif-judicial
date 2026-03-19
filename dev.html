@@ -1310,6 +1310,21 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div class="ruta-main">
             <!-- Panel ASIGNAR -->
             <div id="panel-asignar">
+              <div class="filter-bar" style="margin-bottom:8px; flex-wrap:wrap;">
+                <input type="text" id="ruta-filter-rol" placeholder="ROL" style="width:90px; font-size:12px;">
+                <input type="text" id="ruta-filter-id" placeholder="ID hex" style="width:110px; font-size:12px;">
+                <input type="text" id="ruta-filter-dir" placeholder="Dirección" style="width:140px; font-size:12px;">
+                <select id="ruta-filter-tipo" style="min-width:130px; font-size:12px;">
+                  <option value="">Todos los tipos</option>
+                  <option value="NOT">Notificaciones</option>
+                  <option value="EMBARGO">Embargos</option>
+                  <option value="ALZAMIENTO">Alzamientos</option>
+                  <option value="PRUEBA">Pruebas</option>
+                  <option value="REQ">Requerimientos</option>
+                  <option value="OTRO">Otros</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosRuta()" title="Limpiar filtros">✕ Limpiar</button>
+              </div>
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-sel-count">0 causas seleccionadas</span>
                 <button class="btn btn-primary btn-sm" id="btn-generar-ruta" onclick="generarRuta()" disabled>🗺 Generar Ruta</button>
@@ -2359,35 +2374,18 @@ function generateQR(hex) {
 
 // Observación condicional
 function updateObsRequired() {
-  const sel = document.getElementById('f-tipo_diligencia');
-  const opt = sel.options[sel.selectedIndex];
-  const req = opt && opt.getAttribute('data-obs-required') === '1';
+  // Observación siempre opcional — nunca obligatorio
   const obsEl   = document.getElementById('f-observacion');
   const markEl  = document.getElementById('obs-req-mark');
   const wrapper = document.getElementById('fw-observacion');
-
-  if (req) {
-    obsEl.setAttribute('data-obs-req', '1');
-    obsEl.placeholder = 'Requerido — especifique el detalle';
-    markEl.innerHTML = '<span class="req">*</span>';
-    if (!REQUIRED_FIELDS.includes('observacion')) REQUIRED_FIELDS.push('observacion');
-  } else {
-    obsEl.removeAttribute('data-obs-req');
-    obsEl.placeholder = 'Opcional';
-    markEl.innerHTML = '';
-    wrapper.classList.remove('has-error');
-    const idx = REQUIRED_FIELDS.indexOf('observacion');
-    if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
-  }
+  obsEl.removeAttribute('data-obs-req');
+  obsEl.placeholder = 'Opcional';
+  markEl.innerHTML = '';
+  wrapper.classList.remove('has-error');
+  const idx = REQUIRED_FIELDS.indexOf('observacion');
+  if (idx > -1) REQUIRED_FIELDS.splice(idx, 1);
   updateProgress();
 }
-
-document.getElementById('f-observacion').addEventListener('input', () => {
-  if (document.getElementById('f-observacion').getAttribute('data-obs-req')) {
-    validateField('observacion');
-    updateProgress();
-  }
-});
 
 // Init formulario
 document.getElementById('f-fecha_solicitud').value = new Date().toISOString().slice(0,10);
@@ -2399,16 +2397,6 @@ document.getElementById('btn-guardar').addEventListener('click', () => guardarCa
 document.getElementById('btn-guardar-enviar').addEventListener('click', () => enviarAReceptora());
 
 function enviarAReceptora() {
-  const obs = fval('observacion');
-  if (!obs) {
-    showToast('⚠ Escriba un comentario en Observación para la Receptora', 'warn');
-    const wrapper = document.getElementById('fw-observacion');
-    if (wrapper) wrapper.classList.add('has-error');
-    document.getElementById('f-observacion').focus();
-    return;
-  }
-  const wrapper = document.getElementById('fw-observacion');
-  if (wrapper) wrapper.classList.remove('has-error');
   guardarCausa('pendiente_validacion');
 }
 
@@ -3509,13 +3497,34 @@ async function cargarRuta() {
 }
 
 // ── Render tabla asignar ──
+function limpiarFiltrosRuta() {
+  document.getElementById('ruta-filter-rol').value = '';
+  document.getElementById('ruta-filter-id').value = '';
+  document.getElementById('ruta-filter-dir').value = '';
+  document.getElementById('ruta-filter-tipo').value = '';
+  renderRuta();
+}
+['ruta-filter-rol','ruta-filter-id','ruta-filter-dir'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderRuta));
+document.getElementById('ruta-filter-tipo').addEventListener('change', renderRuta);
+
 function renderRuta() {
-  // Cambio 1: excluir tipos de gestión directa de la selección de ruta
-  const validadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
+  // Excluir tipos de gestión directa de la selección de ruta
+  let validadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
+
+  // Aplicar filtros
+  const fRol = document.getElementById('ruta-filter-rol').value.toLowerCase();
+  const fId  = document.getElementById('ruta-filter-id').value.toLowerCase();
+  const fDir = document.getElementById('ruta-filter-dir').value.toLowerCase();
+  const fTipo = document.getElementById('ruta-filter-tipo').value;
+  if (fRol)  validadas = validadas.filter(c => (c.rol||'').toLowerCase().includes(fRol));
+  if (fId)   validadas = validadas.filter(c => (c.id_hex||'').toLowerCase().includes(fId));
+  if (fDir)  validadas = validadas.filter(c => (c.direccion||'').toLowerCase().includes(fDir));
+  if (fTipo) validadas = validadas.filter(c => (c.tipo_diligencia||'').startsWith(fTipo));
+
   document.getElementById('ruta-count').textContent =
     `${validadas.length} para asignar · ${enRuta.length} en ruta`;
-  // botón export está en panel-ver, se controla en renderRutaDia()
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
