@@ -1289,12 +1289,13 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-validacion">
               <thead>
                 <tr>
-                  <th>N° Sol.</th>
                   <th>ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th>Demandante</th>
                   <th>Demandado</th>
                   <th>Tipo</th>
                   <th>Dirección</th>
-                  <th>Ingresado por</th>
+                  <th>Estado</th>
                   <th>Fecha</th>
                   <th class="col-acc">Acciones</th>
                 </tr>
@@ -3383,7 +3384,7 @@ async function editarCausa(hex) {
   const esDevuelta = c.estado === 'devuelta';
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}'${esDevuelta ? ", 'validada'" : ''})">💾 Guardar cambios</button>
-    ${esDevuelta ? `<button class="btn btn-danger btn-sm" onclick="guardarEdicion('${hex}', 'pendiente_validacion')">📤 Enviar a Receptora</button>` : ''}
+    ${esDevuelta ? `<button class="btn btn-danger btn-sm" onclick="pedirComentarioReenvio('${hex}')">📤 Enviar a Receptora</button>` : ''}
     <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
   `;
 }
@@ -3479,6 +3480,60 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   }
 
   verCausa(hex);
+}
+
+function pedirComentarioReenvio(hex) {
+  // Guardar ediciones primero, luego mostrar modal de comentario
+  document.getElementById('modal-title').textContent = 'Enviar a Receptora';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">Escribe un mensaje para la Receptora explicando las correcciones realizadas:</p>
+    <div class="field">
+      <label>Mensaje para Receptora <span class="req">*</span></label>
+      <textarea id="reenvio-comentario" rows="3" placeholder="Ej: Corregí el tipo de diligencia y la dirección"></textarea>
+    </div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="editarCausa('${hex}')">Cancelar</button>
+    <button class="btn btn-danger btn-sm" onclick="confirmarReenvio('${hex}')">📤 Confirmar envío</button>
+  `;
+  setTimeout(() => document.getElementById('reenvio-comentario').focus(), 100);
+}
+
+async function confirmarReenvio(hex) {
+  const comentario = document.getElementById('reenvio-comentario').value.trim();
+  if (!comentario) {
+    showToast('⚠ Escribe un mensaje para la Receptora', 'warn');
+    document.getElementById('reenvio-comentario').focus();
+    return;
+  }
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  const estadoAnterior = payload.estado;
+  payload.estado = 'pendiente_validacion';
+  c.estado = 'pendiente_validacion';
+  payload.historial.push({
+    accion: 'corregida_reenviada',
+    estado_anterior: estadoAnterior,
+    estado_nuevo: 'pendiente_validacion',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre,
+    comentario: comentario
+  });
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+      actualizarIndex();
+      showToast('📤 Causa reenviada a Receptora', 'success');
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      return;
+    }
+  }
+  renderCausas();
+  renderDevueltas();
+  renderNotificaciones();
+  closeModal();
 }
 
 async function _corregirDevuelta(hex, nuevoEstado, accion) {
@@ -3577,7 +3632,7 @@ function renderValidacion() {
 
   const tbody = document.getElementById('validacion-body');
   if (pendientes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <span class="icon">✅</span>
       <p>No hay causas pendientes de validación.</p>
     </div></td></tr>`;
@@ -3587,17 +3642,16 @@ function renderValidacion() {
   pendientes.sort((a,b) => (a.ts_ingreso||'').localeCompare(b.ts_ingreso||''));
 
   tbody.innerHTML = pendientes.map(c => {
-    const ingreso = c._causa_json?.historial?.find(h => h.accion === 'ingreso');
-    const usuario = ingreso?.usuario || '—';
     return `
     <tr>
-      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || c.nro_solicitud || '—'}</td>
-      <td class="mono">${c.rol || '—'}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
-      <td style="font-size:12px;">${usuario}</td>
-      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td>${estadoBadge(c.estado)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="col-acc" style="white-space:nowrap; display:flex; gap:.35rem;">
         <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
         <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
@@ -4213,6 +4267,9 @@ function exportOptirouteDia() {
 // ══════════════════════════════════════════════
 async function cargarDevueltas() {
   if (!_causasCargadas) await cargarCausasDropbox();
+  // Cargar _causa_json de cada devuelta para acceder al historial
+  const devueltas = causas.filter(c => c.estado === 'devuelta' && !c._causa_json);
+  await Promise.all(devueltas.map(c => cargarCausaCompleta(c.id_hex)));
   renderDevueltas();
 }
 function renderDevueltas() {
