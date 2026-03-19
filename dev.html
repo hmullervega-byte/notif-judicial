@@ -3277,8 +3277,6 @@ async function verCausa(hex) {
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
   } else if (c.estado === 'devuelta') {
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar y corregir">✏ Editar</button>`;
-    footerHtml += `<button class="btn btn-primary btn-sm" onclick="corregirYValidar('${c.id_hex}')" title="Corregir y guardar como validada">💾 Corregir y Validar</button>`;
-    footerHtml += `<button class="btn btn-danger btn-sm" onclick="corregirYReenviar('${c.id_hex}')" title="Corregir y reenviar a Receptora">📤 Reenviar a Receptora</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
   } else {
@@ -3382,13 +3380,15 @@ async function editarCausa(hex) {
 
   document.getElementById('modal-campos').innerHTML = html;
 
+  const esDevuelta = c.estado === 'devuelta';
   document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}')">💾 Guardar cambios</button>
+    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}'${esDevuelta ? ", 'validada'" : ''})">💾 Guardar cambios</button>
+    ${esDevuelta ? `<button class="btn btn-danger btn-sm" onclick="guardarEdicion('${hex}', 'pendiente_validacion')">📤 Enviar a Receptora</button>` : ''}
     <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
   `;
 }
 
-async function guardarEdicion(hex) {
+async function guardarEdicion(hex, nuevoEstadoForzado) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
@@ -3434,6 +3434,22 @@ async function guardarEdicion(hex) {
         usuario: currentUser.nombre
       });
     }
+  }
+
+  // Estado forzado (desde causa devuelta: validar o reenviar)
+  if (nuevoEstadoForzado && payload.estado !== nuevoEstadoForzado) {
+    const estadoAnterior = payload.estado;
+    payload.estado = nuevoEstadoForzado;
+    c.estado = nuevoEstadoForzado;
+    cambioEstado = true;
+    const accionDev = nuevoEstadoForzado === 'validada' ? 'corregida_validada' : 'corregida_reenviada';
+    payload.historial.push({
+      accion: accionDev,
+      estado_anterior: estadoAnterior,
+      estado_nuevo: nuevoEstadoForzado,
+      fecha: new Date().toISOString(),
+      usuario: currentUser.nombre
+    });
   }
 
   if (modificados.length === 0 && !cambioEstado) {
@@ -4224,7 +4240,6 @@ function renderDevueltas() {
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
-        <button class="btn btn-secondary btn-sm btn-icon" title="Editar" onclick="editarCausa('${c.id_hex}')">✏</button>
       </td>
     </tr>`;
   }).join('');
