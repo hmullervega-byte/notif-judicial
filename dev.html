@@ -3475,10 +3475,10 @@ async function confirmarGenerarRuta() {
 // Extraer solo calle + numeración (sin depto/casa/torre/edif/block)
 function _calleNumero(dir) {
   if (!dir) return '';
-  // Cortar en separadores comunes de depto/casa
-  let limpia = dir.split(/\s*[,]\s*/)[0]; // toma solo antes de la primera coma
-  // Quitar depto/dpto/dept/of/oficina/casa/torre/edif/block al final
-  limpia = limpia.replace(/\s+(dpto|depto|dept|of|oficina|casa|torre|edif|block|piso|esc)\b.*/i, '');
+  // Cortar en primera coma
+  let limpia = dir.split(/\s*,\s*/)[0];
+  // Cortar antes de cualquier indicador de depto/edificio/casa/torre
+  limpia = limpia.replace(/\s+(dpto|depto|dept|dto|dt|ed|edif|edificio|block|bloque|torre|of|oficina|casa|piso|esc|interior|int)\b.*/i, '');
   return limpia.trim();
 }
 
