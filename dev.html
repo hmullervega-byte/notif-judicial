@@ -3249,12 +3249,18 @@ async function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
         ${(() => {
+          const hist = c._causa_json?.historial || [];
+          const msgs = [];
           if (c.estado === 'devuelta') {
-            const hist = c._causa_json?.historial || [];
             const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
-            if (dev) return `<div style="margin-top:.75rem; padding:.5rem .75rem; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`;
+            if (dev) msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`);
           }
-          return '';
+          // Mostrar último mensaje de reenvío (Marco → Receptora)
+          const reenvio = [...hist].reverse().find(h => h.accion === 'corregida_reenviada' && h.comentario);
+          if (reenvio && c.estado === 'pendiente_validacion') {
+            msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#dbeafe; border:1px solid #bfdbfe; border-radius:4px; font-size:12px; color:#1e40af;"><strong>📤 Reenviada por ${reenvio.usuario || 'Marco'}:</strong> ${reenvio.comentario}</div>`);
+          }
+          return msgs.join('');
         })()}
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
       </div>
