@@ -2036,7 +2036,7 @@ function buildDashboard() {
 // ══════════════════════════════════════════════
 // FORMULARIO INGRESO
 // ══════════════════════════════════════════════
-const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','notificar_a','direccion'];
+const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','demandado','notificar_a','direccion'];
 const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
 
 let currentHex = null;
@@ -2066,7 +2066,11 @@ function autocompletarCBR() {
     if (!confirm('¿Sobreescribir Notificar a y Dirección con los valores del CBR?')) return;
   }
   notifEl.value = CBR_NOTIF;
+  notifEl.dispatchEvent(new Event('input', { bubbles: true }));
+  notifEl.dispatchEvent(new Event('change', { bubbles: true }));
   dirEl.value = CBR_DIR;
+  dirEl.dispatchEvent(new Event('input', { bubbles: true }));
+  dirEl.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); autocompletarCBR(); });
@@ -2260,8 +2264,8 @@ function autocompletarPiezas() {
   const tipo = fval('tipo_diligencia');
   const piezas = document.getElementById('f-piezas');
   if (tipo !== 'NOT-DEMANDA-EJE-GENERAL' || piezas.value.trim()) return;
-  if (rol.startsWith('C-')) piezas.value = PIEZAS_EJE_C;
-  else if (rol.startsWith('E-')) piezas.value = PIEZAS_EJE_E;
+  if (rol.startsWith('C-')) { piezas.value = PIEZAS_EJE_C; piezas.dispatchEvent(new Event('input', { bubbles: true })); }
+  else if (rol.startsWith('E-')) { piezas.value = PIEZAS_EJE_E; piezas.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 
 function fval(name) {
@@ -2303,9 +2307,28 @@ function validateField(name) {
   wrapper.classList.remove('has-error'); return true;
 }
 
+function _camposObligatoriosActivos() {
+  const campos = [...REQUIRED_FIELDS];
+  const estudio = fval('estudio');
+  const demandante = fval('demandante').toUpperCase();
+  // Demandante obligatorio si estudio tiene lista desplegable
+  if (DEMANDANTES_POR_ESTUDIO[estudio]) campos.push('demandante');
+  // Abogado obligatorio para Socofin
+  if (estudio === 'Socofin') campos.push('abogado_procurador');
+  // Banco representado obligatorio para Exhortos Frias + TESORER
+  if (estudio === 'Exhortos Frias' && demandante.includes('TESORER')) campos.push('banco_representado');
+  // Pagaré obligatorio para Dell'Oro o Recsa con bancos específicos
+  const bancosRecsa = ['BANCO ITAU CHILE', 'ITAU CORPBANCA S.A', 'BANCO SANTANDER-CHILE'];
+  if (estudio === "Dell'Oro Abogados" || (estudio === 'Recsa' && bancosRecsa.some(b => demandante.includes(b)))) {
+    campos.push('n_pagare');
+  }
+  return campos;
+}
+
 function updateProgress() {
-  const filled = REQUIRED_FIELDS.filter(id => fval(id).length > 0);
-  const pct = Math.round(filled.length / REQUIRED_FIELDS.length * 100);
+  const campos = _camposObligatoriosActivos();
+  const filled = campos.filter(id => fval(id).length > 0);
+  const pct = campos.length > 0 ? Math.round(filled.length / campos.length * 100) : 100;
   document.getElementById('f-progress').style.width = pct + '%';
   document.getElementById('f-pct').textContent = pct + '%';
 
@@ -2313,9 +2336,11 @@ function updateProgress() {
     'fecha_solicitud':'Fecha', 'n_solicitud':'N° Sol.', 'rol':'ROL',
     'tribunal':'Tribunal', 'tipo_diligencia':'Tipo', 'estudio':'Estudio',
     'demandante':'Demandante', 'demandado':'Demandado',
-    'notificar_a':'Notificar a', 'direccion':'Dirección'
+    'notificar_a':'Notificar a', 'direccion':'Dirección',
+    'abogado_procurador':'Abogado', 'banco_representado':'Banco rep.',
+    'n_pagare':'N° Pagaré'
   };
-  const missing = REQUIRED_FIELDS.filter(id => fval(id).length === 0);
+  const missing = campos.filter(id => fval(id).length === 0);
   const missingEl = document.getElementById('f-missing');
   if (missing.length === 0) {
     missingEl.textContent = '✓ Campos completos';
@@ -2406,31 +2431,27 @@ function enviarAReceptora() {
 }
 
 async function guardarCausa(estadoInicial) {
+  // Validar TODOS los campos obligatorios y marcar todos los errores
+  const campos = _camposObligatoriosActivos();
+  const wrapperMap = { 'n_pagare': 'fw-nro_pagare' };
   let ok = true;
-  REQUIRED_FIELDS.forEach(id => { if (!validateField(id)) ok = false; });
-  if (!ok || !currentHex) { showToast('⚠ Completar campos obligatorios', 'warn'); return; }
-  // Validación condicional: demandante en modo desplegable
-  if (DEMANDANTES_POR_ESTUDIO[fval('estudio')] && !fval('demandante')) {
-    showToast('⚠ Selecciona el demandante', 'warn');
-    document.getElementById('fw-demandante').classList.add('has-error');
-    return;
-  }
-  // Validación condicional: banco representado si Exhortos Frias
-  if (fval('estudio') === 'Exhortos Frias' && fval('demandante').toUpperCase().includes('TESORER') && !fval('banco_representado')) {
-    showToast('⚠ Selecciona el banco representado por Exhortos Frias', 'warn');
-    document.getElementById('fw-banco_representado').classList.add('has-error');
-    return;
-  }
-  // Validación condicional: abogado obligatorio para Socofin
-  if (fval('estudio') === 'Socofin' && !fval('abogado_procurador')) {
-    showToast('⚠ Selecciona el abogado/procurador de Socofin', 'warn');
-    document.getElementById('fw-abogado_procurador').classList.add('has-error');
-    return;
-  }
-  // Validación condicional: N° Pagaré / N° Operación
-  if (document.getElementById('f-n_pagare').required && !fval('n_pagare')) {
-    showToast('⚠ Ingresa el N° Pagaré / N° Operación para este estudio y demandante', 'warn');
-    document.getElementById('fw-nro_pagare').classList.add('has-error');
+  let primerError = null;
+  campos.forEach(id => {
+    const wrapperId = wrapperMap[id] || ('fw-' + id);
+    const wrapper = document.getElementById(wrapperId);
+    if (!fval(id)) {
+      ok = false;
+      if (wrapper) {
+        wrapper.classList.add('has-error');
+        if (!primerError) primerError = wrapper;
+      }
+    } else if (wrapper) {
+      wrapper.classList.remove('has-error');
+    }
+  });
+  if (!ok || !currentHex) {
+    showToast('⚠ Completar campos obligatorios', 'warn');
+    if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
