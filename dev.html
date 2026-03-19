@@ -1370,6 +1370,83 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
         </div>
       </div><!-- /view-ruta -->
 
+      <!-- ── GESTIÓN DIRECTA ── -->
+      <div class="view" id="view-gestion">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Gestión Directa</div>
+            <div class="page-sub" id="gestion-count">Cargando...</div>
+          </div>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarGestion()">🔄 Recargar</button>
+          </div>
+        </div>
+
+        <!-- Tabs: Pendientes / Terminadas -->
+        <div class="ruta-tabs">
+          <div class="ruta-tab active" id="tab-gestion-pend" onclick="switchGestionTab('pendientes')">Pendientes</div>
+          <div class="ruta-tab" id="tab-gestion-term" onclick="switchGestionTab('terminadas')">Terminadas</div>
+        </div>
+
+        <!-- Panel PENDIENTES -->
+        <div id="panel-gestion-pend">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:75px;">ROL</th>
+                    <th style="width:22px;">T</th>
+                    <th style="width:110px;">Demandante</th>
+                    <th style="width:110px;">Demandado</th>
+                    <th style="width:80px;">RUT</th>
+                    <th style="width:110px;">Notificar a</th>
+                    <th style="width:80px;">Tipo</th>
+                    <th style="max-width:130px;">Piezas</th>
+                    <th style="width:70px;">Estado</th>
+                    <th style="width:70px;">Ingreso</th>
+                    <th style="width:110px;">ID</th>
+                    <th style="width:100px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="gestion-pend-body">
+                  <tr><td colspan="12"><div class="empty-state"><span class="icon">📋</span><p>Sin diligencias de gestión directa pendientes.</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel TERMINADAS -->
+        <div id="panel-gestion-term" style="display:none;">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:75px;">ROL</th>
+                    <th style="width:22px;">T</th>
+                    <th style="width:110px;">Demandante</th>
+                    <th style="width:110px;">Demandado</th>
+                    <th style="width:80px;">RUT</th>
+                    <th style="width:110px;">Notificar a</th>
+                    <th style="width:80px;">Tipo</th>
+                    <th style="max-width:130px;">Piezas</th>
+                    <th style="width:70px;">Estado</th>
+                    <th style="width:70px;">Ingreso</th>
+                    <th style="width:110px;">ID</th>
+                    <th style="width:55px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="gestion-term-body">
+                  <tr><td colspan="12"><div class="empty-state"><span class="icon">✅</span><p>Sin diligencias terminadas.</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view-gestion -->
+
     </main>
   </div><!-- /app-body -->
 </div><!-- /screen-app -->
@@ -1656,6 +1733,7 @@ const PERFILES = {
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
+      { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
     ]
   },
   darth: {
@@ -1667,6 +1745,7 @@ const PERFILES = {
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
+      { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
       { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
     ]
   }
@@ -1677,6 +1756,15 @@ const PERFILES = {
 // ══════════════════════════════════════════════
 let currentUser = null;
 let causas = []; // array de causas en memoria (luego vendrá de Dropbox)
+
+// Tipos de gestión directa — NO van en ruta
+const TIPOS_GESTION_DIRECTA = new Set([
+  'ALZAMIENTO-CBR','ALZAMIENTO-RVM','ALZAMIENTO-TESORERIA','ALZAMIENTO-OTROS',
+  'EMBARGO-CBR','EMBARGO-CUENTA-CORRIENTE','EMBARGO-FRUSTRADO','EMBARGO-OTROS',
+  'EMBARGO-RVM','EMBARGO-TESORERIA','PRUEBA-CONFESIONAL','PRUEBA-TESTIMONIAL',
+  'REQ-PAGO-TRIBUNAL'
+]);
+function esGestionDirecta(tipo) { return TIPOS_GESTION_DIRECTA.has((tipo||'').toUpperCase()); }
 
 // ══════════════════════════════════════════════
 // LOGIN
@@ -1796,6 +1884,7 @@ function showView(viewId) {
   if (viewId === 'view-validacion') cargarValidacion();
   if (viewId === 'view-ruta') cargarRuta();
   if (viewId === 'view-dashboard') buildDashboard();
+  if (viewId === 'view-gestion') cargarGestion();
 }
 
 // ══════════════════════════════════════════════
@@ -2895,11 +2984,23 @@ function verCausa(hex) {
   const qrEl = document.getElementById('modal-qr');
   try { new QRCode(qrEl, { text: c.id_hex, width: 100, height: 100, colorDark:'#0d1b2a', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
 
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>
-    <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
-    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
-  `;
+  // Protección estado "cerrada": solo Darth puede editar/reabrir
+  const esCerrada = c.estado === 'cerrada';
+  const esDarth = currentUser?.perfil === 'darth';
+  let footerHtml = '';
+  if (esCerrada) {
+    if (esDarth) {
+      footerHtml += `<button class="btn btn-warning btn-sm" onclick="reabrirCausa('${c.id_hex}')" title="Reabrir causa cerrada">🔓 Reabrir causa</button>`;
+      footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
+    }
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  } else {
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  }
+  document.getElementById('modal-footer').innerHTML = footerHtml;
   document.getElementById('modal-overlay').classList.add('active');
 }
 
@@ -3319,7 +3420,8 @@ async function cargarRuta() {
 
 // ── Render tabla asignar ──
 function renderRuta() {
-  const validadas = causas.filter(c => c.estado === 'validada');
+  // Cambio 1: excluir tipos de gestión directa de la selección de ruta
+  const validadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
   document.getElementById('ruta-count').textContent =
     `${validadas.length} para asignar · ${enRuta.length} en ruta`;
@@ -3657,7 +3759,9 @@ function _calleNumero(dir) {
   // Cortar en primera coma
   let limpia = dir.split(/\s*,\s*/)[0];
   // Cortar antes de cualquier indicador de depto/edificio/casa/torre
-  limpia = limpia.replace(/\s+(dpto|depto|dept|dto|dt|ed|edif|edificio|block|bloque|torre|of|oficina|casa|piso|esc|interior|int)\b.*/i, '');
+  limpia = limpia.replace(/\s+(dpto|depto|dept|dto|dt|ed|edif|edificio|block|bloque|torre|casa|piso|esc|interior|int)\b.*/i, '');
+  // Cortar antes de código de block/casa tipo H42, B12, etc. (letra + número al final)
+  limpia = limpia.replace(/\s+[A-Z]\d+\s*$/i, '');
   return limpia.trim();
 }
 
@@ -3834,6 +3938,7 @@ function estadoBadge(estado) {
     'lista_para_estampe':   ['tag-purple','Lista para estampe'],
     'estampada':            ['tag-green','Estampada'],
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
+    'cerrada':              ['tag-gray','Cerrada'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
   return `<span class="tag ${cls}">${label}</span>`;
@@ -3865,6 +3970,159 @@ updateTime();
 
 // ══════════════════════════════════════════════
 // CSS ANIMACIÓN SHAKE (login)
+// ══════════════════════════════════════════════
+// GESTIÓN DIRECTA
+// ══════════════════════════════════════════════
+
+function switchGestionTab(tab) {
+  document.getElementById('tab-gestion-pend').classList.toggle('active', tab === 'pendientes');
+  document.getElementById('tab-gestion-term').classList.toggle('active', tab === 'terminadas');
+  document.getElementById('panel-gestion-pend').style.display = tab === 'pendientes' ? '' : 'none';
+  document.getElementById('panel-gestion-term').style.display = tab === 'terminadas' ? '' : 'none';
+}
+
+async function cargarGestion() {
+  if (!_causasCargadas) await cargarCausasDropbox();
+  renderGestion();
+}
+
+function _fechaIngreso(c) {
+  if (c._causa_json?.historial?.length > 0) {
+    const f = c._causa_json.historial[0].fecha;
+    if (f) return f.slice(0, 10);
+  }
+  return c.fecha_solicitud || '';
+}
+
+function renderGestion() {
+  const todas = causas.filter(c => esGestionDirecta(c.tipo_diligencia));
+  const pendientes = todas.filter(c => c.estado !== 'cerrada');
+  const terminadas = todas.filter(c => c.estado === 'cerrada');
+
+  document.getElementById('gestion-count').textContent =
+    `${pendientes.length} pendientes · ${terminadas.length} terminadas`;
+
+  // Pendientes
+  const tbPend = document.getElementById('gestion-pend-body');
+  if (pendientes.length === 0) {
+    tbPend.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">📋</span><p>Sin diligencias de gestión directa pendientes.</p></div></td></tr>`;
+  } else {
+    tbPend.innerHTML = pendientes.map(c => _gestionRow(c, false)).join('');
+  }
+
+  // Terminadas
+  const tbTerm = document.getElementById('gestion-term-body');
+  if (terminadas.length === 0) {
+    tbTerm.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">✅</span><p>Sin diligencias terminadas.</p></div></td></tr>`;
+  } else {
+    tbTerm.innerHTML = terminadas.map(c => _gestionRow(c, true)).join('');
+  }
+}
+
+function _gestionRow(c, esTerminada) {
+  const notifA = c.notificar_a || c.demandado || '—';
+  const piezas = c.piezas || '—';
+  const fechaIng = _fechaIngreso(c);
+  const acciones = esTerminada
+    ? `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>`
+    : `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+       <button class="btn btn-success btn-sm btn-icon" title="Marcar terminada" onclick="marcarGestionTerminada('${c.id_hex}')">✓</button>`;
+  return `<tr>
+    <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+    <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+    <td class="mono" style="font-size:11px;">${c.rut || '—'}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; font-size:12px;" title="${notifA}">${notifA}</td>
+    <td>${tipoBadge(c.tipo_diligencia)}</td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; font-size:12px;" title="${piezas}">${piezas}</td>
+    <td>${estadoBadge(c.estado)}</td>
+    <td class="mono" style="font-size:11px;">${fmtFecha(fechaIng)}</td>
+    <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+    <td style="white-space:nowrap;">${acciones}</td>
+  </tr>`;
+}
+
+async function marcarGestionTerminada(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+
+  // Confirmación
+  document.getElementById('modal-title').textContent = 'Confirmar cierre';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:8px;">
+      <strong>${c.rol || hex.slice(0,8)}</strong> — ${tipoBadge(c.tipo_diligencia)}
+    </p>
+    <p style="font-size:13px;">¿Confirmas que esta diligencia está terminada? El estado cambiará a <strong>Cerrada</strong>.</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-success btn-sm" onclick="confirmarCierreGestion('${hex}')">Confirmar cierre</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function reabrirCausa(hex) {
+  if (currentUser?.perfil !== 'darth') { showToast('Solo Darth puede reabrir causas cerradas', 'warn'); return; }
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  closeModal();
+
+  const payload = c._causa_json || await asegurarCausaCompleta(hex);
+  if (!payload) { showToast('No se pudo cargar la causa', 'warn'); return; }
+  const json = c._causa_json || payload._causa_json || payload;
+
+  json.estado = 'validada';
+  if (!json.historial) json.historial = [];
+  json.historial.push({
+    accion: 'reabierta',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre || currentUser.username
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, json);
+    c.estado = 'validada';
+    c._causa_json = json;
+    await actualizarIndex();
+    renderGestion();
+    showToast('Causa reabierta (estado → validada)', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Error al reabrir: ' + e.message, 'warn');
+  }
+}
+
+async function confirmarCierreGestion(hex) {
+  closeModal();
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+
+  const payload = c._causa_json || await asegurarCausaCompleta(hex);
+  if (!payload) { showToast('No se pudo cargar la causa', 'warn'); return; }
+  const json = c._causa_json || payload._causa_json || payload;
+
+  json.estado = 'cerrada';
+  if (!json.historial) json.historial = [];
+  json.historial.push({
+    accion: 'cierre_gestion_directa',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre || currentUser.username
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, json);
+    c.estado = 'cerrada';
+    c._causa_json = json;
+    await actualizarIndex();
+    renderGestion();
+    showToast('Diligencia marcada como terminada', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Error al cerrar diligencia: ' + e.message, 'warn');
+  }
+}
+
 // ══════════════════════════════════════════════
 const styleEl = document.createElement('style');
 styleEl.textContent = `
