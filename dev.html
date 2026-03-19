@@ -439,17 +439,24 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 
 /* TABLA */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   background: #f8fafc; color: var(--muted);
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; padding: .5rem .75rem;
   text-align: left; border-bottom: 1.5px solid var(--border);
-  white-space: nowrap; overflow: hidden; resize: horizontal;
+  white-space: nowrap; overflow: hidden;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:hover { background: #f8fafc; }
 tbody td { padding: .55rem .75rem; vertical-align: middle; }
+/* Columna acciones sticky a la derecha */
+th.col-acc, td.col-acc {
+  position: sticky; right: 0; background: #fff; z-index: 1;
+  box-shadow: -2px 0 4px rgba(0,0,0,.06);
+}
+thead th.col-acc { background: #f8fafc; }
+tbody tr:hover td.col-acc { background: #f8fafc; }
 tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
 /* STATS */
@@ -1205,18 +1212,18 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
-                  <th style="width:75px;">ROL</th>
+                  <th style="width:80px;">ROL</th>
                   <th style="width:22px;">T</th>
-                  <th style="width:130px;">Demandante</th>
-                  <th style="width:130px;">Demandado</th>
-                  <th style="width:90px;">RUT</th>
-                  <th style="width:180px;">Dirección</th>
-                  <th style="width:80px;">Tipo</th>
-                  <th style="width:100px;">Estudio</th>
-                  <th style="width:80px;">Estado</th>
-                  <th style="width:70px;">Fecha</th>
-                  <th style="width:120px;">ID</th>
-                  <th style="width:55px;">Acc.</th>
+                  <th style="min-width:100px;">Demandante</th>
+                  <th style="min-width:100px;">Demandado</th>
+                  <th style="width:85px;">RUT</th>
+                  <th style="min-width:120px;">Dirección</th>
+                  <th style="width:70px;">Tipo</th>
+                  <th style="width:80px;">Estudio</th>
+                  <th style="width:70px;">Estado</th>
+                  <th style="width:65px;">Fecha</th>
+                  <th style="width:100px;">ID</th>
+                  <th style="width:55px;" class="col-acc">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
@@ -1256,7 +1263,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <th>Dirección</th>
                   <th>Ingresado por</th>
                   <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th class="col-acc">Acciones</th>
                 </tr>
               </thead>
               <tbody id="validacion-body">
@@ -1344,7 +1351,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:70px;">F. Sol.</th>
                         <th style="width:70px;">F. Ruta</th>
                         <th style="width:110px;">ID</th>
-                        <th style="width:55px;">Acc.</th>
+                        <th style="width:55px;" class="col-acc">Acc.</th>
                       </tr>
                     </thead>
                     <tbody id="ruta-body">
@@ -1379,7 +1386,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:80px;">Tipo</th>
                         <th style="width:70px;">F. Sol.</th>
                         <th style="width:110px;">ID</th>
-                        <th style="width:55px;">Acc.</th>
+                        <th style="width:55px;" class="col-acc">Acc.</th>
                       </tr>
                     </thead>
                     <tbody id="ruta-dia-body">
@@ -1429,7 +1436,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <th style="width:70px;">Estado</th>
                     <th style="width:70px;">Ingreso</th>
                     <th style="width:110px;">ID</th>
-                    <th style="width:100px;">Acciones</th>
+                    <th style="width:100px;" class="col-acc">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="gestion-pend-body">
@@ -1458,7 +1465,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <th style="width:70px;">Estado</th>
                     <th style="width:70px;">Ingreso</th>
                     <th style="width:110px;">ID</th>
-                    <th style="width:55px;">Acciones</th>
+                    <th style="width:55px;" class="col-acc">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="gestion-term-body">
@@ -3147,7 +3154,7 @@ function renderCausas() {
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
         ${currentUser?.perfil === 'darth' ? `<button class="btn btn-danger btn-sm btn-icon" title="Eliminar causa" onclick="eliminarCausa('${c.id_hex}')">🗑</button>` : ''}
@@ -3495,7 +3502,7 @@ function renderValidacion() {
       <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
       <td style="font-size:12px;">${usuario}</td>
       <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
-      <td style="white-space:nowrap; display:flex; gap:.35rem;">
+      <td class="col-acc" style="white-space:nowrap; display:flex; gap:.35rem;">
         <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
         <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
         <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
@@ -3752,7 +3759,7 @@ function renderRuta() {
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
@@ -3801,7 +3808,7 @@ function renderRutaDia() {
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-      <td style="white-space:nowrap;">
+      <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
       </td>
@@ -4342,7 +4349,7 @@ function _gestionRow(c, esTerminada) {
     <td>${estadoBadge(c.estado)}</td>
     <td class="mono" style="font-size:11px;">${fmtFecha(fechaIng)}</td>
     <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
-    <td style="white-space:nowrap;">${acciones}</td>
+    <td class="col-acc" style="white-space:nowrap;">${acciones}</td>
   </tr>`;
 }
 
