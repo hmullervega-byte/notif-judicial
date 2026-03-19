@@ -3264,7 +3264,7 @@ async function editarCausa(hex) {
   }
 
   const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;';
-  const inp = 'font-size:13px; margin-top:2px;';
+  const inp = 'font-size:13px; margin-top:2px; width:100%;';
 
   const camposTexto = [
     ['rol', 'ROL', c.rol],
@@ -3288,6 +3288,7 @@ async function editarCausa(hex) {
   // Estado select (solo Darth)
   if (currentUser?.perfil === 'darth') {
     const estados = [
+      ['ingresada','Ingresada'],
       ['pendiente_validacion','Pendiente validación'],
       ['validada','Validada'],
       ['en_ruta','En ruta'],
@@ -3302,6 +3303,8 @@ async function editarCausa(hex) {
       `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
     ).join('');
     html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}">${estadoOpts}</select></div>`;
+  } else {
+    html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
   }
   // Campos texto
   html += camposTexto.map(([key, label, val, span]) => {
