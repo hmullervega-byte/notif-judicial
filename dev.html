@@ -1339,6 +1339,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                 <span class="counter" id="ruta-dia-sel-count" style="display:none;"></span>
                 <button class="btn btn-success btn-sm" id="btn-export-optiroute" onclick="exportOptirouteDia()" style="display:none;">📤 Exportar día</button>
                 <button class="btn btn-primary btn-sm" id="btn-reasignar-sel" onclick="reasignarSeleccionadas()" style="display:none;">📅 Reasignar día</button>
+                <button class="btn btn-secondary btn-sm" id="btn-agendar-2da" onclick="agendar2daPositiva()" style="display:none;">🔄 Agendar 2da Positiva</button>
                 <button class="btn btn-danger btn-sm" id="btn-quitar-sel" onclick="quitarSeleccionadasDeRuta()" style="display:none;">↩ Quitar de ruta</button>
               </div>
               <div class="card">
@@ -2687,6 +2688,7 @@ async function cargarCausasDropbox(forzar = false) {
       demandante:       c.demandante,
       ciudad:           c.ciudad || 'Antofagasta',
       fecha_ruta:       c.fecha_ruta || '',
+      fecha_2da_positiva: c.fecha_2da_positiva || '',
       ts_ingreso:       c.ts_ingreso || '',
       _causa_json:      null  // se carga bajo demanda
     }));
@@ -2725,6 +2727,7 @@ async function actualizarIndex() {
     demandante:       c.demandante || '',
     ciudad:           c.ciudad || 'Antofagasta',
     fecha_ruta:       c.fecha_ruta || '',
+    fecha_2da_positiva: c.fecha_2da_positiva || '',
     ts_ingreso:       c.ts_ingreso || '',
   }));
   try {
@@ -3263,9 +3266,10 @@ function _fechaRuta(c) {
 }
 function _diasConRuta() {
   const dias = new Set();
-  causas.filter(c => c.estado === 'en_ruta' || c.fecha_ruta).forEach(c => {
+  causas.filter(c => c.estado === 'en_ruta' || c.fecha_ruta || c.fecha_2da_positiva).forEach(c => {
     const fr = _fechaRuta(c) || c.fecha_ruta || '';
     if (fr) dias.add(fr);
+    if (c.fecha_2da_positiva) dias.add(c.fecha_2da_positiva);
   });
   return dias;
 }
@@ -3372,7 +3376,7 @@ function renderRutaDia() {
   }
   const del_dia = causas.filter(c => {
     const fr = _fechaRuta(c) || c.fecha_ruta || '';
-    return fr === calRutaSelected;
+    return fr === calRutaSelected || c.fecha_2da_positiva === calRutaSelected;
   });
   const fmtSel = calRutaSelected.split('-').reverse().join('/');
   document.getElementById('ruta-dia-info').innerHTML = `<strong>${del_dia.length}</strong> causa${del_dia.length !== 1 ? 's' : ''} en ruta del <strong>${fmtSel}</strong>`;
@@ -3419,19 +3423,12 @@ function toggleAllRutaDia(checked) {
 }
 function _actualizarBotonesRutaDia() {
   const n = rutaDiaSeleccionadas.size;
-  const selCount = document.getElementById('ruta-dia-sel-count');
-  const btnR = document.getElementById('btn-reasignar-sel');
-  const btnQ = document.getElementById('btn-quitar-sel');
-  if (n > 0) {
-    selCount.style.display = '';
-    selCount.innerHTML = `<strong>${n}</strong> seleccionada${n !== 1 ? 's' : ''}`;
-    btnR.style.display = '';
-    btnQ.style.display = '';
-  } else {
-    selCount.style.display = 'none';
-    btnR.style.display = 'none';
-    btnQ.style.display = 'none';
-  }
+  const vis = n > 0 ? '' : 'none';
+  document.getElementById('ruta-dia-sel-count').style.display = vis;
+  if (n > 0) document.getElementById('ruta-dia-sel-count').innerHTML = `<strong>${n}</strong> seleccionada${n !== 1 ? 's' : ''}`;
+  document.getElementById('btn-reasignar-sel').style.display = vis;
+  document.getElementById('btn-agendar-2da').style.display = vis;
+  document.getElementById('btn-quitar-sel').style.display = vis;
 }
 
 // ── Reasignar seleccionadas a otro día ──
@@ -3601,6 +3598,59 @@ async function confirmarGenerarRuta() {
 }
 
 // ── Export Optiroute ──
+// ── Agendar 2da Positiva ──
+// Agenda las causas seleccionadas para una 2da búsqueda positiva en otro día.
+// NO las quita del día actual — queda el registro de la 1ra búsqueda.
+function agendar2daPositiva() {
+  if (rutaDiaSeleccionadas.size === 0) return;
+  document.getElementById('modal-title').textContent = 'Agendar 2da Búsqueda Positiva';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:6px;">
+      <strong>${rutaDiaSeleccionadas.size}</strong> causa${rutaDiaSeleccionadas.size !== 1 ? 's' : ''} seleccionada${rutaDiaSeleccionadas.size !== 1 ? 's' : ''}
+    </p>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">
+      La 1ra búsqueda queda registrada en el día actual. Se agendará la 2da búsqueda para el día seleccionado.
+    </p>
+    <label style="font-size:12px; font-weight:600;">Fecha 2da búsqueda positiva:</label>
+    <input type="date" id="input-fecha-2da" style="width:100%; margin-top:4px;">
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="confirmarAgendar2da()">Confirmar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function confirmarAgendar2da() {
+  const fecha2da = document.getElementById('input-fecha-2da').value;
+  if (!fecha2da) { showToast('⚠ Selecciona la fecha para la 2da búsqueda', 'warn'); return; }
+  closeModal();
+  let ok = 0;
+  for (const hex of rutaDiaSeleccionadas) {
+    const c = await asegurarCausaCompleta(hex);
+    if (!c) continue;
+    const payload = c._causa_json;
+    // Guardar fecha de 2da positiva sin borrar la fecha_ruta original
+    payload.fecha_2da_positiva = fecha2da;
+    payload.historial.push({
+      accion: '2da_positiva_agendada',
+      fecha: new Date().toISOString(),
+      fecha_2da_positiva: fecha2da,
+      fecha_1ra: c.fecha_ruta || calRutaSelected || '',
+      usuario: currentUser.nombre
+    });
+    try {
+      if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+      c.fecha_2da_positiva = fecha2da;
+      ok++;
+    } catch(e) { console.error(e); }
+  }
+  rutaDiaSeleccionadas.clear();
+  actualizarIndex();
+  renderRuta(); renderRutaDia(); renderCalRuta();
+  showToast(`🔄 ${ok} causa${ok !== 1 ? 's' : ''} agendada${ok !== 1 ? 's' : ''} para 2da positiva el ${fecha2da.split('-').reverse().join('/')}`, 'success');
+}
+
 // Extraer solo calle + numeración (sin depto/casa/torre/edif/block)
 function _calleNumero(dir) {
   if (!dir) return '';
@@ -3621,7 +3671,7 @@ function _buildOptiroute(lista) {
 }
 function exportOptirouteDia() {
   if (!calRutaSelected) return;
-  const del_dia = causas.filter(c => { const fr = _fechaRuta(c) || c.fecha_ruta || ''; return fr === calRutaSelected; });
+  const del_dia = causas.filter(c => { const fr = _fechaRuta(c) || c.fecha_ruta || ''; return fr === calRutaSelected || c.fecha_2da_positiva === calRutaSelected; });
   if (del_dia.length === 0) { showToast('⚠ Sin causas en esa fecha', 'warn'); return; }
   const partes = calRutaSelected.split('-');
   const filename = `${partes[2]}-${partes[1]}-${partes[0]} Optiroute.xlsx`;
