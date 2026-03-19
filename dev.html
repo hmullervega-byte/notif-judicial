@@ -2873,6 +2873,8 @@ function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
+          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">FECHA RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
@@ -2889,6 +2891,10 @@ function verCausa(hex) {
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>
     <button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>
+    ${c.estado === 'en_ruta' ? `
+    <button class="btn btn-primary btn-sm" onclick="reasignarRuta('${c.id_hex}')" title="Cambiar fecha de ruta">📅 Reasignar día</button>
+    <button class="btn btn-danger btn-sm" onclick="quitarDeRuta('${c.id_hex}')" title="Volver a estado validada">↩ Quitar de ruta</button>
+    ` : ''}
     <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
   `;
   document.getElementById('modal-overlay').classList.add('active');
@@ -3472,6 +3478,90 @@ async function confirmarGenerarRuta() {
 }
 
 // ── Export Optiroute ──
+// ── Reasignar día de ruta ──
+async function reasignarRuta(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Reasignar día de ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:6px;"><strong>${c.rol}</strong> — ${c.demandado || ''}</p>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">Fecha actual: <strong>${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</strong></p>
+    <label style="font-size:12px; font-weight:600;">Nueva fecha de ruta:</label>
+    <input type="date" id="input-reasignar-fecha" value="${c.fecha_ruta || new Date().toISOString().slice(0,10)}" style="width:100%; margin-top:4px;">
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="confirmarReasignar('${hex}')">Confirmar</button>
+  `;
+}
+
+async function confirmarReasignar(hex) {
+  const nuevaFecha = document.getElementById('input-reasignar-fecha').value;
+  if (!nuevaFecha) { showToast('⚠ Selecciona una fecha', 'warn'); return; }
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  payload.fecha_ruta = nuevaFecha;
+  payload.historial.push({
+    accion: 'reasignacion_ruta', fecha: new Date().toISOString(),
+    fecha_ruta: nuevaFecha, usuario: currentUser.nombre
+  });
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+    c.fecha_ruta = nuevaFecha;
+    actualizarIndex();
+    closeModal();
+    renderRuta();
+    renderRutaDia();
+    renderCalRuta();
+    showToast(`📅 Reasignada al ${nuevaFecha.split('-').reverse().join('/')}`, 'success');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+// ── Quitar de ruta (volver a validada) ──
+async function quitarDeRuta(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Quitar de ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:10px;">
+      ¿Quitar <strong>${c.rol}</strong> de la ruta del <strong>${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</strong>?
+    </p>
+    <p style="font-size:12px; color:var(--muted);">La causa volverá al estado <strong>Validada</strong> y podrá reasignarse a otra ruta.</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-danger btn-sm" onclick="confirmarQuitarDeRuta('${hex}')">↩ Quitar de ruta</button>
+  `;
+}
+
+async function confirmarQuitarDeRuta(hex) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  payload.estado = 'validada';
+  payload.fecha_ruta = '';
+  payload.historial.push({
+    accion: 'quitada_de_ruta', fecha: new Date().toISOString(), usuario: currentUser.nombre
+  });
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+    c.estado = 'validada';
+    c.fecha_ruta = '';
+    actualizarIndex();
+    closeModal();
+    renderRuta();
+    renderRutaDia();
+    renderCalRuta();
+    renderCausas();
+    showToast('↩ Causa quitada de ruta — vuelve a Validada', 'success');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
 // Extraer solo calle + numeración (sin depto/casa/torre/edif/block)
 function _calleNumero(dir) {
   if (!dir) return '';
