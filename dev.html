@@ -950,10 +950,18 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   </select>
                   <span class="error-msg">Obligatorio</span>
                 </div>
-                <div class="field span2">
+                <div class="field span2" id="fw-abogado_procurador">
                   <label>Abogado / Procurador</label>
                   <input type="text" name="abogado_procurador" id="f-abogado_procurador" placeholder="Nombre" autocomplete="off">
-                  <span class="hint">Opcional</span>
+                  <select id="f-abogado_procurador-select" style="display:none;">
+                    <option value="">(seleccionar abogado)</option>
+                    <option value="MIRIAM FUENTES">MIRIAM FUENTES</option>
+                    <option value="CATALINA FUENTES">CATALINA FUENTES</option>
+                    <option value="__otro__">Otro (escribir nombre)</option>
+                  </select>
+                  <input type="text" id="f-abogado_procurador-otro" placeholder="Nombre del abogado" style="display:none; margin-top:4px;" autocomplete="off">
+                  <span class="hint" id="hint-abogado">Opcional</span>
+                  <span class="error-msg">Selecciona el abogado/procurador de Socofin</span>
                 </div>
                 <div class="field span2" id="fw-tipo_diligencia">
                   <label>Tipo Diligencia</label>
@@ -2032,7 +2040,23 @@ document.querySelectorAll('#view-ingreso input:not([readonly]), #view-ingreso se
   });
 
 // Tipo diligencia → observación obligatoria + autocompletar piezas
-document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); });
+// Autocompletar notificar_a y dirección para CBR
+function autocompletarCBR() {
+  const tipo = fval('tipo_diligencia');
+  if (tipo !== 'ALZAMIENTO-CBR' && tipo !== 'EMBARGO-CBR') return;
+  const CBR_NOTIF = 'SR. CONSERVADOR DE BIENES RAÍCES DE ANTOFAGASTA';
+  const CBR_DIR = 'Gral. Manuel Baquedano N°229';
+  const notifEl = document.getElementById('f-notificar_a');
+  const dirEl = document.getElementById('f-direccion');
+  const tieneContenido = notifEl.value.trim() || dirEl.value.trim();
+  if (tieneContenido) {
+    if (!confirm('¿Sobreescribir Notificar a y Dirección con los valores del CBR?')) return;
+  }
+  notifEl.value = CBR_NOTIF;
+  dirEl.value = CBR_DIR;
+}
+
+document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); autocompletarCBR(); });
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
@@ -2143,7 +2167,41 @@ function evaluarPagare() {
   document.getElementById('f-n_pagare').placeholder = obligatorio ? 'Obligatorio' : 'Opcional';
 }
 
-document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); });
+// Abogado/Procurador: selector para Socofin, texto libre para el resto
+function evaluarAbogado() {
+  const estudio = fval('estudio');
+  const input = document.getElementById('f-abogado_procurador');
+  const select = document.getElementById('f-abogado_procurador-select');
+  const otro = document.getElementById('f-abogado_procurador-otro');
+  const hint = document.getElementById('hint-abogado');
+  if (estudio === 'Socofin') {
+    input.style.display = 'none';
+    select.style.display = '';
+    hint.textContent = 'Obligatorio';
+    // Si el input tenía valor y coincide con una opción, seleccionarla
+    const prev = input.value.trim();
+    if (prev) {
+      const match = Array.from(select.options).find(o => o.value === prev);
+      if (match) select.value = prev;
+      else { select.value = '__otro__'; otro.style.display = ''; otro.value = prev; }
+    }
+  } else {
+    select.style.display = 'none';
+    otro.style.display = 'none';
+    select.value = '';
+    otro.value = '';
+    input.style.display = '';
+    hint.textContent = 'Opcional';
+    document.getElementById('fw-abogado_procurador').classList.remove('has-error');
+  }
+}
+document.getElementById('f-abogado_procurador-select').addEventListener('change', function() {
+  const otro = document.getElementById('f-abogado_procurador-otro');
+  if (this.value === '__otro__') { otro.style.display = ''; otro.focus(); }
+  else { otro.style.display = 'none'; otro.value = ''; }
+});
+
+document.getElementById('f-estudio').addEventListener('change', () => { evaluarDemandante(); evaluarBancoRepresentado(); evaluarPagare(); evaluarAbogado(); });
 document.getElementById('f-demandante').addEventListener('input', () => { evaluarBancoRepresentado(); evaluarPagare(); });
 document.getElementById('f-demandante-select').addEventListener('change', () => { evaluarBancoRepresentado(); evaluarPagare(); });
 
@@ -2193,6 +2251,13 @@ function fval(name) {
   if (name === 'demandante') {
     const sel = document.getElementById('f-demandante-select');
     if (sel && sel.style.display !== 'none') return sel.value.trim();
+  }
+  if (name === 'abogado_procurador') {
+    const sel = document.getElementById('f-abogado_procurador-select');
+    if (sel && sel.style.display !== 'none') {
+      if (sel.value === '__otro__') return document.getElementById('f-abogado_procurador-otro').value.trim();
+      return sel.value.trim();
+    }
   }
   const el = document.getElementById('f-' + name);
   return el ? el.value.trim() : '';
@@ -2363,6 +2428,12 @@ async function guardarCausa(estadoInicial) {
     document.getElementById('fw-banco_representado').classList.add('has-error');
     return;
   }
+  // Validación condicional: abogado obligatorio para Socofin
+  if (fval('estudio') === 'Socofin' && !fval('abogado_procurador')) {
+    showToast('⚠ Selecciona el abogado/procurador de Socofin', 'warn');
+    document.getElementById('fw-abogado_procurador').classList.add('has-error');
+    return;
+  }
   // Validación condicional: N° Pagaré / N° Operación
   if (document.getElementById('f-n_pagare').required && !fval('n_pagare')) {
     showToast('⚠ Ingresa el N° Pagaré / N° Operación para este estudio y demandante', 'warn');
@@ -2370,12 +2441,16 @@ async function guardarCausa(estadoInicial) {
     return;
   }
 
-  const accion = estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso';
+  // Cambio 6: tipos de gestión directa siempre van con estado especial
+  const tipoDigSel = fval('tipo_diligencia');
+  const esGD = esGestionDirecta(tipoDigSel);
+  const estadoFinal = esGD ? 'gestion_directa_receptora' : estadoInicial;
+  const accion = esGD ? 'ingreso_gestion_directa' : (estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso');
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas-dev/
   const payload = {
     id_hex:  currentHex,
-    estado:  estadoInicial,
+    estado:  estadoFinal,
     datos: {
       fecha_solicitud:   fval('fecha_solicitud'),
       nro_solicitud:     fval('n_solicitud'),
@@ -2838,8 +2913,14 @@ async function cargarCausaCompleta(hex) {
     const data = await DBX.download(`/causas-dev/${hex}_CAUSA.json`);
     if (data) {
       c._causa_json = data;
-      // Sincronizar estado por si cambió
+      // Sincronizar estado y campos que no están en INDEX.json
       c.estado = data.estado;
+      if (data.datos) {
+        c.piezas = data.datos.piezas || '';
+        c.abogado_procurador = data.datos.abogado_procurador || '';
+        c.observacion = data.datos.comentario || '';
+        c.comentario = data.datos.comentario || '';
+      }
     }
     return data;
   } catch(err) {
@@ -2952,8 +3033,8 @@ document.getElementById('btn-limpiar-filtros').addEventListener('click', () => {
   renderCausas();
 });
 
-function verCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
+async function verCausa(hex) {
+  const c = await asegurarCausaCompleta(hex);
   if (!c) return;
   document.getElementById('modal-title').textContent = 'Causa — ' + (c.rol || hex.slice(0,8));
   document.getElementById('modal-body').innerHTML = `
@@ -2961,18 +3042,20 @@ function verCausa(hex) {
       <div style="flex:1;">
         <div id="modal-campos" style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
           <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol || '—'}</strong></div>
+          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud || c.nro_solicitud || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
+          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
           <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
-          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
+          ${c.abogado_procurador ? `<div><span style="color:var(--muted); font-size:11px;">ABOGADO / PROCURADOR</span><br>${c.abogado_procurador}</div>` : ''}
           <div><span style="color:var(--muted); font-size:11px;">FECHA RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
+          <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
@@ -3004,8 +3087,8 @@ function verCausa(hex) {
   document.getElementById('modal-overlay').classList.add('active');
 }
 
-function editarCausa(hex) {
-  const c = causas.find(x => x.id_hex === hex);
+async function editarCausa(hex) {
+  const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
   // Clonar opciones del select tribunal del formulario
@@ -3044,6 +3127,7 @@ function editarCausa(hex) {
     ['demandado', 'Demandado', c.demandado],
     ['rut', 'RUT', c.rut],
     ['estudio', 'Estudio', c.estudio || c.estudio_juridico],
+    ['abogado_procurador', 'Abogado/Procurador', c.abogado_procurador],
     ['direccion', 'Dirección', c.direccion, true],
     ['notificar_a', 'Notificar a', c.notificar_a, true],
     ['piezas', 'Piezas', c.piezas, true],
@@ -3056,12 +3140,18 @@ function editarCausa(hex) {
   // Tipo diligencia select
   html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
   // Campos texto
-  html += camposTexto.map(([key, label, val, span]) =>
-    `<div class="${span ? 'span2' : ''}">
+  html += camposTexto.map(([key, label, val, span]) => {
+    if (key === 'piezas') {
+      return `<div class="span2">
+        <label style="${lbl}">${label}</label>
+        <textarea id="edit-${key}" style="${inp}; min-height:80px; resize:vertical; width:100%;" oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">${(val||'').replace(/</g,'&lt;')}</textarea>
+      </div>`;
+    }
+    return `<div class="${span ? 'span2' : ''}">
       <label style="${lbl}">${label}</label>
       <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="${inp}">
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 
   document.getElementById('modal-campos').innerHTML = html;
 
@@ -3076,7 +3166,7 @@ async function guardarEdicion(hex) {
   if (!c) return;
 
   const camposEditables = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
-    'estudio','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
+    'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
   const modificados = [];
   const payload = c._causa_json;
 
@@ -3939,6 +4029,7 @@ function estadoBadge(estado) {
     'estampada':            ['tag-green','Estampada'],
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
     'cerrada':              ['tag-gray','Cerrada'],
+    'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
   return `<span class="tag ${cls}">${label}</span>`;
