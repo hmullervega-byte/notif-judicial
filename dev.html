@@ -1176,6 +1176,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="lista_para_estampe">Lista para estampe</option>
             <option value="estampada">Estampada</option>
             <option value="boleta_emitida">Boleta emitida</option>
+            <option value="suspendida">Suspendida</option>
           </select>
           <button class="btn btn-secondary btn-sm" id="btn-limpiar-filtros" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
         </div>
@@ -1210,6 +1211,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <input type="date" id="filter-fecha-hasta" style="max-width:140px;">
           <span id="causas-sel-count" style="font-size:11px; color:var(--blue); font-weight:600; white-space:nowrap; display:none;">0 seleccionadas</span>
           <button class="btn btn-primary btn-sm" id="btn-exportar-correspondencia" onclick="exportarCorrespondencia()" style="white-space:nowrap;">⬇ Exportar Excel</button>
+          <button class="btn btn-sm" id="btn-suspender-causa" onclick="iniciarSuspension()" style="display:none; background:#ef4444; color:#fff; font-weight:600; white-space:nowrap;">Suspender</button>
         </div>
 
         <div class="card">
@@ -3333,9 +3335,27 @@ async function verCausa(hex) {
 
   // Protección estado "cerrada": solo Darth puede editar/reabrir
   const esCerrada = c.estado === 'cerrada';
+  const esSuspendida = c.estado === 'suspendida';
   const esDarth = currentUser?.perfil === 'darth';
   let footerHtml = '';
-  if (esCerrada) {
+  if (esSuspendida) {
+    // Mostrar motivo de suspensión en recuadro rojo
+    const hist = c._causa_json?.historial || [];
+    const susp = [...hist].reverse().find(h => h.accion === 'suspension');
+    if (susp) {
+      document.getElementById('modal-campos').insertAdjacentHTML('afterend',
+        `<div style="margin-top:.75rem; padding:.5rem .75rem; background:#fee2e2; border:1px solid #fca5a5; border-radius:4px; font-size:12px; color:#b91c1c;">
+          <strong>⛔ Suspendida:</strong> ${susp.motivo}
+          <div style="font-size:10px; color:#991b1b; margin-top:4px;">${susp.usuario || '—'} · ${susp.fecha ? new Date(susp.fecha).toLocaleString('es-CL') : ''}</div>
+        </div>`);
+    }
+    if (esDarth) {
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="mostrarReactivar('${c.id_hex}')" title="Reactivar causa suspendida">Reactivar causa</button>`;
+      footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
+    }
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  } else if (esCerrada) {
     if (esDarth) {
       footerHtml += `<button class="btn btn-warning btn-sm" onclick="reabrirCausa('${c.id_hex}')" title="Reabrir causa cerrada">🔓 Reabrir causa</button>`;
       footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
@@ -3423,6 +3443,7 @@ async function editarCausa(hex) {
       ['estampada','Estampada'],
       ['boleta_emitida','Boleta emitida'],
       ['cerrada','Cerrada'],
+      ['suspendida','Suspendida'],
     ];
     const estadoOpts = estados.map(([v,l]) =>
       `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
@@ -4363,6 +4384,9 @@ function _actualizarSelUI() {
   if (chkAll && _lastFilteredHexes.length > 0) {
     chkAll.checked = _lastFilteredHexes.every(h => causasSeleccionadas.has(h));
   }
+  // Botón SUSPENDER: visible solo con exactamente 1 seleccionada
+  const btnSusp = document.getElementById('btn-suspender-causa');
+  if (btnSusp) btnSusp.style.display = n === 1 ? '' : 'none';
 }
 
 // Normalizar tribunal a nombre completo para Excel
@@ -4750,6 +4774,7 @@ function estadoBadge(estado) {
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
     'cerrada':              ['tag-gray','Cerrada'],
     'devuelta':             ['tag-orange','Devuelta'],
+    'suspendida':           ['tag-red','Suspendida'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
@@ -4872,6 +4897,129 @@ async function marcarGestionTerminada(hex) {
     <button class="btn btn-success btn-sm" onclick="confirmarCierreGestion('${hex}')">Confirmar cierre</button>
   `;
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// SUSPENDER / REACTIVAR CAUSA
+// ══════════════════════════════════════════════
+function iniciarSuspension() {
+  if (causasSeleccionadas.size !== 1) {
+    showToast('Selecciona exactamente una causa para suspender', 'error');
+    return;
+  }
+  const hex = [...causasSeleccionadas][0];
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Suspender causa ' + (c.rol || hex.slice(0,8));
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">
+      <strong>${c.demandado || '—'}</strong> — ${c.direccion || ''}
+    </p>
+    <div class="field">
+      <label>Motivo de la suspensión <span class="req">*</span></label>
+      <textarea id="suspension-motivo" rows="3" placeholder="Motivo de la suspensión (obligatorio)" oninput="document.getElementById('btn-confirmar-suspension').disabled = this.value.trim().length < 10"></textarea>
+    </div>
+    <p style="font-size:11px; color:var(--muted); margin-top:.25rem;">Mínimo 10 caracteres</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-sm" id="btn-confirmar-suspension" style="background:#ef4444; color:#fff; font-weight:600;" disabled onclick="confirmarSuspension('${hex}')">Confirmar suspensión</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('suspension-motivo').focus(), 100);
+}
+
+async function confirmarSuspension(hex) {
+  const motivo = document.getElementById('suspension-motivo').value.trim();
+  if (motivo.length < 10) { showToast('El motivo debe tener al menos 10 caracteres', 'warn'); return; }
+
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+
+  const payload = c._causa_json;
+  payload.estado = 'suspendida';
+  if (!payload.historial) payload.historial = [];
+  payload.historial.push({
+    accion: 'suspension',
+    motivo: motivo,
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre || currentUser.username
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+    c.estado = 'suspendida';
+    c._causa_json = payload;
+    causasSeleccionadas.delete(hex);
+    _actualizarSelUI();
+    await actualizarIndex();
+    closeModal();
+    renderCausas();
+    buildDashboard();
+    showToast(`Causa ${c.rol || hex.slice(0,8)} suspendida`, 'success');
+  } catch(e) {
+    console.error('Error al suspender:', e);
+    showToast('Error al suspender: ' + e.message, 'error');
+  }
+}
+
+function mostrarReactivar(hex) {
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  const estados = [
+    ['ingresada','Ingresada'],
+    ['pendiente_validacion','Pendiente validación'],
+    ['devuelta','Devuelta'],
+    ['validada','Validada'],
+    ['en_ruta','En ruta'],
+    ['gestion_directa_receptora','Gestión Directa'],
+    ['resultado_registrado','Resultado registrado'],
+    ['lista_para_estampe','Lista para estampe'],
+    ['estampada','Estampada'],
+    ['boleta_emitida','Boleta emitida'],
+    ['cerrada','Cerrada'],
+  ];
+  const opts = estados.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+  document.getElementById('modal-title').textContent = 'Reactivar causa — ' + (c.rol || hex.slice(0,8));
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">Selecciona el estado al que volver:</p>
+    <select id="reactivar-estado" style="width:100%; padding:6px 8px; border-radius:4px; border:1px solid var(--border);">${opts}</select>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-success btn-sm" onclick="confirmarReactivar('${hex}')">Reactivar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function confirmarReactivar(hex) {
+  const nuevoEstado = document.getElementById('reactivar-estado').value;
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+
+  const payload = c._causa_json;
+  payload.estado = nuevoEstado;
+  if (!payload.historial) payload.historial = [];
+  payload.historial.push({
+    accion: 'reactivacion',
+    estado_nuevo: nuevoEstado,
+    fecha: new Date().toISOString(),
+    usuario: 'helmuth'
+  });
+
+  try {
+    if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+    c.estado = nuevoEstado;
+    c._causa_json = payload;
+    await actualizarIndex();
+    closeModal();
+    renderCausas();
+    buildDashboard();
+    showToast(`Causa ${c.rol || hex.slice(0,8)} reactivada`, 'success');
+  } catch(e) {
+    console.error('Error al reactivar:', e);
+    showToast('Error al reactivar: ' + e.message, 'error');
+  }
 }
 
 async function reabrirCausa(hex) {
