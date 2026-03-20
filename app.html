@@ -1777,10 +1777,15 @@ document.getElementById('btn-config-save').addEventListener('click', () => {
 // USUARIOS — placeholder, se reemplaza al final
 // ══════════════════════════════════════════════
 const USERS = {
-  'marco':  { pass: '', perfil: 'padawan', nombre: 'Marco' },
-  'receptora': { pass: '', perfil: 'jedi',    nombre: 'Receptora' },
-  'helmuth':{ pass: '', perfil: 'darth',   nombre: 'Helmuth' }
+  'macosta':  { hash: 'e8d3c5dd23aa297cfa26ea27989a17ffcadaaba3303690e3d7f74990de16f91f', perfil: 'padawan', nombre: 'Marco' },
+  'mcarreño': { hash: '1ba2643c8d1b291139d73ea9d5fd095d1e996bfd476d944bdf0f5ff3d34969fd', perfil: 'jedi',    nombre: 'Receptora' },
+  'hmuller':  { hash: '1d813aa3a6c496be75fe7e88da35cbce437cd0fc289a10f5c45ed25937006d30', perfil: 'darth',   nombre: 'Helmuth' }
 };
+
+async function hashPassword(pass) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const PERFILES = {
   padawan: {
@@ -1844,13 +1849,24 @@ document.getElementById('login-pass').addEventListener('keydown', e => {
 });
 document.getElementById('btn-login').addEventListener('click', doLogin);
 
-function doLogin() {
+async function doLogin() {
   const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
   const err  = document.getElementById('login-error');
 
   if (!USERS[user]) {
     err.textContent = 'Usuario no existe';
     document.getElementById('login-user').classList.add('err');
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none'; box.offsetHeight;
+    box.style.animation = 'shake .35s ease';
+    return;
+  }
+
+  const h = await hashPassword(pass);
+  if (h !== USERS[user].hash) {
+    err.textContent = 'Contraseña incorrecta';
+    document.getElementById('login-pass').classList.add('err');
     const box = document.querySelector('.login-box');
     box.style.animation = 'none'; box.offsetHeight;
     box.style.animation = 'shake .35s ease';
