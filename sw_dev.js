@@ -1,7 +1,9 @@
-const CACHE_NAME = 'notif-dev-v1';
+const CACHE_NAME = 'notif-dev-v2';
 const URLS_TO_CACHE = [
   '/notif-judicial/webapp_dev.html',
-  '/notif-judicial/manifest_dev.json'
+  '/notif-judicial/manifest_dev.json',
+  '/notif-judicial/jsqr.min.js',
+  '/notif-judicial/Logo_pjud.png'
 ];
 
 self.addEventListener('install', event => {
@@ -21,9 +23,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // No interceptar Dropbox API ni Google Fonts
+  // No interceptar Dropbox API
   const url = new URL(event.request.url);
-  if (url.hostname.includes('dropbox') || url.hostname.includes('googleapis')) return;
+  if (url.hostname.includes('dropbox')) return;
   if (event.request.method !== 'GET') return;
 
   // Stale While Revalidate: servir caché inmediato + actualizar en background
