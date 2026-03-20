@@ -4353,10 +4353,22 @@ async function exportarCorrespondencia() {
   // Limpiar monto (solo número sin $)
   const limpiarMonto = (m) => { if (!m) return ''; return String(m).replace(/[$.\s]/g, '').trim(); };
 
-  const headers = ['ROL','Juzgado','Demandante','Demandado','Rut Demandado','Domicilio','Ciudad','Monto Mandamiento','Tipo Notificación','Piezas','Notificar a','Fecha Solicitud','','','Estudio','N° Solicitud',''];
+  // Normalizar tribunal a nombre completo para Excel
+  const _tribNombreMap = {'1':'Primero','2':'Segundo','3':'Tercero','4':'Cuarto','5':'Quinto'};
+  const _tribTextoMap = {'primer':'Primero','segund':'Segundo','tercer':'Tercero','cuart':'Cuarto','quint':'Quinto'};
+  function _tribExcel(t) {
+    if (!t) return '';
+    const numMatch = t.match(/(\d)/);
+    if (numMatch) return _tribNombreMap[numMatch[1]] || t;
+    const txtMatch = t.toLowerCase().match(/primer|segund|tercer|cuart|quint/);
+    if (txtMatch) return _tribTextoMap[txtMatch[0]] || t;
+    return t;
+  }
+
+  const headers = ['ROL','Juzgado','Demandante','Demandado','Rut Demandado','Domicilio','Ciudad','Monto Mandamiento','Tipo Notificación','Piezas','Notificar a','Fecha Solicitud','Fecha Notificación','Resultado Notificación','Estudio','N° Solicitud','Derechos'];
   const rows = resultados.map(r => [
     r.rol,
-    normalizarTribunal(r.tribunal),
+    _tribExcel(r.tribunal),
     r.demandante,
     r.demandado,
     r.rut,
