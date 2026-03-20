@@ -870,52 +870,6 @@
       <div style="font-family:var(--mono); font-size:12px; color:#e8c46a; margin-bottom:4px;">REQUERIMIENTO DE PAGO</div>
       <div style="font-size:13px; color:var(--text2);" id="rpprf-desc">Solo se registra fecha y hora.</div>
     </div>
-
-    <!-- E11: Resultado requerimiento — 4 options -->
-    <div class="section-title" style="margin-top:12px">Resultado del requerimiento</div>
-    <div class="radio-group" id="rpp-resultado-group">
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','no_pago')">
-        <input type="radio" name="rpp_resultado"> No efectuó el pago
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','firmo')">
-        <input type="radio" name="rpp_resultado"> Tomó conocimiento y firmó conforme
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','nego')">
-        <input type="radio" name="rpp_resultado"> Se negó a firmar
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','rebeldia')">
-        <input type="radio" name="rpp_resultado"> No compareció — rebeldía
-      </label>
-    </div>
-
-    <!-- E12: Lugar requerimiento -->
-    <div class="section-title" style="margin-top:12px">Lugar del requerimiento</div>
-    <div class="toggle-row" id="rpp-lugar-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'subtipo_rpp','domicilio')">Domicilio</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'subtipo_rpp','oficina')">Oficina receptora</button>
-    </div>
-
-    <!-- E13: Resultado embargo -->
-    <div id="seccion-embargo-resultado" style="display:none">
-      <div class="section-title" style="margin-top:12px">Resultado del embargo</div>
-      <div class="radio-group" id="emb-resultado-group">
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','efectivo')">
-          <input type="radio" name="resultado_embargo"> Efectivo
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','sin_bienes')">
-          <input type="radio" name="resultado_embargo"> Sin bienes suficientes
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','laboral')">
-          <input type="radio" name="resultado_embargo"> Domicilio laboral
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','oposicion')">
-          <input type="radio" name="resultado_embargo"> Oposición del ejecutado
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','rebeldia')">
-          <input type="radio" name="resultado_embargo"> En rebeldía
-        </label>
-      </div>
-    </div>
   </div>
 
   <!-- ── BN: Familia 1 (D-codes) ── -->
@@ -1197,18 +1151,6 @@
     </div>
   </div>
 
-  <!-- ── E05: Calidad del notificado (BP, NOT44, CED, NP) ── -->
-  <div id="seccion-calidad-notificado" style="display:none">
-    <div class="section-title" style="margin-top:12px">Calidad del notificado</div>
-    <div class="quick-select-grid">
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','fiador/a y codeudor/a solidario/a')">fiador/a y codeudor/a solidario/a</button>
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','deudor/a principal')">deudor/a principal</button>
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','representante empresa')">representante empresa</button>
-    </div>
-    <div class="obs-box" style="margin-top:6px">
-      <input type="text" id="texto-calidad-notificado" placeholder="Texto libre..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;" autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-  </div>
 
   <!-- ── E16: Tipo demandado (CED/NP) ── -->
   <div id="seccion-tipo-demandado" style="display:none">
@@ -2192,8 +2134,6 @@ function updateTipoSections() {
   show('seccion-domicilio-laboral', t === 'BP' || t === 'NOT44');
   // E23: obs acceso for BP/NOT44
   show('seccion-obs-acceso', t === 'BP' || t === 'NOT44');
-  // E05: calidad notificado for BP, NOT44, CED, NP
-  show('seccion-calidad-notificado', t === 'BP' || t === 'NOT44' || t === 'CED' || t === 'NP');
   // E16: tipo demandado for CED/NP
   show('seccion-tipo-demandado', t === 'CED' || t === 'NP');
 
@@ -2203,8 +2143,6 @@ function updateTipoSections() {
   show('seccion-emb',  t === 'EMB');
   show('seccion-embf', t === 'EMBF');
 
-  // E11/E13: RPP/RPF sub-sections
-  show('seccion-embargo-resultado', t === 'RPP' || t === 'RPF');
 
   const lbl = document.getElementById('seccion-quien-label');
   if (lbl) {
@@ -2723,9 +2661,9 @@ function resetSelections() {
   });
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
    'seccion-not44-n44','seccion-not44-cit',
-   'seccion-domicilio-laboral','seccion-obs-acceso','seccion-calidad-notificado',
+   'seccion-domicilio-laboral','seccion-obs-acceso',
    'seccion-tipo-demandado','seccion-ced','seccion-np','seccion-emb','seccion-embf',
-   'seccion-embargo-resultado'].forEach(c => show(c, false));
+   ].forEach(c => show(c, false));
   show('hora-block', true);
   document.getElementById('obs-input').value = '';
 }
@@ -2891,12 +2829,7 @@ async function enviarResultado() {
   }
 
   else if (t === 'RPP' || t === 'RPF') {
-    // E11: resultado requerimiento
-    if (state.selections.rpp_resultado) codigos.push('rpp_resultado:' + state.selections.rpp_resultado);
-    // E12: subtipo RPP
-    if (state.selections.subtipo_rpp) codigos.push('subtipo_rpp:' + state.selections.subtipo_rpp);
-    // E13: resultado embargo
-    if (state.selections.resultado_embargo) codigos.push('resultado_embargo:' + state.selections.resultado_embargo);
+    // Simple: solo fecha y hora
   }
 
   else if (t === 'CED') {
@@ -2960,11 +2893,6 @@ async function enviarResultado() {
     if (obsAcceso) codigos.push('obs_acceso:' + obsAcceso);
   }
 
-  // E05: calidad notificado for BP/NOT44/CED/NP
-  if (['BP','NOT44','CED','NP'].includes(t)) {
-    const calNot = document.getElementById('texto-calidad-notificado')?.value.trim();
-    if (calNot) codigos.push('calidad_notificado:' + calNot);
-  }
 
   // E16: tipo demandado for CED/NP
   if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
@@ -2997,11 +2925,6 @@ async function enviarResultado() {
     if (horaCita) payload.hora_cita = horaCita;
   }
 
-  // E05: calidad_notificado as top-level field
-  if (['BP','NOT44','CED','NP'].includes(t)) {
-    const calNot = document.getElementById('texto-calidad-notificado')?.value.trim();
-    if (calNot) payload.calidad_notificado = calNot;
-  }
 
   // E16: tipo_demandado as top-level field
   if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
@@ -3012,9 +2935,6 @@ async function enviarResultado() {
   if (state.selections.resultado_np)    payload.resultado_np = state.selections.resultado_np;
   if (state.selections.verificacion_id) payload.verificacion_id = state.selections.verificacion_id;
   if (state.selections.tipo_causa)      payload.tipo_causa = state.selections.tipo_causa;
-  if (state.selections.rpp_resultado)   payload.resultado_rpp = state.selections.rpp_resultado;
-  if (state.selections.subtipo_rpp)     payload.subtipo_rpp = state.selections.subtipo_rpp;
-  if (state.selections.resultado_embargo) payload.resultado_embargo = state.selections.resultado_embargo;
   if (state.selections.parte_notificada) payload.parte_notificada = state.selections.parte_notificada;
   if (state.selections.metodo_entrega)  payload.metodo_entrega = state.selections.metodo_entrega;
   if (state.selections.motivo_embf)     payload.motivo_embf = state.selections.motivo_embf;
