@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Notif Judicial — DEV</title>
+<link rel="manifest" href="manifest_dev.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
@@ -1518,20 +1523,27 @@ window.onload = () => {
   const lastScreen = localStorage.getItem('notif_last_screen');
   if (lastScreen) localStorage.removeItem('notif_last_screen');
 
-  // Forzar todas las pantallas a estado limpio
+  // Reset agresivo del DOM — Chrome puede restaurar estado visual sucio
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  // Resetear state de JS que pudo quedar sucio
+  document.querySelectorAll('button').forEach(b => { b.disabled = false; b.style.pointerEvents = ''; });
+  document.getElementById('camera-container').classList.remove('active');
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.querySelectorAll('.loading').forEach(l => l.classList.remove('active'));
+
+  // Resetear state JS
   state.idHex = null;
   state.causaData = null;
   state.resultadoPrevio = null;
   state.videoStream = null;
   state.scanActive = false;
 
+  // Mostrar pantalla principal INMEDIATAMENTE (sin esperar red)
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
     showScreen('scan');
   }
+
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
   // 1. Inicializar offline/pendientes PRIMERO (muestra banner inmediatamente)
@@ -1539,12 +1551,20 @@ window.onload = () => {
   // 2. Cargar INDEX_RESPALDO desde localStorage (instantáneo, sin red)
   cargarIndexDesdeLS();
   actualizarIndexInfo();
-  // 3. Solo si hay conexión, intentar refresh en background
+  // 3. Background: refresh token + index (no bloquea pantalla)
   if (state.refreshToken && state.appKey && state.appSecret && navigator.onLine) {
+    // Renovar token en background — no bloquea el render
+    getAccessToken().catch(e => console.warn('Token refresh background:', e));
     const edad = Date.now() - indexTsLocal();
     if (edad > INDEX_CACHE_TTL || !_indexCache) {
       descargarIndex().catch(e => console.warn('Refresh background falló:', e));
     }
+  }
+
+  // Registrar Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/notif-judicial/sw_dev.js')
+      .catch(e => console.warn('SW registro falló:', e));
   }
 };
 
