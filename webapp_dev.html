@@ -720,6 +720,7 @@
   <div style="margin-top:20px; text-align:center;">
     <button class="btn btn-secondary" onclick="forzarActualizacion()" style="font-size:12px; padding:6px 16px;">↻ Actualizar datos</button>
     <div id="index-info" style="font-size:11px; color:var(--text2); margin-top:6px;"></div>
+    <div id="timing-info" style="font-size:10px; color:var(--accent2); margin-top:4px; font-family:var(--mono); opacity:0.7;"></div>
   </div>
 </div>
 
@@ -1520,7 +1521,9 @@ let state = {
 
 // ── INIT ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  console.time('total-init');
+  const _t0 = performance.now();
+  const _timings = {};
+
   // Detectar si Chrome restauró una sesión previa (DOM en estado sucio)
   const lastScreen = localStorage.getItem('notif_last_screen');
   if (lastScreen) localStorage.removeItem('notif_last_screen');
@@ -1540,13 +1543,12 @@ document.addEventListener('DOMContentLoaded', () => {
   state.scanActive = false;
 
   // Mostrar pantalla principal INMEDIATAMENTE (sin esperar red)
-  console.time('show-scanner');
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
     showScreen('scan');
   }
-  console.timeEnd('show-scanner');
+  _timings.carga = Math.round(performance.now() - _t0);
 
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
@@ -1555,22 +1557,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Cargar INDEX_RESPALDO desde localStorage (instantáneo, sin red)
   cargarIndexDesdeLS();
   actualizarIndexInfo();
+
   // 3. Background: refresh token + index (no bloquea pantalla)
-  if (state.refreshToken && state.appKey && state.appSecret && navigator.onLine) {
-    // Renovar token en background — no bloquea el render
-    getAccessToken().catch(e => console.warn('Token refresh background:', e));
-    const edad = Date.now() - indexTsLocal();
-    if (edad > INDEX_CACHE_TTL || !_indexCache) {
-      descargarIndex().catch(e => console.warn('Refresh background falló:', e));
-    }
-  }
+  const _tToken = performance.now();
+  const tokenPromise = (state.refreshToken && state.appKey && state.appSecret && navigator.onLine)
+    ? getAccessToken().then(() => { _timings.token = Math.round(performance.now() - _tToken); })
+                       .catch(() => { _timings.token = 'err'; })
+    : Promise.resolve().then(() => { _timings.token = 'skip'; });
+
+  const _tIndex = performance.now();
+  const indexPromise = (state.refreshToken && state.appKey && state.appSecret && navigator.onLine
+    && (Date.now() - indexTsLocal() > INDEX_CACHE_TTL || !_indexCache))
+    ? descargarIndex().then(() => { _timings.index = Math.round(performance.now() - _tIndex); })
+                       .catch(() => { _timings.index = 'err'; })
+    : Promise.resolve().then(() => { _timings.index = 'skip'; });
+
+  // Mostrar timings cuando las operaciones async terminen
+  Promise.all([tokenPromise, indexPromise]).then(() => {
+    const txt = `Carga: ${_timings.carga}ms | Token: ${_timings.token}${typeof _timings.token === 'number' ? 'ms' : ''} | Index: ${_timings.index}${typeof _timings.index === 'number' ? 'ms' : ''}`;
+    const el = document.getElementById('timing-info');
+    if (el) { el.textContent = txt; setTimeout(() => { el.textContent = ''; }, 5000); }
+    console.log('⏱ ' + txt);
+  });
 
   // Registrar Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/notif-judicial/sw_dev.js')
       .catch(e => console.warn('SW registro falló:', e));
   }
-  console.timeEnd('total-init');
 });
 
 // ── NAVEGACIÓN ───────────────────────────
