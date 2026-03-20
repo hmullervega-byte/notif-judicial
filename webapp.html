@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Notif Judicial · Terreno</title>
+<title>Notif Judicial — DEV</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
@@ -603,6 +603,9 @@
 </head>
 <body>
 
+<!-- BANNER DESARROLLO -->
+<div style="background:#facc15; color:#000; text-align:center; font-weight:700; font-size:14px; padding:6px 0; position:sticky; top:0; z-index:9999; letter-spacing:1px;">MODO DESARROLLO</div>
+
 <!-- HEADER -->
 <header>
   <div>
@@ -761,7 +764,56 @@
 
   <div class="bottom-actions">
     <button class="btn btn-primary" onclick="showScreen('resultado')">Registrar resultado →</button>
+    <button class="btn btn-secondary" id="btn-editar-causa" onclick="mostrarEdicionCausa()" style="margin-top:10px; display:none;">✏ Editar datos</button>
     <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: EDITAR CAUSA                    -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-editar-causa">
+  <div style="background:#fef3c7; border:1px solid #fbbf24; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#92400e; line-height:1.4;">
+    Estos datos provienen de la demanda judicial. Modificar solo si hay un error de ingreso.
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">ROL</label>
+      <input type="text" id="edit-causa-rol" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Tribunal</label>
+      <select id="edit-causa-tribunal" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;">
+        <option value="">— Seleccionar —</option>
+        <option value="1°">Primer</option>
+        <option value="2°">Segundo</option>
+        <option value="3°">Tercer</option>
+        <option value="4°">Cuarto</option>
+        <option value="5°">Quinto</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Demandado</label>
+      <input type="text" id="edit-causa-demandado" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">RUT Demandado</label>
+      <input type="text" id="edit-causa-rut" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Notificar a</label>
+      <textarea id="edit-causa-notif_a" rows="2" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); resize:vertical; box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Dirección</label>
+      <input type="text" id="edit-causa-direccion" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+  </div>
+
+  <div class="bottom-actions" style="margin-top:20px;">
+    <button class="btn btn-primary" id="btn-guardar-edicion-causa" onclick="guardarEdicionCausa()">Guardar cambios</button>
+    <button class="btn btn-secondary" onclick="cancelarEdicionCausa()" style="margin-top:10px">Cancelar</button>
   </div>
 </div>
 
@@ -802,10 +854,6 @@
       <span class="code-tag" style="color:#91e8c8">NP</span>
       <span class="code-desc">Notificación Personal</span>
     </button>
-    <button class="code-btn" data-group="tipo" data-code="EMB" onclick="selectTipo(this)">
-      <span class="code-tag" style="color:#e8c46a">EMB</span>
-      <span class="code-desc">Embargo efectivo</span>
-    </button>
     <button class="code-btn" data-group="tipo" data-code="EMBF" onclick="selectTipo(this)">
       <span class="code-tag" style="color:#e8c46a">EMBF</span>
       <span class="code-desc">Embargo frustrado</span>
@@ -817,52 +865,6 @@
     <div style="background:var(--surface2); border-radius:10px; padding:14px 16px; margin:12px 0; border-left:3px solid #e8c46a;">
       <div style="font-family:var(--mono); font-size:12px; color:#e8c46a; margin-bottom:4px;">REQUERIMIENTO DE PAGO</div>
       <div style="font-size:13px; color:var(--text2);" id="rpprf-desc">Solo se registra fecha y hora.</div>
-    </div>
-
-    <!-- E11: Resultado requerimiento — 4 options -->
-    <div class="section-title" style="margin-top:12px">Resultado del requerimiento</div>
-    <div class="radio-group" id="rpp-resultado-group">
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','no_pago')">
-        <input type="radio" name="rpp_resultado"> No efectuó el pago
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','firmo')">
-        <input type="radio" name="rpp_resultado"> Tomó conocimiento y firmó conforme
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','nego')">
-        <input type="radio" name="rpp_resultado"> Se negó a firmar
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'rpp_resultado','rebeldia')">
-        <input type="radio" name="rpp_resultado"> No compareció — rebeldía
-      </label>
-    </div>
-
-    <!-- E12: Lugar requerimiento -->
-    <div class="section-title" style="margin-top:12px">Lugar del requerimiento</div>
-    <div class="toggle-row" id="rpp-lugar-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'subtipo_rpp','domicilio')">Domicilio</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'subtipo_rpp','oficina')">Oficina receptora</button>
-    </div>
-
-    <!-- E13: Resultado embargo -->
-    <div id="seccion-embargo-resultado" style="display:none">
-      <div class="section-title" style="margin-top:12px">Resultado del embargo</div>
-      <div class="radio-group" id="emb-resultado-group">
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','efectivo')">
-          <input type="radio" name="resultado_embargo"> Efectivo
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','sin_bienes')">
-          <input type="radio" name="resultado_embargo"> Sin bienes suficientes
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','laboral')">
-          <input type="radio" name="resultado_embargo"> Domicilio laboral
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','oposicion')">
-          <input type="radio" name="resultado_embargo"> Oposición del ejecutado
-        </label>
-        <label class="radio-option" onclick="selectRadioOption(this,'resultado_embargo','rebeldia')">
-          <input type="radio" name="resultado_embargo"> En rebeldía
-        </label>
-      </div>
     </div>
   </div>
 
@@ -1145,27 +1147,8 @@
     </div>
   </div>
 
-  <!-- ── E05: Calidad del notificado (BP, NOT44, CED, NP) ── -->
-  <div id="seccion-calidad-notificado" style="display:none">
-    <div class="section-title" style="margin-top:12px">Calidad del notificado</div>
-    <div class="quick-select-grid">
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','fiador/a y codeudor/a solidario/a')">fiador/a y codeudor/a solidario/a</button>
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','deudor/a principal')">deudor/a principal</button>
-      <button class="quick-select-btn" onclick="quickSelectInput(this,'texto-calidad-notificado','representante empresa')">representante empresa</button>
-    </div>
-    <div class="obs-box" style="margin-top:6px">
-      <input type="text" id="texto-calidad-notificado" placeholder="Texto libre..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;" autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-  </div>
 
   <!-- ── E16: Tipo demandado (CED/NP) ── -->
-  <div id="seccion-tipo-demandado" style="display:none">
-    <div class="section-title" style="margin-top:12px">Tipo de demandado</div>
-    <div class="toggle-row" id="tipo-demandado-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_demandado','persona_natural')">Persona natural</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_demandado','persona_juridica')">Persona jurídica</button>
-    </div>
-  </div>
 
   <!-- ── BN-ONLY: R codes ── -->
   <div id="seccion-R" style="display:none">
@@ -1383,75 +1366,18 @@
       <div style="font-size:13px; color:var(--text2);">Notificación en persona al demandado/a.</div>
     </div>
 
-    <!-- E09: Resultado NP — three options -->
+    <!-- E09: Resultado NP — two options -->
     <div class="section-title" style="margin-top:12px">Resultado de la notificación</div>
     <div class="radio-group" id="np-resultado-group">
       <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','firmo')">
-        <input type="radio" name="resultado_np"> Tomó conocimiento y firmó
+        <input type="radio" name="resultado_np"> Tomó conocimiento y firmó conforme
       </label>
       <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','nego')">
         <input type="radio" name="resultado_np"> Tomó conocimiento y se negó a firmar
       </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','no_suscribio')">
-        <input type="radio" name="resultado_np"> No estimó necesario suscribir el acta
-      </label>
-    </div>
-
-    <!-- E10: Verificación identidad -->
-    <div class="section-title" style="margin-top:12px">Verificación de identidad</div>
-    <div class="radio-group" id="np-verificacion-group">
-      <label class="radio-option" onclick="selectRadioOption(this,'verificacion_id','cedula')">
-        <input type="radio" name="verificacion_id"> Exhibió cédula de identidad
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'verificacion_id','no_exhibio')">
-        <input type="radio" name="verificacion_id"> No exhibió cédula — identidad verificada por datos propios
-      </label>
-    </div>
-
-    <!-- Tipo causa NP -->
-    <div class="section-title" style="margin-top:12px">Tipo de causa</div>
-    <div class="toggle-row" id="np-tipo-causa-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_causa','contenciosa')">Contenciosa</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_causa','exhorto')">Exhorto</button>
     </div>
   </div><!-- /seccion-np -->
 
-  <!-- ═══ E17/E20: SECCION EMB ═══ -->
-  <div id="seccion-emb" style="display:none">
-    <div style="background:var(--surface2); border-radius:10px; padding:14px 16px; margin:12px 0; border-left:3px solid #e8c46a;">
-      <div style="font-family:var(--mono); font-size:12px; color:#e8c46a; margin-bottom:4px;">EMBARGO EFECTIVO</div>
-      <div style="font-size:13px; color:var(--text2);">Se registran los datos del embargo practicado.</div>
-    </div>
-
-    <div class="obs-box" style="margin-top:8px">
-      <div class="field-label" style="margin-bottom:6px">Nombre del director (depositario)</div>
-      <input type="text" id="texto-emb-director" placeholder="Ej: Juan Pérez..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Folio solicitud</div>
-      <input type="text" id="texto-emb-folio" placeholder="Ej: 12345" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Fecha resolución</div>
-      <input type="date" id="texto-emb-fecha-resolucion" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Monto embargo</div>
-      <input type="text" id="texto-emb-monto" placeholder="Ej: $1.500.000" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">RUT demandado</div>
-      <input type="text" id="texto-emb-rut" placeholder="Ej: 12.345.678-9" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;" autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Nombre funcionaria/o</div>
-      <input type="text" id="texto-emb-funcionaria" placeholder="Ej: María Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Calidad funcionaria/o</div>
-      <input type="text" id="texto-emb-calidad-func" placeholder="Ej: secretaria, asistente..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-  </div><!-- /seccion-emb -->
 
   <!-- ═══ E17/E21: SECCION EMBF ═══ -->
   <div id="seccion-embf" style="display:none">
@@ -1853,17 +1779,22 @@ async function loadCausa(idHex) {
     fillCausa(idHex, causaData);
     resetSelections();
 
+    // Mostrar/ocultar botón Editar datos según estado
+    const btnEditCausa = document.getElementById('btn-editar-causa');
+    const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
+    btnEditCausa.style.display = estadoBloquea ? 'none' : '';
+
     // Verificar etapas existentes (orden: más avanzada primero)
     const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
     let previo = null;
     for (const etapa of etapas) {
-      const existe = await dbxCheckExists('/resultados/' + idHex + '_' + etapa + '.json');
+      const existe = await dbxCheckExists('/resultados-dev/' + idHex + '_' + etapa + '.json');
       if (existe) { previo = etapa; break; }
     }
 
     // Compatibilidad hacia atrás: archivo sin sufijo (esquema antiguo)
     if (!previo) {
-      const legacy = await dbxCheckExists('/resultados/' + idHex + '.json');
+      const legacy = await dbxCheckExists('/resultados-dev/' + idHex + '.json');
       if (legacy) previo = '?';
     }
 
@@ -1982,6 +1913,104 @@ async function showScreenSuspendida(idHex, c) {
   showScreen('suspendida');
 }
 
+// ══════════════════════════════════════════════
+// EDICIÓN DE CAUSA DESDE TERRENO
+// ══════════════════════════════════════════════
+function mostrarEdicionCausa() {
+  const c = state.causaData;
+  if (!c) return;
+  // Mapear tribunal a formato select
+  const tribMap = {'primer':'1°','primero':'1°','1°':'1°','segundo':'2°','2°':'2°','tercer':'3°','tercero':'3°','3°':'3°','cuarto':'4°','4°':'4°','quinto':'5°','5°':'5°'};
+  const tribVal = tribMap[(c.tribunal||'').toLowerCase().replace(/\s.*/,'')] || '';
+  document.getElementById('edit-causa-rol').value = c.rol || '';
+  document.getElementById('edit-causa-tribunal').value = tribVal;
+  document.getElementById('edit-causa-demandado').value = c.demandado || '';
+  document.getElementById('edit-causa-rut').value = c.rut || '';
+  document.getElementById('edit-causa-notif_a').value = c.notif_a || '';
+  document.getElementById('edit-causa-direccion').value = c.direccion || '';
+  showScreen('editar-causa');
+}
+
+async function guardarEdicionCausa() {
+  const idHex = state.idHex;
+  if (!idHex) return;
+
+  const btn = document.getElementById('btn-guardar-edicion-causa');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    // Cargar _CAUSA.json completo desde Dropbox (producción)
+    const causaJson = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    if (!causaJson) throw new Error('No se pudo cargar la causa');
+
+    const campos = {
+      rol:          document.getElementById('edit-causa-rol').value.trim(),
+      tribunal:     document.getElementById('edit-causa-tribunal').value,
+      demandado:    document.getElementById('edit-causa-demandado').value.trim(),
+      rut:          document.getElementById('edit-causa-rut').value.trim(),
+      notificar_a:  document.getElementById('edit-causa-notif_a').value.trim(),
+      direccion:    document.getElementById('edit-causa-direccion').value.trim(),
+    };
+
+    // Detectar campos modificados
+    const datos = causaJson.datos || causaJson;
+    const modificados = [];
+    for (const [key, val] of Object.entries(campos)) {
+      const original = datos[key] || datos[key === 'notificar_a' ? 'notif_a' : key] || '';
+      if (val !== original) modificados.push(key);
+    }
+
+    if (modificados.length === 0) {
+      showToast('Sin cambios');
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+      cancelarEdicionCausa();
+      return;
+    }
+
+    // Actualizar datos en el JSON
+    if (causaJson.datos) {
+      Object.assign(causaJson.datos, campos);
+    } else {
+      Object.assign(causaJson, campos);
+    }
+
+    // Registrar en historial
+    if (!causaJson.historial) causaJson.historial = [];
+    causaJson.historial.push({
+      accion: 'edicion_terreno',
+      campos_modificados: modificados,
+      fecha: new Date().toISOString(),
+      usuario: 'receptora'
+    });
+
+    // Subir a /causas/ (producción)
+    await dbxPut('/causas/' + idHex + '_CAUSA.json', causaJson);
+
+    // Actualizar state local
+    for (const [key, val] of Object.entries(campos)) {
+      state.causaData[key] = val;
+      if (key === 'notificar_a') state.causaData.notif_a = val;
+    }
+
+    // Refrescar pantalla causa
+    fillCausa(idHex, state.causaData);
+    showToast('Datos actualizados ✓');
+    showScreen('causa');
+  } catch(e) {
+    console.error('Error al guardar edición:', e);
+    showToast('Error al guardar: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar cambios';
+  }
+}
+
+function cancelarEdicionCausa() {
+  showScreen('causa');
+}
+
 function editarPiezas() {
   const actual = document.getElementById('c-piezas').textContent;
   document.getElementById('texto-piezas').value = actual === '—' ? '' : actual;
@@ -2037,19 +2066,12 @@ function updateTipoSections() {
   show('seccion-domicilio-laboral', t === 'BP' || t === 'NOT44');
   // E23: obs acceso for BP/NOT44
   show('seccion-obs-acceso', t === 'BP' || t === 'NOT44');
-  // E05: calidad notificado for BP, NOT44, CED, NP
-  show('seccion-calidad-notificado', t === 'BP' || t === 'NOT44' || t === 'CED' || t === 'NP');
-  // E16: tipo demandado for CED/NP
-  show('seccion-tipo-demandado', t === 'CED' || t === 'NP');
 
   // E17: new sections
   show('seccion-ced',  t === 'CED');
   show('seccion-np',   t === 'NP');
-  show('seccion-emb',  t === 'EMB');
   show('seccion-embf', t === 'EMBF');
 
-  // E11/E13: RPP/RPF sub-sections
-  show('seccion-embargo-resultado', t === 'RPP' || t === 'RPF');
 
   const lbl = document.getElementById('seccion-quien-label');
   if (lbl) {
@@ -2568,9 +2590,9 @@ function resetSelections() {
   });
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
    'seccion-not44-n44','seccion-not44-cit',
-   'seccion-domicilio-laboral','seccion-obs-acceso','seccion-calidad-notificado',
-   'seccion-tipo-demandado','seccion-ced','seccion-np','seccion-emb','seccion-embf',
-   'seccion-embargo-resultado'].forEach(c => show(c, false));
+   'seccion-domicilio-laboral','seccion-obs-acceso',
+   'seccion-ced','seccion-np','seccion-embf',
+   ].forEach(c => show(c, false));
   show('hora-block', true);
   document.getElementById('obs-input').value = '';
 }
@@ -2736,12 +2758,7 @@ async function enviarResultado() {
   }
 
   else if (t === 'RPP' || t === 'RPF') {
-    // E11: resultado requerimiento
-    if (state.selections.rpp_resultado) codigos.push('rpp_resultado:' + state.selections.rpp_resultado);
-    // E12: subtipo RPP
-    if (state.selections.subtipo_rpp) codigos.push('subtipo_rpp:' + state.selections.subtipo_rpp);
-    // E13: resultado embargo
-    if (state.selections.resultado_embargo) codigos.push('resultado_embargo:' + state.selections.resultado_embargo);
+    // Simple: solo fecha y hora
   }
 
   else if (t === 'CED') {
@@ -2758,29 +2775,8 @@ async function enviarResultado() {
     // E09: resultado NP
     if (!state.selections.resultado_np) { showToast('Selecciona el resultado de la notificación'); return; }
     codigos.push('resultado_np:' + state.selections.resultado_np);
-    // E10: verificación identidad
-    if (state.selections.verificacion_id) codigos.push('verificacion_id:' + state.selections.verificacion_id);
-    // tipo causa
-    if (state.selections.tipo_causa) codigos.push('tipo_causa:' + state.selections.tipo_causa);
   }
 
-  else if (t === 'EMB') {
-    // Embargo fields
-    const director = document.getElementById('texto-emb-director')?.value.trim();
-    const folio = document.getElementById('texto-emb-folio')?.value.trim();
-    const fechaRes = document.getElementById('texto-emb-fecha-resolucion')?.value;
-    const monto = document.getElementById('texto-emb-monto')?.value.trim();
-    const rutEmb = document.getElementById('texto-emb-rut')?.value.trim();
-    const funcionaria = document.getElementById('texto-emb-funcionaria')?.value.trim();
-    const calidadFunc = document.getElementById('texto-emb-calidad-func')?.value.trim();
-    if (director) codigos.push('emb_director:' + director);
-    if (folio) codigos.push('emb_folio:' + folio);
-    if (fechaRes) codigos.push('emb_fecha_resolucion:' + fechaRes);
-    if (monto) codigos.push('emb_monto:' + monto);
-    if (rutEmb) codigos.push('emb_rut:' + rutEmb);
-    if (funcionaria) codigos.push('emb_funcionaria:' + funcionaria);
-    if (calidadFunc) codigos.push('emb_calidad_func:' + calidadFunc);
-  }
 
   else if (t === 'EMBF') {
     // E21: motivo
@@ -2805,16 +2801,7 @@ async function enviarResultado() {
     if (obsAcceso) codigos.push('obs_acceso:' + obsAcceso);
   }
 
-  // E05: calidad notificado for BP/NOT44/CED/NP
-  if (['BP','NOT44','CED','NP'].includes(t)) {
-    const calNot = document.getElementById('texto-calidad-notificado')?.value.trim();
-    if (calNot) codigos.push('calidad_notificado:' + calNot);
-  }
 
-  // E16: tipo demandado for CED/NP
-  if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
-    codigos.push('tipo_demandado:' + state.selections.tipo_demandado);
-  }
 
   const obs   = document.getElementById('obs-input').value.trim();
   const fecha = document.getElementById('fecha-input').value;
@@ -2842,24 +2829,10 @@ async function enviarResultado() {
     if (horaCita) payload.hora_cita = horaCita;
   }
 
-  // E05: calidad_notificado as top-level field
-  if (['BP','NOT44','CED','NP'].includes(t)) {
-    const calNot = document.getElementById('texto-calidad-notificado')?.value.trim();
-    if (calNot) payload.calidad_notificado = calNot;
-  }
 
-  // E16: tipo_demandado as top-level field
-  if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
-    payload.tipo_demandado = state.selections.tipo_demandado;
-  }
 
   // E09/E10/E11/E12/E13/E14/E15: top-level fields
   if (state.selections.resultado_np)    payload.resultado_np = state.selections.resultado_np;
-  if (state.selections.verificacion_id) payload.verificacion_id = state.selections.verificacion_id;
-  if (state.selections.tipo_causa)      payload.tipo_causa = state.selections.tipo_causa;
-  if (state.selections.rpp_resultado)   payload.resultado_rpp = state.selections.rpp_resultado;
-  if (state.selections.subtipo_rpp)     payload.subtipo_rpp = state.selections.subtipo_rpp;
-  if (state.selections.resultado_embargo) payload.resultado_embargo = state.selections.resultado_embargo;
   if (state.selections.parte_notificada) payload.parte_notificada = state.selections.parte_notificada;
   if (state.selections.metodo_entrega)  payload.metodo_entrega = state.selections.metodo_entrega;
   if (state.selections.motivo_embf)     payload.motivo_embf = state.selections.motivo_embf;
@@ -2881,16 +2854,6 @@ async function enviarResultado() {
     if (calRec) payload.calidad_receptor = calRec;
   }
 
-  // EMB fields as top-level
-  if (t === 'EMB') {
-    payload.emb_director = document.getElementById('texto-emb-director')?.value.trim() || null;
-    payload.emb_folio = document.getElementById('texto-emb-folio')?.value.trim() || null;
-    payload.emb_fecha_resolucion = document.getElementById('texto-emb-fecha-resolucion')?.value || null;
-    payload.emb_monto = document.getElementById('texto-emb-monto')?.value.trim() || null;
-    payload.emb_rut = document.getElementById('texto-emb-rut')?.value.trim() || null;
-    payload.emb_funcionaria = document.getElementById('texto-emb-funcionaria')?.value.trim() || null;
-    payload.emb_calidad_func = document.getElementById('texto-emb-calidad-func')?.value.trim() || null;
-  }
 
   // EMBF motivo text
   if (t === 'EMBF' && state.selections.motivo_embf === 'otro') {
@@ -2900,7 +2863,7 @@ async function enviarResultado() {
   document.getElementById('loading-envio').classList.add('active');
   document.getElementById('btn-enviar').disabled = true;
   try {
-    await dbxPut('/resultados/' + state.idHex + '_' + t + '.json', payload);
+    await dbxPut('/resultados-dev/' + state.idHex + '_' + t + '.json', payload);
     document.getElementById('loading-envio').classList.remove('active');
     document.getElementById('btn-enviar').disabled = false;
     showConfirm(true, codigos, state.causaData);
