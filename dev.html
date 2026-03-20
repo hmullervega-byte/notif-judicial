@@ -1147,6 +1147,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox(true)" title="Recargar desde Dropbox">🔄 Recargar</button>
+            <button class="btn btn-secondary btn-sm darth-only" id="btn-regen-respaldo" onclick="regenerarIndexRespaldo()" title="Regenerar INDEX_RESPALDO.json desde todas las causas" style="display:none;">🔄 Regenerar respaldo</button>
             <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
           </div>
         </div>
@@ -1892,6 +1893,11 @@ function initApp() {
   // Mostrar dashboard por defecto
   showView('view-dashboard');
   setActiveNav('dashboard');
+
+  // Mostrar botones Darth-only
+  if (currentUser.perfil === 'darth') {
+    document.querySelectorAll('.darth-only').forEach(el => el.style.display = '');
+  }
 
   // Precargar causas en background inmediatamente después del login
   if (DBX.isConfigured()) cargarCausasDropbox();
@@ -3093,6 +3099,47 @@ async function actualizarIndex() {
     await DBX.upload('/causas-dev/INDEX.json', index);
   } catch(e) {
     console.warn('Error actualizando INDEX.json:', e);
+  }
+  // Actualizar respaldo en background
+  actualizarIndexRespaldo();
+}
+
+// Actualiza INDEX_RESPALDO.json con todos los campos de cada causa
+async function actualizarIndexRespaldo() {
+  if (!DBX.isConfigured()) return;
+  const respaldo = causas.map(c => {
+    const datos = c._causa_json?.datos || {};
+    return {
+      id_hex:             c.id_hex,
+      estado:             c.estado,
+      rol:                datos.rol               || c.rol               || '',
+      tribunal:           datos.tribunal          || c.tribunal          || '',
+      demandante:         datos.demandante        || c.demandante        || '',
+      demandado:          datos.demandado         || c.demandado         || '',
+      rut:                datos.rut               || c.rut               || '',
+      direccion:          datos.direccion         || c.direccion         || '',
+      ciudad:             datos.ciudad            || c.ciudad            || 'Antofagasta',
+      tipo_diligencia:    datos.tipo_diligencia   || c.tipo_diligencia   || '',
+      fecha_solicitud:    datos.fecha_solicitud   || c.fecha_solicitud   || '',
+      nro_solicitud:      datos.nro_solicitud     || c.nro_solicitud     || '',
+      estudio_juridico:   datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
+      abogado_procurador: datos.abogado_procurador || c.abogado_procurador || '',
+      banco_representado: datos.banco_representado || c.banco_representado || '',
+      notificar_a:        datos.notificar_a       || c.notificar_a       || '',
+      piezas:             datos.piezas            || c.piezas            || '',
+      monto_mandamiento:  datos.monto_mandamiento || c.monto_mandamiento || '',
+      nro_pagare:         datos.nro_pagare        || datos.n_pagare      || c.nro_pagare || '',
+      observacion:        datos.observacion       || datos.comentario    || c.observacion || '',
+      comentario:         datos.comentario        || c.comentario        || '',
+      fecha_ruta:         c.fecha_ruta            || '',
+      ts_ingreso:         c.ts_ingreso            || '',
+      historial:          c._causa_json?.historial || [],
+    };
+  });
+  try {
+    await DBX.upload('/causas-dev/INDEX_RESPALDO.json', respaldo);
+  } catch(e) {
+    console.warn('Error actualizando INDEX_RESPALDO.json:', e);
   }
 }
 
@@ -4318,6 +4365,19 @@ function _actualizarSelUI() {
   }
 }
 
+// Normalizar tribunal a nombre completo para Excel
+const _tribNombreMap = {'1':'Primero','2':'Segundo','3':'Tercero','4':'Cuarto','5':'Quinto'};
+const _tribTextoMap = {'primer':'Primero','segund':'Segundo','tercer':'Tercero','cuart':'Cuarto','quint':'Quinto'};
+function _tribExcel(t) {
+  if (!t) return '';
+  const numMatch = t.match(/(\d)/);
+  if (numMatch) return _tribNombreMap[numMatch[1]] || t;
+  const txtMatch = t.toLowerCase().match(/primer|segund|tercer|cuart|quint/);
+  if (txtMatch) return _tribTextoMap[txtMatch[0]] || t;
+  return t;
+}
+const _limpiarMonto = (m) => { if (!m) return ''; return String(m).replace(/[$.\s]/g, '').trim(); };
+
 async function exportarCorrespondencia() {
   if (causasSeleccionadas.size === 0) {
     showToast('Selecciona al menos una causa para exportar', 'error');
@@ -4325,69 +4385,87 @@ async function exportarCorrespondencia() {
   }
   showToast('⏳ Preparando exportación...', 'info');
   const hexes = [...causasSeleccionadas];
-  // Cargar datos completos de cada causa
-  const resultados = [];
-  for (const hex of hexes) {
-    const c = await asegurarCausaCompleta(hex);
-    if (!c) continue;
-    const datos = c._causa_json?.datos || c;
-    resultados.push({
-      rol:               datos.rol               || c.rol               || '',
-      tribunal:          datos.tribunal          || c.tribunal          || '',
-      demandante:        datos.demandante        || c.demandante        || '',
-      demandado:         datos.demandado         || c.demandado         || '',
-      rut:               datos.rut               || c.rut               || '',
-      direccion:         datos.direccion         || c.direccion         || '',
-      ciudad:            datos.ciudad            || c.ciudad            || 'Antofagasta',
-      monto_mandamiento: datos.monto_mandamiento || c.monto_mandamiento || '',
-      tipo_diligencia:   datos.tipo_diligencia   || c.tipo_diligencia   || '',
-      piezas:            datos.piezas            || c.piezas            || '',
-      notificar_a:       datos.notificar_a       || c.notificar_a       || datos.demandado || c.demandado || '',
-      fecha_solicitud:   datos.fecha_solicitud   || c.fecha_solicitud   || '',
-      estudio_juridico:  datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
-      nro_solicitud:     datos.nro_solicitud     || c.nro_solicitud     || ''
-    });
+
+  // 1. Descargar INDEX_RESPALDO.json en una sola llamada
+  let respaldoMap = {};
+  try {
+    const respaldo = await DBX.download('/causas-dev/INDEX_RESPALDO.json');
+    if (respaldo && Array.isArray(respaldo)) {
+      respaldo.forEach(r => { if (r.id_hex) respaldoMap[r.id_hex] = r; });
+    }
+  } catch(e) {
+    console.warn('INDEX_RESPALDO.json no disponible, usando fallback:', e);
   }
+
+  // 2. Buscar cada causa en el respaldo; las que falten van a fallback
+  const resultados = [];
+  const fallbackHexes = [];
+  for (const hex of hexes) {
+    if (respaldoMap[hex]) {
+      resultados.push(respaldoMap[hex]);
+    } else {
+      fallbackHexes.push(hex);
+    }
+  }
+
+  // 3. Fallback: descargar _CAUSA.json individuales (en lotes de 20 si >5)
+  if (fallbackHexes.length > 0) {
+    if (fallbackHexes.length > 5) {
+      for (let i = 0; i < fallbackHexes.length; i += 20) {
+        const lote = fallbackHexes.slice(i, i + 20);
+        await Promise.all(lote.map(hex => asegurarCausaCompleta(hex)));
+      }
+    } else {
+      for (const hex of fallbackHexes) await asegurarCausaCompleta(hex);
+    }
+    for (const hex of fallbackHexes) {
+      const c = causas.find(x => x.id_hex === hex);
+      if (!c) continue;
+      const datos = c._causa_json?.datos || c;
+      resultados.push({
+        rol:               datos.rol               || c.rol               || '',
+        tribunal:          datos.tribunal          || c.tribunal          || '',
+        demandante:        datos.demandante        || c.demandante        || '',
+        demandado:         datos.demandado         || c.demandado         || '',
+        rut:               datos.rut               || c.rut               || '',
+        direccion:         datos.direccion         || c.direccion         || '',
+        ciudad:            datos.ciudad            || c.ciudad            || 'Antofagasta',
+        monto_mandamiento: datos.monto_mandamiento || c.monto_mandamiento || '',
+        tipo_diligencia:   datos.tipo_diligencia   || c.tipo_diligencia   || '',
+        piezas:            datos.piezas            || c.piezas            || '',
+        notificar_a:       datos.notificar_a       || c.notificar_a       || datos.demandado || c.demandado || '',
+        fecha_solicitud:   datos.fecha_solicitud   || c.fecha_solicitud   || '',
+        estudio_juridico:  datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
+        nro_solicitud:     datos.nro_solicitud     || c.nro_solicitud     || ''
+      });
+    }
+  }
+
   if (resultados.length === 0) { showToast('❌ No se pudieron cargar las causas', 'error'); return; }
 
-  // Limpiar monto (solo número sin $)
-  const limpiarMonto = (m) => { if (!m) return ''; return String(m).replace(/[$.\s]/g, '').trim(); };
-
-  // Normalizar tribunal a nombre completo para Excel
-  const _tribNombreMap = {'1':'Primero','2':'Segundo','3':'Tercero','4':'Cuarto','5':'Quinto'};
-  const _tribTextoMap = {'primer':'Primero','segund':'Segundo','tercer':'Tercero','cuart':'Cuarto','quint':'Quinto'};
-  function _tribExcel(t) {
-    if (!t) return '';
-    const numMatch = t.match(/(\d)/);
-    if (numMatch) return _tribNombreMap[numMatch[1]] || t;
-    const txtMatch = t.toLowerCase().match(/primer|segund|tercer|cuart|quint/);
-    if (txtMatch) return _tribTextoMap[txtMatch[0]] || t;
-    return t;
-  }
+  showToast('⏳ Generando Excel...', 'info');
 
   const headers = ['ROL','Juzgado','Demandante','Demandado','Rut Demandado','Domicilio','Ciudad','Monto Mandamiento','Tipo Notificación','Piezas','Notificar a','Fecha Solicitud','Fecha Notificación','Resultado Notificación','Estudio','N° Solicitud','Derechos'];
   const rows = resultados.map(r => [
-    r.rol,
+    r.rol || '',
     _tribExcel(r.tribunal),
-    r.demandante,
-    r.demandado,
-    r.rut,
-    r.direccion,
-    r.ciudad,
-    limpiarMonto(r.monto_mandamiento),
-    r.tipo_diligencia,
-    r.piezas,
-    r.notificar_a,
+    r.demandante || '',
+    r.demandado || '',
+    r.rut || '',
+    r.direccion || '',
+    r.ciudad || 'Antofagasta',
+    _limpiarMonto(r.monto_mandamiento),
+    r.tipo_diligencia || '',
+    r.piezas || '',
+    r.notificar_a || r.demandado || '',
     fmtFecha(r.fecha_solicitud),
-    '', '', // columnas M, N reservadas
-    r.estudio_juridico,
-    r.nro_solicitud,
-    ''  // columna Q reservada
+    '', '',
+    r.estudio_juridico || '',
+    r.nro_solicitud || '',
+    ''
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-  // Anchos de columna
   ws['!cols'] = [
     {wch:15}, {wch:12}, {wch:35}, {wch:35}, {wch:15}, {wch:40}, {wch:15},
     {wch:18}, {wch:25}, {wch:60}, {wch:50}, {wch:15}, {wch:20}, {wch:20},
@@ -4402,6 +4480,76 @@ async function exportarCorrespondencia() {
   const filename = `CombinacionCorrespondencia_${fechaStr}.xlsx`;
   XLSX.writeFile(wb, filename);
   showToast(`✅ Exportado: ${filename} (${resultados.length} causas)`, 'success');
+}
+
+// Regenerar INDEX_RESPALDO.json desde el navegador (Darth)
+async function regenerarIndexRespaldo() {
+  if (!DBX.isConfigured()) { showToast('❌ Dropbox no configurado', 'error'); return; }
+  showToast('⏳ Descargando todas las causas...', 'info');
+
+  // Listar todos los _CAUSA.json
+  let archivos = [];
+  try {
+    const entries = await DBX.listFolder('/causas-dev');
+    archivos = entries.filter(e => e.name.endsWith('_CAUSA.json') && e.name !== 'INDEX.json' && e.name !== 'INDEX_RESPALDO.json');
+  } catch(e) {
+    showToast('❌ Error listando causas: ' + e.message, 'error');
+    return;
+  }
+
+  showToast(`⏳ Procesando ${archivos.length} causas...`, 'info');
+
+  // Descargar en lotes de 20
+  const respaldo = [];
+  for (let i = 0; i < archivos.length; i += 20) {
+    const lote = archivos.slice(i, i + 20);
+    const resultados = await Promise.all(lote.map(async (entry) => {
+      try {
+        const data = await DBX.download(`/causas-dev/${entry.name}`);
+        if (!data) return null;
+        const datos = data.datos || {};
+        return {
+          id_hex:             data.id_hex || '',
+          estado:             data.estado || '',
+          rol:                datos.rol || '',
+          tribunal:           datos.tribunal || '',
+          demandante:         datos.demandante || '',
+          demandado:          datos.demandado || '',
+          rut:                datos.rut || '',
+          direccion:          datos.direccion || '',
+          ciudad:             datos.ciudad || 'Antofagasta',
+          tipo_diligencia:    datos.tipo_diligencia || '',
+          fecha_solicitud:    datos.fecha_solicitud || '',
+          nro_solicitud:      datos.nro_solicitud || datos.n_solicitud || '',
+          estudio_juridico:   datos.estudio_juridico || datos.estudio || '',
+          abogado_procurador: datos.abogado_procurador || '',
+          banco_representado: datos.banco_representado || '',
+          notificar_a:        datos.notificar_a || datos.notif_a || '',
+          piezas:             datos.piezas || '',
+          monto_mandamiento:  datos.monto_mandamiento || '',
+          nro_pagare:         datos.nro_pagare || datos.n_pagare || '',
+          observacion:        datos.observacion || datos.comentario || '',
+          comentario:         datos.comentario || '',
+          fecha_ruta:         data.fecha_ruta || '',
+          ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
+          historial:          data.historial || [],
+        };
+      } catch(e) { console.warn(`Error ${entry.name}:`, e); return null; }
+    }));
+    respaldo.push(...resultados.filter(Boolean));
+    if ((i + 20) % 100 === 0 || i + 20 >= archivos.length) {
+      showToast(`⏳ ${Math.min(i + 20, archivos.length)}/${archivos.length} procesadas...`, 'info');
+    }
+  }
+
+  respaldo.sort((a, b) => (b.ts_ingreso || '').localeCompare(a.ts_ingreso || ''));
+
+  try {
+    await DBX.upload('/causas-dev/INDEX_RESPALDO.json', respaldo);
+    showToast(`✅ INDEX_RESPALDO.json regenerado: ${respaldo.length} causas`, 'success');
+  } catch(e) {
+    showToast('❌ Error subiendo INDEX_RESPALDO.json: ' + e.message, 'error');
+  }
 }
 
 // ══════════════════════════════════════════════
