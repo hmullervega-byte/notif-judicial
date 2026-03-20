@@ -1967,8 +1967,8 @@ async function guardarEdicionCausa() {
   btn.textContent = 'Guardando...';
 
   try {
-    // Cargar _CAUSA.json completo desde Dropbox (producción)
-    const causaJson = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    // Cargar _CAUSA.json completo desde Dropbox
+    const causaJson = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
     if (!causaJson) throw new Error('No se pudo cargar la causa');
 
     const campos = {
@@ -2012,8 +2012,8 @@ async function guardarEdicionCausa() {
       usuario: 'receptora'
     });
 
-    // Subir a /causas/ (producción)
-    await dbxPut('/causas/' + idHex + '_CAUSA.json', causaJson);
+    // Subir a /causas-dev/
+    await dbxPut('/causas-dev/' + idHex + '_CAUSA.json', causaJson);
 
     // Actualizar state local
     for (const [key, val] of Object.entries(campos)) {
