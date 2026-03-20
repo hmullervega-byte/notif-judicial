@@ -854,10 +854,6 @@
       <span class="code-tag" style="color:#91e8c8">NP</span>
       <span class="code-desc">Notificación Personal</span>
     </button>
-    <button class="code-btn" data-group="tipo" data-code="EMB" onclick="selectTipo(this)">
-      <span class="code-tag" style="color:#e8c46a">EMB</span>
-      <span class="code-desc">Embargo efectivo</span>
-    </button>
     <button class="code-btn" data-group="tipo" data-code="EMBF" onclick="selectTipo(this)">
       <span class="code-tag" style="color:#e8c46a">EMBF</span>
       <span class="code-desc">Embargo frustrado</span>
@@ -1153,13 +1149,6 @@
 
 
   <!-- ── E16: Tipo demandado (CED/NP) ── -->
-  <div id="seccion-tipo-demandado" style="display:none">
-    <div class="section-title" style="margin-top:12px">Tipo de demandado</div>
-    <div class="toggle-row" id="tipo-demandado-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_demandado','persona_natural')">Persona natural</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_demandado','persona_juridica')">Persona jurídica</button>
-    </div>
-  </div>
 
   <!-- ── BN-ONLY: R codes ── -->
   <div id="seccion-R" style="display:none">
@@ -1377,75 +1366,18 @@
       <div style="font-size:13px; color:var(--text2);">Notificación en persona al demandado/a.</div>
     </div>
 
-    <!-- E09: Resultado NP — three options -->
+    <!-- E09: Resultado NP — two options -->
     <div class="section-title" style="margin-top:12px">Resultado de la notificación</div>
     <div class="radio-group" id="np-resultado-group">
       <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','firmo')">
-        <input type="radio" name="resultado_np"> Tomó conocimiento y firmó
+        <input type="radio" name="resultado_np"> Tomó conocimiento y firmó conforme
       </label>
       <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','nego')">
         <input type="radio" name="resultado_np"> Tomó conocimiento y se negó a firmar
       </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'resultado_np','no_suscribio')">
-        <input type="radio" name="resultado_np"> No estimó necesario suscribir el acta
-      </label>
-    </div>
-
-    <!-- E10: Verificación identidad -->
-    <div class="section-title" style="margin-top:12px">Verificación de identidad</div>
-    <div class="radio-group" id="np-verificacion-group">
-      <label class="radio-option" onclick="selectRadioOption(this,'verificacion_id','cedula')">
-        <input type="radio" name="verificacion_id"> Exhibió cédula de identidad
-      </label>
-      <label class="radio-option" onclick="selectRadioOption(this,'verificacion_id','no_exhibio')">
-        <input type="radio" name="verificacion_id"> No exhibió cédula — identidad verificada por datos propios
-      </label>
-    </div>
-
-    <!-- Tipo causa NP -->
-    <div class="section-title" style="margin-top:12px">Tipo de causa</div>
-    <div class="toggle-row" id="np-tipo-causa-row">
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_causa','contenciosa')">Contenciosa</button>
-      <button class="toggle-btn" onclick="selectToggle(this,'tipo_causa','exhorto')">Exhorto</button>
     </div>
   </div><!-- /seccion-np -->
 
-  <!-- ═══ E17/E20: SECCION EMB ═══ -->
-  <div id="seccion-emb" style="display:none">
-    <div style="background:var(--surface2); border-radius:10px; padding:14px 16px; margin:12px 0; border-left:3px solid #e8c46a;">
-      <div style="font-family:var(--mono); font-size:12px; color:#e8c46a; margin-bottom:4px;">EMBARGO EFECTIVO</div>
-      <div style="font-size:13px; color:var(--text2);">Se registran los datos del embargo practicado.</div>
-    </div>
-
-    <div class="obs-box" style="margin-top:8px">
-      <div class="field-label" style="margin-bottom:6px">Nombre del director (depositario)</div>
-      <input type="text" id="texto-emb-director" placeholder="Ej: Juan Pérez..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Folio solicitud</div>
-      <input type="text" id="texto-emb-folio" placeholder="Ej: 12345" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Fecha resolución</div>
-      <input type="date" id="texto-emb-fecha-resolucion" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Monto embargo</div>
-      <input type="text" id="texto-emb-monto" placeholder="Ej: $1.500.000" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">RUT demandado</div>
-      <input type="text" id="texto-emb-rut" placeholder="Ej: 12.345.678-9" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;" autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Nombre funcionaria/o</div>
-      <input type="text" id="texto-emb-funcionaria" placeholder="Ej: María Soto..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-    <div class="obs-box" style="margin-top:4px">
-      <div class="field-label" style="margin-bottom:6px">Calidad funcionaria/o</div>
-      <input type="text" id="texto-emb-calidad-func" placeholder="Ej: secretaria, asistente..." style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-  </div><!-- /seccion-emb -->
 
   <!-- ═══ E17/E21: SECCION EMBF ═══ -->
   <div id="seccion-embf" style="display:none">
@@ -2134,13 +2066,10 @@ function updateTipoSections() {
   show('seccion-domicilio-laboral', t === 'BP' || t === 'NOT44');
   // E23: obs acceso for BP/NOT44
   show('seccion-obs-acceso', t === 'BP' || t === 'NOT44');
-  // E16: tipo demandado for CED/NP
-  show('seccion-tipo-demandado', t === 'CED' || t === 'NP');
 
   // E17: new sections
   show('seccion-ced',  t === 'CED');
   show('seccion-np',   t === 'NP');
-  show('seccion-emb',  t === 'EMB');
   show('seccion-embf', t === 'EMBF');
 
 
@@ -2662,7 +2591,7 @@ function resetSelections() {
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
    'seccion-not44-n44','seccion-not44-cit',
    'seccion-domicilio-laboral','seccion-obs-acceso',
-   'seccion-tipo-demandado','seccion-ced','seccion-np','seccion-emb','seccion-embf',
+   'seccion-ced','seccion-np','seccion-embf',
    ].forEach(c => show(c, false));
   show('hora-block', true);
   document.getElementById('obs-input').value = '';
@@ -2846,29 +2775,8 @@ async function enviarResultado() {
     // E09: resultado NP
     if (!state.selections.resultado_np) { showToast('Selecciona el resultado de la notificación'); return; }
     codigos.push('resultado_np:' + state.selections.resultado_np);
-    // E10: verificación identidad
-    if (state.selections.verificacion_id) codigos.push('verificacion_id:' + state.selections.verificacion_id);
-    // tipo causa
-    if (state.selections.tipo_causa) codigos.push('tipo_causa:' + state.selections.tipo_causa);
   }
 
-  else if (t === 'EMB') {
-    // Embargo fields
-    const director = document.getElementById('texto-emb-director')?.value.trim();
-    const folio = document.getElementById('texto-emb-folio')?.value.trim();
-    const fechaRes = document.getElementById('texto-emb-fecha-resolucion')?.value;
-    const monto = document.getElementById('texto-emb-monto')?.value.trim();
-    const rutEmb = document.getElementById('texto-emb-rut')?.value.trim();
-    const funcionaria = document.getElementById('texto-emb-funcionaria')?.value.trim();
-    const calidadFunc = document.getElementById('texto-emb-calidad-func')?.value.trim();
-    if (director) codigos.push('emb_director:' + director);
-    if (folio) codigos.push('emb_folio:' + folio);
-    if (fechaRes) codigos.push('emb_fecha_resolucion:' + fechaRes);
-    if (monto) codigos.push('emb_monto:' + monto);
-    if (rutEmb) codigos.push('emb_rut:' + rutEmb);
-    if (funcionaria) codigos.push('emb_funcionaria:' + funcionaria);
-    if (calidadFunc) codigos.push('emb_calidad_func:' + calidadFunc);
-  }
 
   else if (t === 'EMBF') {
     // E21: motivo
@@ -2894,10 +2802,6 @@ async function enviarResultado() {
   }
 
 
-  // E16: tipo demandado for CED/NP
-  if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
-    codigos.push('tipo_demandado:' + state.selections.tipo_demandado);
-  }
 
   const obs   = document.getElementById('obs-input').value.trim();
   const fecha = document.getElementById('fecha-input').value;
@@ -2926,15 +2830,9 @@ async function enviarResultado() {
   }
 
 
-  // E16: tipo_demandado as top-level field
-  if (['CED','NP'].includes(t) && state.selections.tipo_demandado) {
-    payload.tipo_demandado = state.selections.tipo_demandado;
-  }
 
   // E09/E10/E11/E12/E13/E14/E15: top-level fields
   if (state.selections.resultado_np)    payload.resultado_np = state.selections.resultado_np;
-  if (state.selections.verificacion_id) payload.verificacion_id = state.selections.verificacion_id;
-  if (state.selections.tipo_causa)      payload.tipo_causa = state.selections.tipo_causa;
   if (state.selections.parte_notificada) payload.parte_notificada = state.selections.parte_notificada;
   if (state.selections.metodo_entrega)  payload.metodo_entrega = state.selections.metodo_entrega;
   if (state.selections.motivo_embf)     payload.motivo_embf = state.selections.motivo_embf;
@@ -2956,16 +2854,6 @@ async function enviarResultado() {
     if (calRec) payload.calidad_receptor = calRec;
   }
 
-  // EMB fields as top-level
-  if (t === 'EMB') {
-    payload.emb_director = document.getElementById('texto-emb-director')?.value.trim() || null;
-    payload.emb_folio = document.getElementById('texto-emb-folio')?.value.trim() || null;
-    payload.emb_fecha_resolucion = document.getElementById('texto-emb-fecha-resolucion')?.value || null;
-    payload.emb_monto = document.getElementById('texto-emb-monto')?.value.trim() || null;
-    payload.emb_rut = document.getElementById('texto-emb-rut')?.value.trim() || null;
-    payload.emb_funcionaria = document.getElementById('texto-emb-funcionaria')?.value.trim() || null;
-    payload.emb_calidad_func = document.getElementById('texto-emb-calidad-func')?.value.trim() || null;
-  }
 
   // EMBF motivo text
   if (t === 'EMBF' && state.selections.motivo_embf === 'otro') {
