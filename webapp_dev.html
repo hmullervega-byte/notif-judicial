@@ -1514,6 +1514,19 @@ let state = {
 
 // ── INIT ─────────────────────────────────
 window.onload = () => {
+  // Detectar si Chrome restauró una sesión previa (DOM en estado sucio)
+  const lastScreen = localStorage.getItem('notif_last_screen');
+  if (lastScreen) localStorage.removeItem('notif_last_screen');
+
+  // Forzar todas las pantallas a estado limpio
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  // Resetear state de JS que pudo quedar sucio
+  state.idHex = null;
+  state.causaData = null;
+  state.resultadoPrevio = null;
+  state.videoStream = null;
+  state.scanActive = false;
+
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
@@ -1542,6 +1555,12 @@ function showScreen(name) {
   if (name === 'resultado') {
     updateTipoSections();
     setDefaultFechaHora();
+  }
+  // Trackear pantalla para detectar restauración de Chrome
+  if (name === 'scan' || name === 'config') {
+    localStorage.removeItem('notif_last_screen');
+  } else {
+    localStorage.setItem('notif_last_screen', name);
   }
 }
 
