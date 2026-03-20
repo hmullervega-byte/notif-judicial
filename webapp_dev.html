@@ -720,7 +720,6 @@
   <div style="margin-top:20px; text-align:center;">
     <button class="btn btn-secondary" onclick="forzarActualizacion()" style="font-size:12px; padding:6px 16px;">↻ Actualizar datos</button>
     <div id="index-info" style="font-size:11px; color:var(--text2); margin-top:6px;"></div>
-    <div id="timing-info" style="font-size:10px; color:var(--accent2); margin-top:4px; font-family:var(--mono); opacity:0.7;"></div>
   </div>
 </div>
 
@@ -1521,9 +1520,6 @@ let state = {
 
 // ── INIT ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const _t0 = performance.now();
-  const _timings = {};
-
   // Detectar si Chrome restauró una sesión previa (DOM en estado sucio)
   const lastScreen = localStorage.getItem('notif_last_screen');
   if (lastScreen) localStorage.removeItem('notif_last_screen');
@@ -1542,48 +1538,32 @@ document.addEventListener('DOMContentLoaded', () => {
   state.videoStream = null;
   state.scanActive = false;
 
-  // Mostrar pantalla principal INMEDIATAMENTE (sin esperar red)
+  // Mostrar pantalla principal INMEDIATAMENTE
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
     showScreen('scan');
   }
-  _timings.carga = Math.round(performance.now() - _t0);
 
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
-  // 1. Inicializar offline/pendientes PRIMERO (muestra banner inmediatamente)
+  // 1. Inicializar offline/pendientes
   initOffline();
   // 2. Cargar INDEX_RESPALDO desde localStorage (instantáneo, sin red)
   cargarIndexDesdeLS();
   actualizarIndexInfo();
-
   // 3. Background: refresh token + index (no bloquea pantalla)
-  const _tToken = performance.now();
-  const tokenPromise = (state.refreshToken && state.appKey && state.appSecret && navigator.onLine)
-    ? getAccessToken().then(() => { _timings.token = Math.round(performance.now() - _tToken); })
-                       .catch(() => { _timings.token = 'err'; })
-    : Promise.resolve().then(() => { _timings.token = 'skip'; });
-
-  const _tIndex = performance.now();
-  const indexPromise = (state.refreshToken && state.appKey && state.appSecret && navigator.onLine
-    && (Date.now() - indexTsLocal() > INDEX_CACHE_TTL || !_indexCache))
-    ? descargarIndex().then(() => { _timings.index = Math.round(performance.now() - _tIndex); })
-                       .catch(() => { _timings.index = 'err'; })
-    : Promise.resolve().then(() => { _timings.index = 'skip'; });
-
-  // Mostrar timings cuando las operaciones async terminen
-  Promise.all([tokenPromise, indexPromise]).then(() => {
-    const txt = `Carga: ${_timings.carga}ms | Token: ${_timings.token}${typeof _timings.token === 'number' ? 'ms' : ''} | Index: ${_timings.index}${typeof _timings.index === 'number' ? 'ms' : ''}`;
-    const el = document.getElementById('timing-info');
-    if (el) { el.textContent = txt; setTimeout(() => { el.textContent = ''; }, 5000); }
-    console.log('⏱ ' + txt);
-  });
+  if (state.refreshToken && state.appKey && state.appSecret && navigator.onLine) {
+    getAccessToken().catch(() => {});
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL || !_indexCache) {
+      descargarIndex().catch(() => {});
+    }
+  }
 
   // Registrar Service Worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/notif-judicial/sw_dev.js')
-      .catch(e => console.warn('SW registro falló:', e));
+    navigator.serviceWorker.register('/notif-judicial/sw_dev.js').catch(() => {});
   }
 });
 
@@ -1909,95 +1889,123 @@ function mapIndexEntry(found) {
 async function loadCausa(idHex) {
   state.idHex = idHex;
   state.resultadoPrevio = null;
+
+  // 1. Buscar en INDEX_RESPALDO local (instantáneo, sin red)
+  let causaData = null;
+  if (_indexCache) {
+    const found = _indexCache.find(c => c.id_hex === idHex);
+    if (found) causaData = mapIndexEntry(found);
+  }
+
+  // 2. Si está en caché → mostrar INMEDIATAMENTE sin esperar red
+  if (causaData) {
+    state.causaData = causaData;
+    if (causaData.estado === 'suspendida') {
+      showScreenSuspendida(idHex, causaData);
+    } else {
+      _mostrarCausa(idHex, causaData);
+    }
+    // Background: verificar etapas + refrescar datos si hay conexión
+    _verificarEtapasBackground(idHex);
+    _refrescarCausaBackground(idHex);
+    return;
+  }
+
+  // 3. NO está en caché — necesita red (mostrar spinner)
   document.getElementById('loading-causa').classList.add('active');
   showScreen('scan');
   try {
-    let causaData = null;
-
-    // 1. Buscar en caché (memoria o localStorage — instantáneo)
-    const index = await getIndex();
-    if (index) {
-      const found = index.find(c => c.id_hex === idHex);
-      if (found) causaData = mapIndexEntry(found);
-    }
-
-    // 2. Si no se encontró, forzar re-descarga (puede ser causa nueva)
-    if (!causaData && navigator.onLine) {
+    // Forzar re-descarga del index (puede ser causa nueva)
+    if (navigator.onLine) {
       const fresh = await descargarIndex();
       if (fresh) {
         const found = fresh.find(c => c.id_hex === idHex);
         if (found) causaData = mapIndexEntry(found);
       }
     }
-
-    // 3. Fallback: _CAUSA.json individual
+    // Fallback: _CAUSA.json individual
     if (!causaData && navigator.onLine) {
       try {
         const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
         if (individual && individual.datos) {
           const d = individual.datos;
           causaData = {
-            id_hex:    individual.id_hex,
-            rol:       d.rol || '',
-            tribunal:  d.tribunal || '',
-            demandante:d.demandante || '',
-            demandado: d.demandado || '',
-            rut:       d.rut || '',
-            notif_a:   d.notificar_a || d.notif_a || '',
-            direccion: d.direccion || '',
-            estudio:   d.estudio_juridico || d.estudio || '',
-            piezas:    d.piezas || '',
-            n_solicitud: d.nro_solicitud || '',
-            ciudad:    d.ciudad || 'Antofagasta',
-            estado:    individual.estado || '',
+            id_hex: individual.id_hex, rol: d.rol || '', tribunal: d.tribunal || '',
+            demandante: d.demandante || '', demandado: d.demandado || '', rut: d.rut || '',
+            notif_a: d.notificar_a || d.notif_a || '', direccion: d.direccion || '',
+            estudio: d.estudio_juridico || d.estudio || '', piezas: d.piezas || '',
+            n_solicitud: d.nro_solicitud || '', ciudad: d.ciudad || 'Antofagasta',
+            estado: individual.estado || '',
           };
         }
-      } catch(e) { console.warn('_CAUSA.json individual no disponible'); }
+      } catch(e) {}
     }
-
     document.getElementById('loading-causa').classList.remove('active');
     if (!causaData) { showToast('⚠ Causa no encontrada: ' + idHex); return; }
     state.causaData = causaData;
-
-    // Verificar si la causa está suspendida
     if (causaData.estado === 'suspendida') {
       showScreenSuspendida(idHex, causaData);
-      return;
-    }
-
-    fillCausa(idHex, causaData);
-    resetSelections();
-
-    // Mostrar/ocultar botón Editar datos según estado
-    const btnEditCausa = document.getElementById('btn-editar-causa');
-    const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
-    btnEditCausa.style.display = estadoBloquea ? 'none' : '';
-
-    // Verificar etapas existentes (orden: más avanzada primero)
-    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
-    let previo = null;
-    for (const etapa of etapas) {
-      const existe = await dbxCheckExists('/resultados-dev/' + idHex + '_' + etapa + '.json');
-      if (existe) { previo = etapa; break; }
-    }
-
-    // Compatibilidad hacia atrás: archivo sin sufijo (esquema antiguo)
-    if (!previo) {
-      const legacy = await dbxCheckExists('/resultados-dev/' + idHex + '.json');
-      if (legacy) previo = '?';
-    }
-
-    if (previo) {
-      state.resultadoPrevio = previo;
-      showModalYaEnviado(idHex);
     } else {
-      showScreen('causa');
+      _mostrarCausa(idHex, causaData);
+      _verificarEtapasBackground(idHex);
     }
   } catch(e) {
     document.getElementById('loading-causa').classList.remove('active');
-    showToast('Error al cargar causas. Verifica conexión.');
-    console.error(e);
+    showToast('Error al cargar causa. Verifica conexión.');
   }
+}
+
+function _mostrarCausa(idHex, causaData) {
+  fillCausa(idHex, causaData);
+  resetSelections();
+  const btnEditCausa = document.getElementById('btn-editar-causa');
+  const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
+  btnEditCausa.style.display = estadoBloquea ? 'none' : '';
+  showScreen('causa');
+}
+
+async function _verificarEtapasBackground(idHex) {
+  if (!navigator.onLine) return;
+  try {
+    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
+    for (const etapa of etapas) {
+      const existe = await dbxCheckExists('/resultados-dev/' + idHex + '_' + etapa + '.json');
+      if (existe) {
+        state.resultadoPrevio = etapa;
+        showModalYaEnviado(idHex);
+        return;
+      }
+    }
+    // Compatibilidad: archivo sin sufijo
+    const legacy = await dbxCheckExists('/resultados-dev/' + idHex + '.json');
+    if (legacy) { state.resultadoPrevio = '?'; showModalYaEnviado(idHex); }
+  } catch(e) {}
+}
+
+async function _refrescarCausaBackground(idHex) {
+  if (!navigator.onLine) return;
+  try {
+    const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
+    if (!individual || !individual.datos) return;
+    const d = individual.datos;
+    const fresh = {
+      id_hex: individual.id_hex, rol: d.rol || '', tribunal: d.tribunal || '',
+      demandante: d.demandante || '', demandado: d.demandado || '', rut: d.rut || '',
+      notif_a: d.notificar_a || d.notif_a || '', direccion: d.direccion || '',
+      estudio: d.estudio_juridico || d.estudio || '', piezas: d.piezas || '',
+      n_solicitud: d.nro_solicitud || '', ciudad: d.ciudad || 'Antofagasta',
+      estado: individual.estado || '',
+    };
+    // Actualizar si hay diferencias
+    let cambio = false;
+    for (const key of Object.keys(fresh)) {
+      if (fresh[key] !== state.causaData[key]) { cambio = true; break; }
+    }
+    if (cambio) {
+      state.causaData = fresh;
+      fillCausa(idHex, fresh);
+    }
+  } catch(e) {}
 }
 
 function showModalYaEnviado(idHex) {
