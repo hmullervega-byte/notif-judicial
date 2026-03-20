@@ -637,6 +637,27 @@
 </div>
 
 <!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: SUSPENDIDA                      -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-suspendida">
+  <div class="causa-id">
+    <span style="color:var(--text2)">ID:</span>
+    <span id="susp-id-display" style="color:var(--accent)">—</span>
+  </div>
+  <div id="susp-campos" style="margin-bottom:16px;"></div>
+  <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:10px; padding:16px; margin-bottom:16px;">
+    <div style="font-size:15px; font-weight:700; color:#b91c1c; margin-bottom:8px;">⛔ Causa suspendida</div>
+    <div id="susp-motivo" style="font-size:13px; color:#991b1b; line-height:1.5;"></div>
+  </div>
+  <div style="text-align:center; font-size:13px; color:var(--text2); margin-bottom:16px;">
+    Esta causa está suspendida. Contacta a la oficina.
+  </div>
+  <div class="bottom-actions">
+    <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
 <!-- SCREEN: CONFIG                          -->
 <!-- ═══════════════════════════════════════ -->
 <div class="screen" id="screen-config">
@@ -1778,6 +1799,7 @@ async function loadCausa(idHex) {
             piezas:    found.piezas || '',
             n_solicitud: found.nro_solicitud || '',
             ciudad:    found.ciudad || 'Antofagasta',
+            estado:    found.estado || '',
           };
         }
       }
@@ -1812,6 +1834,7 @@ async function loadCausa(idHex) {
             piezas:    d.piezas || '',
             n_solicitud: d.nro_solicitud || '',
             ciudad:    d.ciudad || 'Antofagasta',
+            estado:    individual.estado || '',
           };
         }
       } catch(e) { console.warn('_CAUSA.json individual no disponible'); }
@@ -1820,6 +1843,13 @@ async function loadCausa(idHex) {
     document.getElementById('loading-causa').classList.remove('active');
     if (!causaData) { showToast('⚠ Causa no encontrada: ' + idHex); return; }
     state.causaData = causaData;
+
+    // Verificar si la causa está suspendida
+    if (causaData.estado === 'suspendida') {
+      showScreenSuspendida(idHex, causaData);
+      return;
+    }
+
     fillCausa(idHex, causaData);
     resetSelections();
 
@@ -1919,6 +1949,37 @@ function fillCausa(idHex, c) {
   // Resetear edición de piezas
   document.getElementById('campo-piezas-edit').style.display = 'none';
   document.getElementById('btn-editar-piezas').style.display = '';
+}
+
+async function showScreenSuspendida(idHex, c) {
+  document.getElementById('loading-causa').classList.remove('active');
+  document.getElementById('susp-id-display').textContent = idHex;
+
+  // Mostrar campos de la causa en solo lectura
+  const campos = [
+    ['ROL', c.rol], ['Tribunal', c.tribunal], ['Demandado', c.demandado],
+    ['RUT', c.rut], ['Notificar a', c.notif_a], ['Dirección', c.direccion],
+    ['Estudio', c.estudio]
+  ];
+  document.getElementById('susp-campos').innerHTML = campos.map(([label, val]) => `
+    <div class="field-row">
+      <div class="field-label">${label}</div>
+      <div class="field-value" style="opacity:0.7;">${val || '—'}</div>
+    </div>
+  `).join('');
+
+  // Obtener motivo de suspensión desde _CAUSA.json individual
+  let motivo = 'Sin motivo registrado';
+  try {
+    const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    if (individual && individual.historial) {
+      const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
+      if (susp) motivo = susp.motivo || motivo;
+    }
+  } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
+
+  document.getElementById('susp-motivo').textContent = motivo;
+  showScreen('suspendida');
 }
 
 function editarPiezas() {
