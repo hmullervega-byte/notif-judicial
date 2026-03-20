@@ -1508,6 +1508,8 @@ window.onload = () => {
   }
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
+  // Precargar INDEX.json en background para acelerar primer escaneo
+  if (state.refreshToken && state.appKey && state.appSecret) getIndex();
 };
 
 // ── NAVEGACIÓN ───────────────────────────
@@ -1697,6 +1699,39 @@ async function dbxCheckExists(path) {
   } catch(e) { return false; }
 }
 
+// ── CACHÉ INDEX.json ─────────────────────
+let _indexCache = null;
+let _indexCacheTs = 0;
+const INDEX_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function getIndex() {
+  const now = Date.now();
+  if (_indexCache && (now - _indexCacheTs) < INDEX_CACHE_TTL) return _indexCache;
+  try {
+    const idx = await dbxGet('/causas-dev/INDEX.json');
+    if (Array.isArray(idx)) { _indexCache = idx; _indexCacheTs = now; }
+    return _indexCache;
+  } catch(e) { console.warn('INDEX.json no disponible'); return _indexCache; }
+}
+
+function mapIndexEntry(found) {
+  return {
+    id_hex:    found.id_hex,
+    rol:       found.rol,
+    tribunal:  found.tribunal || '',
+    demandante:found.demandante || '',
+    demandado: found.demandado || '',
+    rut:       found.rut || '',
+    notif_a:   found.notificar_a || found.notif_a || '',
+    direccion: found.direccion || '',
+    estudio:   found.estudio_juridico || found.estudio || '',
+    piezas:    found.piezas || '',
+    n_solicitud: found.nro_solicitud || '',
+    ciudad:    found.ciudad || 'Antofagasta',
+    estado:    found.estado || '',
+  };
+}
+
 // ── CARGAR CAUSA ─────────────────────────
 async function loadCausa(idHex) {
   state.idHex = idHex;
@@ -1704,32 +1739,24 @@ async function loadCausa(idHex) {
   document.getElementById('loading-causa').classList.add('active');
   showScreen('scan');
   try {
-    // Intentar INDEX.json primero, fallback a causas.json, luego _CAUSA.json individual
     let causaData = null;
-    try {
-      const index = await dbxGet('/causas/INDEX.json');
-      if (Array.isArray(index)) {
-        const found = index.find(c => c.id_hex === idHex);
-        if (found) {
-          // Mapear campos de INDEX.json al formato que usa fillCausa
-          causaData = {
-            id_hex:    found.id_hex,
-            rol:       found.rol,
-            tribunal:  found.tribunal || '',
-            demandante:found.demandante || '',
-            demandado: found.demandado || '',
-            rut:       found.rut || '',
-            notif_a:   found.notificar_a || found.notif_a || '',
-            direccion: found.direccion || '',
-            estudio:   found.estudio_juridico || found.estudio || '',
-            piezas:    found.piezas || '',
-            n_solicitud: found.nro_solicitud || '',
-            ciudad:    found.ciudad || 'Antofagasta',
-            estado:    found.estado || '',
-          };
+
+    // 1. Buscar en caché de INDEX.json (instantáneo si ya se cargó)
+    if (_indexCache) {
+      const found = _indexCache.find(c => c.id_hex === idHex);
+      if (found) causaData = mapIndexEntry(found);
+    }
+
+    // 2. Si no está en caché, descargar INDEX.json
+    if (!causaData) {
+      try {
+        const index = await getIndex();
+        if (index) {
+          const found = index.find(c => c.id_hex === idHex);
+          if (found) causaData = mapIndexEntry(found);
         }
-      }
-    } catch(e) { console.warn('INDEX.json no disponible, intentando causas.json'); }
+      } catch(e) { console.warn('INDEX.json no disponible'); }
+    }
 
     // Fallback 1: causas.json (legacy)
     if (!causaData) {
@@ -1744,7 +1771,7 @@ async function loadCausa(idHex) {
     // Fallback 2: _CAUSA.json individual
     if (!causaData) {
       try {
-        const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+        const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
         if (individual && individual.datos) {
           const d = individual.datos;
           causaData = {
@@ -1902,7 +1929,7 @@ async function showScreenSuspendida(idHex, c) {
   // Obtener motivo de suspensión desde _CAUSA.json individual
   let motivo = 'Sin motivo registrado';
   try {
-    const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
     if (individual && individual.historial) {
       const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
       if (susp) motivo = susp.motivo || motivo;
