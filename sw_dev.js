@@ -21,20 +21,23 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Solo cachear navegacion y assets del sitio, no llamadas a Dropbox API
+  // No interceptar Dropbox API ni Google Fonts
   const url = new URL(event.request.url);
   if (url.hostname.includes('dropbox') || url.hostname.includes('googleapis')) return;
+  if (event.request.method !== 'GET') return;
 
+  // Stale While Revalidate: servir caché inmediato + actualizar en background
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cachear copia fresca
-        if (response.ok && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(event.request).then(cached => {
+        const fetchPromise = fetch(event.request).then(response => {
+          if (response.ok) cache.put(event.request, response.clone());
+          return response;
+        }).catch(() => cached);
+
+        // Si hay caché, servir inmediato; si no, esperar red
+        return cached || fetchPromise;
       })
-      .catch(() => caches.match(event.request))
+    )
   );
 });
