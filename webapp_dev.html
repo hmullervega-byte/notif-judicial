@@ -599,6 +599,7 @@
     background: rgba(79,142,247,0.12);
     color: var(--text);
   }
+  @keyframes parpadeo { 0%,100%{opacity:1} 50%{opacity:0.3} }
 </style>
 </head>
 <body>
@@ -606,11 +607,19 @@
 <!-- BANNER DESARROLLO -->
 <div style="background:#facc15; color:#000; text-align:center; font-weight:700; font-size:14px; padding:6px 0; position:sticky; top:0; z-index:9999; letter-spacing:1px;">MODO DESARROLLO</div>
 
+<!-- BANNER OFFLINE / PENDIENTES -->
+<div id="banner-offline" style="display:none; background:#f97316; color:#fff; text-align:center; font-weight:600; font-size:13px; padding:6px 0; position:sticky; top:30px; z-index:9998;">
+  <span id="banner-offline-text">Sin conexión</span>
+</div>
+
 <!-- HEADER -->
 <header>
-  <div>
-    <div class="header-title">⚖ Notif Judicial</div>
-    <div class="header-sub">Módulo Terreno</div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div>
+      <div class="header-title">⚖ Notif Judicial</div>
+      <div class="header-sub">Módulo Terreno</div>
+    </div>
+    <span id="dot-conexion" style="width:10px; height:10px; border-radius:50%; background:#22c55e; display:inline-block; flex-shrink:0;" title="Con conexión"></span>
   </div>
   <button class="btn-config" onclick="showScreen('config')" title="Configuración">⚙</button>
 </header>
@@ -701,6 +710,10 @@
   <div class="loading" id="loading-causa">
     <div class="spinner"></div>
     Cargando datos de causa...
+  </div>
+  <div style="margin-top:20px; text-align:center;">
+    <button class="btn btn-secondary" onclick="forzarActualizacion()" style="font-size:12px; padding:6px 16px;">↻ Actualizar datos</button>
+    <div id="index-info" style="font-size:11px; color:var(--text2); margin-top:6px;"></div>
   </div>
 </div>
 
@@ -1508,8 +1521,15 @@ window.onload = () => {
   }
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
-  // Precargar INDEX.json en background para acelerar primer escaneo
-  if (state.refreshToken && state.appKey && state.appSecret) getIndex();
+  // Cargar INDEX_RESPALDO desde localStorage (instantáneo) + refresh background
+  cargarIndexDesdeLS();
+  actualizarIndexInfo();
+  if (state.refreshToken && state.appKey && state.appSecret) {
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL || !_indexCache) descargarIndex();
+  }
+  // Inicializar offline/pendientes
+  initOffline();
 };
 
 // ── NAVEGACIÓN ───────────────────────────
@@ -1699,19 +1719,91 @@ async function dbxCheckExists(path) {
   } catch(e) { return false; }
 }
 
-// ── CACHÉ INDEX_RESPALDO.json ─────────────────────
+// ── CACHÉ INDEX_RESPALDO.json con localStorage ─────────────────────
 let _indexCache = null;
-let _indexCacheTs = 0;
-const INDEX_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const INDEX_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas
+const LS_INDEX_KEY = 'notif_index_respaldo';
+const LS_INDEX_TS  = 'notif_index_respaldo_ts';
 
-async function getIndex() {
-  const now = Date.now();
-  if (_indexCache && (now - _indexCacheTs) < INDEX_CACHE_TTL) return _indexCache;
+function cargarIndexDesdeLS() {
+  try {
+    const raw = localStorage.getItem(LS_INDEX_KEY);
+    if (raw) { _indexCache = JSON.parse(raw); return true; }
+  } catch(e) { console.warn('Error leyendo index de localStorage'); }
+  return false;
+}
+
+function guardarIndexEnLS(idx) {
+  try {
+    localStorage.setItem(LS_INDEX_KEY, JSON.stringify(idx));
+    localStorage.setItem(LS_INDEX_TS, String(Date.now()));
+  } catch(e) { console.warn('Error guardando index en localStorage'); }
+}
+
+function indexTsLocal() {
+  return parseInt(localStorage.getItem(LS_INDEX_TS) || '0', 10);
+}
+
+async function descargarIndex() {
   try {
     const idx = await dbxGet('/causas-dev/INDEX_RESPALDO.json');
-    if (Array.isArray(idx)) { _indexCache = idx; _indexCacheTs = now; }
+    if (Array.isArray(idx)) {
+      _indexCache = idx;
+      guardarIndexEnLS(idx);
+      actualizarIndexInfo();
+      return idx;
+    }
+  } catch(e) { console.warn('INDEX_RESPALDO.json no disponible'); }
+  return _indexCache;
+}
+
+async function getIndex() {
+  // Si hay caché en memoria, verificar TTL
+  if (_indexCache) {
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL) {
+      // Descargar en background sin bloquear
+      descargarIndex();
+    }
     return _indexCache;
-  } catch(e) { console.warn('INDEX_RESPALDO.json no disponible'); return _indexCache; }
+  }
+  // Si no hay en memoria, intentar localStorage
+  if (cargarIndexDesdeLS()) {
+    // Verificar si necesita refresh en background
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL) descargarIndex();
+    return _indexCache;
+  }
+  // Última opción: descargar
+  return await descargarIndex();
+}
+
+async function forzarActualizacion() {
+  const infoEl = document.getElementById('index-info');
+  infoEl.textContent = 'Descargando...';
+  await descargarIndex();
+  const n = _indexCache ? _indexCache.length : 0;
+  infoEl.textContent = `✓ ${n} causas cargadas`;
+  showToast('Datos actualizados ✓');
+}
+
+function actualizarIndexInfo() {
+  const el = document.getElementById('index-info');
+  if (!el) return;
+  const ts = indexTsLocal();
+  if (!ts) { el.textContent = ''; return; }
+  const hace = Math.round((Date.now() - ts) / 60000);
+  const n = _indexCache ? _indexCache.length : 0;
+  el.textContent = `${n} causas · actualizado hace ${hace < 1 ? '<1' : hace} min`;
+}
+
+function actualizarIndexLocal(idHex, campos) {
+  if (!_indexCache) return;
+  const entry = _indexCache.find(c => c.id_hex === idHex);
+  if (entry) {
+    Object.assign(entry, campos);
+    guardarIndexEnLS(_indexCache);
+  }
 }
 
 function mapIndexEntry(found) {
@@ -1743,35 +1835,24 @@ async function loadCausa(idHex) {
   try {
     let causaData = null;
 
-    // 1. Buscar en caché de INDEX.json (instantáneo si ya se cargó)
-    if (_indexCache) {
-      const found = _indexCache.find(c => c.id_hex === idHex);
+    // 1. Buscar en caché (memoria o localStorage — instantáneo)
+    const index = await getIndex();
+    if (index) {
+      const found = index.find(c => c.id_hex === idHex);
       if (found) causaData = mapIndexEntry(found);
     }
 
-    // 2. Si no está en caché, descargar INDEX.json
-    if (!causaData) {
-      try {
-        const index = await getIndex();
-        if (index) {
-          const found = index.find(c => c.id_hex === idHex);
-          if (found) causaData = mapIndexEntry(found);
-        }
-      } catch(e) { console.warn('INDEX.json no disponible'); }
+    // 2. Si no se encontró, forzar re-descarga (puede ser causa nueva)
+    if (!causaData && navigator.onLine) {
+      const fresh = await descargarIndex();
+      if (fresh) {
+        const found = fresh.find(c => c.id_hex === idHex);
+        if (found) causaData = mapIndexEntry(found);
+      }
     }
 
-    // Fallback 1: causas.json (legacy)
-    if (!causaData) {
-      try {
-        const causasArr = await dbxGet('/causas.json');
-        if (Array.isArray(causasArr)) {
-          causaData = causasArr.find(c => c.id_hex === idHex) || null;
-        }
-      } catch(e) { console.warn('causas.json no disponible'); }
-    }
-
-    // Fallback 2: _CAUSA.json individual
-    if (!causaData) {
+    // 3. Fallback: _CAUSA.json individual
+    if (!causaData && navigator.onLine) {
       try {
         const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
         if (individual && individual.datos) {
@@ -2020,8 +2101,13 @@ async function guardarEdicionCausa() {
       usuario: 'receptora'
     });
 
-    // Subir a /causas-dev/
-    await dbxPut('/causas-dev/' + idHex + '_CAUSA.json', causaJson);
+    const envio = { tipo: 'edicion', id_hex: idHex, path: '/causas-dev/' + idHex + '_CAUSA.json', payload: causaJson, timestamp: new Date().toISOString() };
+
+    if (!navigator.onLine) {
+      guardarPendiente(envio);
+    } else {
+      await dbxPut(envio.path, causaJson);
+    }
 
     // Actualizar state local
     for (const [key, val] of Object.entries(campos)) {
@@ -2029,9 +2115,12 @@ async function guardarEdicionCausa() {
       if (key === 'notificar_a') state.causaData.notif_a = val;
     }
 
+    // Actualizar index local con campos modificados
+    actualizarIndexLocal(idHex, campos);
+
     // Refrescar pantalla causa
     fillCausa(idHex, state.causaData);
-    showToast('Datos actualizados ✓');
+    showToast(!navigator.onLine ? 'Guardado offline — se enviará con señal' : 'Datos actualizados ✓');
     showScreen('causa');
   } catch(e) {
     console.error('Error al guardar edición:', e);
@@ -2897,15 +2986,40 @@ async function enviarResultado() {
 
   document.getElementById('loading-envio').classList.add('active');
   document.getElementById('btn-enviar').disabled = true;
+
+  const envio = { tipo: 'resultado', id_hex: state.idHex, path: '/resultados-dev/' + state.idHex + '_' + t + '.json', payload, timestamp: new Date().toISOString() };
+
+  if (!navigator.onLine) {
+    // Guardar offline
+    guardarPendiente(envio);
+    document.getElementById('loading-envio').classList.remove('active');
+    document.getElementById('btn-enviar').disabled = false;
+    actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
+    showConfirm(true, codigos, state.causaData);
+    showToast('Guardado offline — se enviará con señal');
+    return;
+  }
+
   try {
-    await dbxPut('/resultados-dev/' + state.idHex + '_' + t + '.json', payload);
+    await dbxPut(envio.path, payload);
+    // Actualizar index local
+    actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
     document.getElementById('loading-envio').classList.remove('active');
     document.getElementById('btn-enviar').disabled = false;
     showConfirm(true, codigos, state.causaData);
   } catch(e) {
-    document.getElementById('loading-envio').classList.remove('active');
-    document.getElementById('btn-enviar').disabled = false;
-    showConfirm(false, codigos, state.causaData, e.message);
+    // Si falla la red, guardar como pendiente
+    if (!navigator.onLine) {
+      guardarPendiente(envio);
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      showConfirm(true, codigos, state.causaData);
+      showToast('Guardado offline — se enviará con señal');
+    } else {
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      showConfirm(false, codigos, state.causaData, e.message);
+    }
   }
 }
 
@@ -2943,6 +3057,99 @@ function resetApp() {
 
 // ── TOAST ────────────────────────────────
 let toastTimer;
+// ══════════════════════════════════════════════
+// MODO OFFLINE — PENDIENTES
+// ══════════════════════════════════════════════
+const LS_PENDIENTES = 'notif_pendientes';
+
+function getPendientes() {
+  try { return JSON.parse(localStorage.getItem(LS_PENDIENTES) || '[]'); }
+  catch(e) { return []; }
+}
+
+function guardarPendiente(envio) {
+  const arr = getPendientes();
+  arr.push(envio);
+  localStorage.setItem(LS_PENDIENTES, JSON.stringify(arr));
+  actualizarBannerOffline();
+}
+
+function actualizarBannerOffline() {
+  const banner = document.getElementById('banner-offline');
+  const texto = document.getElementById('banner-offline-text');
+  const dot = document.getElementById('dot-conexion');
+  const pendientes = getPendientes();
+  const online = navigator.onLine;
+
+  if (!online) {
+    dot.style.background = '#f97316';
+    dot.style.animation = 'parpadeo 1.5s infinite';
+    dot.title = 'Sin conexión';
+    if (pendientes.length > 0) {
+      banner.style.display = '';
+      texto.textContent = `Sin conexión — ${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''} de enviar`;
+    } else {
+      banner.style.display = '';
+      texto.textContent = 'Sin conexión';
+    }
+  } else if (pendientes.length > 0) {
+    dot.style.background = '#f97316';
+    dot.style.animation = '';
+    dot.title = 'Pendientes por enviar';
+    banner.style.display = '';
+    texto.textContent = `${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''} de enviar...`;
+  } else {
+    dot.style.background = '#22c55e';
+    dot.style.animation = '';
+    dot.title = 'Con conexión';
+    banner.style.display = 'none';
+  }
+}
+
+async function sincronizarPendientes() {
+  const pendientes = getPendientes();
+  if (pendientes.length === 0) { actualizarBannerOffline(); return; }
+  if (!navigator.onLine) return;
+
+  let enviados = 0;
+  const fallidos = [];
+
+  for (const envio of pendientes) {
+    try {
+      await dbxPut(envio.path, envio.payload);
+      enviados++;
+    } catch(e) {
+      console.warn('Error sincronizando pendiente:', e);
+      fallidos.push(envio);
+    }
+  }
+
+  localStorage.setItem(LS_PENDIENTES, JSON.stringify(fallidos));
+  actualizarBannerOffline();
+
+  if (enviados > 0) {
+    showToast(`${enviados} registro${enviados !== 1 ? 's' : ''} enviado${enviados !== 1 ? 's' : ''} correctamente`);
+  }
+  if (fallidos.length > 0) {
+    showToast(`${fallidos.length} no se pudo enviar — se reintentará`);
+  }
+}
+
+function initOffline() {
+  window.addEventListener('online', () => {
+    actualizarBannerOffline();
+    sincronizarPendientes();
+  });
+  window.addEventListener('offline', () => {
+    actualizarBannerOffline();
+  });
+  actualizarBannerOffline();
+  // Si hay pendientes al abrir, sincronizar
+  if (navigator.onLine && getPendientes().length > 0) {
+    setTimeout(sincronizarPendientes, 2000);
+  }
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
