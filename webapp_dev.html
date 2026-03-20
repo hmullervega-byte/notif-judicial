@@ -1699,7 +1699,7 @@ async function dbxCheckExists(path) {
   } catch(e) { return false; }
 }
 
-// ── CACHÉ INDEX.json ─────────────────────
+// ── CACHÉ INDEX_RESPALDO.json ─────────────────────
 let _indexCache = null;
 let _indexCacheTs = 0;
 const INDEX_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
@@ -1708,27 +1708,29 @@ async function getIndex() {
   const now = Date.now();
   if (_indexCache && (now - _indexCacheTs) < INDEX_CACHE_TTL) return _indexCache;
   try {
-    const idx = await dbxGet('/causas-dev/INDEX.json');
+    const idx = await dbxGet('/causas-dev/INDEX_RESPALDO.json');
     if (Array.isArray(idx)) { _indexCache = idx; _indexCacheTs = now; }
     return _indexCache;
-  } catch(e) { console.warn('INDEX.json no disponible'); return _indexCache; }
+  } catch(e) { console.warn('INDEX_RESPALDO.json no disponible'); return _indexCache; }
 }
 
 function mapIndexEntry(found) {
+  const d = found.datos || found;
   return {
-    id_hex:    found.id_hex,
-    rol:       found.rol,
-    tribunal:  found.tribunal || '',
-    demandante:found.demandante || '',
-    demandado: found.demandado || '',
-    rut:       found.rut || '',
-    notif_a:   found.notificar_a || found.notif_a || '',
-    direccion: found.direccion || '',
-    estudio:   found.estudio_juridico || found.estudio || '',
-    piezas:    found.piezas || '',
-    n_solicitud: found.nro_solicitud || '',
-    ciudad:    found.ciudad || 'Antofagasta',
-    estado:    found.estado || '',
+    id_hex:    found.id_hex || d.id_hex,
+    rol:       d.rol || found.rol || '',
+    tribunal:  d.tribunal || found.tribunal || '',
+    demandante:d.demandante || found.demandante || '',
+    demandado: d.demandado || found.demandado || '',
+    rut:       d.rut || found.rut || '',
+    notif_a:   d.notificar_a || d.notif_a || found.notificar_a || found.notif_a || '',
+    direccion: d.direccion || found.direccion || '',
+    estudio:   d.estudio_juridico || d.estudio || found.estudio_juridico || found.estudio || '',
+    piezas:    d.piezas || found.piezas || '',
+    n_solicitud: d.nro_solicitud || found.nro_solicitud || '',
+    ciudad:    d.ciudad || found.ciudad || 'Antofagasta',
+    estado:    found.estado || d.estado || '',
+    historial: found.historial || [],
   };
 }
 
@@ -1926,15 +1928,21 @@ async function showScreenSuspendida(idHex, c) {
     </div>
   `).join('');
 
-  // Obtener motivo de suspensión desde _CAUSA.json individual
+  // Obtener motivo de suspensión desde historial (caché o individual)
   let motivo = 'Sin motivo registrado';
-  try {
-    const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
-    if (individual && individual.historial) {
-      const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
-      if (susp) motivo = susp.motivo || motivo;
-    }
-  } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
+  const hist = c.historial || [];
+  if (hist.length > 0) {
+    const susp = [...hist].reverse().find(h => h.accion === 'suspension');
+    if (susp) motivo = susp.motivo || motivo;
+  } else {
+    try {
+      const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
+      if (individual && individual.historial) {
+        const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
+        if (susp) motivo = susp.motivo || motivo;
+      }
+    } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
+  }
 
   document.getElementById('susp-motivo').textContent = motivo;
   showScreen('suspendida');
