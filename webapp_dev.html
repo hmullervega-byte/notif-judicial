@@ -9,9 +9,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js" async></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap&font-display=swap');
 
   :root {
     --bg: #0f1117;
@@ -1518,7 +1518,8 @@ let state = {
 };
 
 // ── INIT ─────────────────────────────────
-window.onload = () => {
+document.addEventListener('DOMContentLoaded', () => {
+  console.time('total-init');
   // Detectar si Chrome restauró una sesión previa (DOM en estado sucio)
   const lastScreen = localStorage.getItem('notif_last_screen');
   if (lastScreen) localStorage.removeItem('notif_last_screen');
@@ -1538,11 +1539,13 @@ window.onload = () => {
   state.scanActive = false;
 
   // Mostrar pantalla principal INMEDIATAMENTE (sin esperar red)
+  console.time('show-scanner');
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
     showScreen('scan');
   }
+  console.timeEnd('show-scanner');
 
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
@@ -1566,7 +1569,8 @@ window.onload = () => {
     navigator.serviceWorker.register('/notif-judicial/sw_dev.js')
       .catch(e => console.warn('SW registro falló:', e));
   }
-};
+  console.timeEnd('total-init');
+});
 
 // ── NAVEGACIÓN ───────────────────────────
 function showScreen(name) {
