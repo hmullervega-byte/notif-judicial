@@ -764,7 +764,56 @@
 
   <div class="bottom-actions">
     <button class="btn btn-primary" onclick="showScreen('resultado')">Registrar resultado →</button>
+    <button class="btn btn-secondary" id="btn-editar-causa" onclick="mostrarEdicionCausa()" style="margin-top:10px; display:none;">✏ Editar datos</button>
     <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SCREEN: EDITAR CAUSA                    -->
+<!-- ═══════════════════════════════════════ -->
+<div class="screen" id="screen-editar-causa">
+  <div style="background:#fef3c7; border:1px solid #fbbf24; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#92400e; line-height:1.4;">
+    Estos datos provienen de la demanda judicial. Modificar solo si hay un error de ingreso.
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">ROL</label>
+      <input type="text" id="edit-causa-rol" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Tribunal</label>
+      <select id="edit-causa-tribunal" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;">
+        <option value="">— Seleccionar —</option>
+        <option value="1°">Primer</option>
+        <option value="2°">Segundo</option>
+        <option value="3°">Tercer</option>
+        <option value="4°">Cuarto</option>
+        <option value="5°">Quinto</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Demandado</label>
+      <input type="text" id="edit-causa-demandado" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">RUT Demandado</label>
+      <input type="text" id="edit-causa-rut" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Notificar a</label>
+      <textarea id="edit-causa-notif_a" rows="2" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); resize:vertical; box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px; color:var(--text2); margin-bottom:4px; display:block;">Dirección</label>
+      <input type="text" id="edit-causa-direccion" style="width:100%; font-size:16px; padding:10px 12px; background:var(--surface2); border:1px solid var(--accent2); border-radius:8px; color:var(--text); box-sizing:border-box;" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+  </div>
+
+  <div class="bottom-actions" style="margin-top:20px;">
+    <button class="btn btn-primary" id="btn-guardar-edicion-causa" onclick="guardarEdicionCausa()">Guardar cambios</button>
+    <button class="btn btn-secondary" onclick="cancelarEdicionCausa()" style="margin-top:10px">Cancelar</button>
   </div>
 </div>
 
@@ -1856,6 +1905,11 @@ async function loadCausa(idHex) {
     fillCausa(idHex, causaData);
     resetSelections();
 
+    // Mostrar/ocultar botón Editar datos según estado
+    const btnEditCausa = document.getElementById('btn-editar-causa');
+    const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
+    btnEditCausa.style.display = estadoBloquea ? 'none' : '';
+
     // Verificar etapas existentes (orden: más avanzada primero)
     const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
     let previo = null;
@@ -1983,6 +2037,104 @@ async function showScreenSuspendida(idHex, c) {
 
   document.getElementById('susp-motivo').textContent = motivo;
   showScreen('suspendida');
+}
+
+// ══════════════════════════════════════════════
+// EDICIÓN DE CAUSA DESDE TERRENO
+// ══════════════════════════════════════════════
+function mostrarEdicionCausa() {
+  const c = state.causaData;
+  if (!c) return;
+  // Mapear tribunal a formato select
+  const tribMap = {'primer':'1°','primero':'1°','1°':'1°','segundo':'2°','2°':'2°','tercer':'3°','tercero':'3°','3°':'3°','cuarto':'4°','4°':'4°','quinto':'5°','5°':'5°'};
+  const tribVal = tribMap[(c.tribunal||'').toLowerCase().replace(/\s.*/,'')] || '';
+  document.getElementById('edit-causa-rol').value = c.rol || '';
+  document.getElementById('edit-causa-tribunal').value = tribVal;
+  document.getElementById('edit-causa-demandado').value = c.demandado || '';
+  document.getElementById('edit-causa-rut').value = c.rut || '';
+  document.getElementById('edit-causa-notif_a').value = c.notif_a || '';
+  document.getElementById('edit-causa-direccion').value = c.direccion || '';
+  showScreen('editar-causa');
+}
+
+async function guardarEdicionCausa() {
+  const idHex = state.idHex;
+  if (!idHex) return;
+
+  const btn = document.getElementById('btn-guardar-edicion-causa');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    // Cargar _CAUSA.json completo desde Dropbox (producción)
+    const causaJson = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    if (!causaJson) throw new Error('No se pudo cargar la causa');
+
+    const campos = {
+      rol:          document.getElementById('edit-causa-rol').value.trim(),
+      tribunal:     document.getElementById('edit-causa-tribunal').value,
+      demandado:    document.getElementById('edit-causa-demandado').value.trim(),
+      rut:          document.getElementById('edit-causa-rut').value.trim(),
+      notificar_a:  document.getElementById('edit-causa-notif_a').value.trim(),
+      direccion:    document.getElementById('edit-causa-direccion').value.trim(),
+    };
+
+    // Detectar campos modificados
+    const datos = causaJson.datos || causaJson;
+    const modificados = [];
+    for (const [key, val] of Object.entries(campos)) {
+      const original = datos[key] || datos[key === 'notificar_a' ? 'notif_a' : key] || '';
+      if (val !== original) modificados.push(key);
+    }
+
+    if (modificados.length === 0) {
+      showToast('Sin cambios');
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+      cancelarEdicionCausa();
+      return;
+    }
+
+    // Actualizar datos en el JSON
+    if (causaJson.datos) {
+      Object.assign(causaJson.datos, campos);
+    } else {
+      Object.assign(causaJson, campos);
+    }
+
+    // Registrar en historial
+    if (!causaJson.historial) causaJson.historial = [];
+    causaJson.historial.push({
+      accion: 'edicion_terreno',
+      campos_modificados: modificados,
+      fecha: new Date().toISOString(),
+      usuario: 'receptora'
+    });
+
+    // Subir a /causas/ (producción)
+    await dbxPut('/causas/' + idHex + '_CAUSA.json', causaJson);
+
+    // Actualizar state local
+    for (const [key, val] of Object.entries(campos)) {
+      state.causaData[key] = val;
+      if (key === 'notificar_a') state.causaData.notif_a = val;
+    }
+
+    // Refrescar pantalla causa
+    fillCausa(idHex, state.causaData);
+    showToast('Datos actualizados ✓');
+    showScreen('causa');
+  } catch(e) {
+    console.error('Error al guardar edición:', e);
+    showToast('Error al guardar: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar cambios';
+  }
+}
+
+function cancelarEdicionCausa() {
+  showScreen('causa');
 }
 
 function editarPiezas() {
