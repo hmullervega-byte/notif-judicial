@@ -1,0 +1,21 @@
+{
+  "name": "Notif Judicial",
+  "short_name": "Notif",
+  "start_url": "/notif-judicial/webapp.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "Logo_pjud.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Logo_pjud.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

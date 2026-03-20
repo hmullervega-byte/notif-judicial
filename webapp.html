@@ -3,10 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Notif Judicial — DEV</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<title>Notif Judicial</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<script src="./jsqr.min.js" async></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
   :root {
     --bg: #0f1117;
@@ -599,18 +605,24 @@
     background: rgba(79,142,247,0.12);
     color: var(--text);
   }
+  @keyframes parpadeo { 0%,100%{opacity:1} 50%{opacity:0.3} }
 </style>
 </head>
 <body>
 
-<!-- BANNER DESARROLLO -->
-<div style="background:#facc15; color:#000; text-align:center; font-weight:700; font-size:14px; padding:6px 0; position:sticky; top:0; z-index:9999; letter-spacing:1px;">MODO DESARROLLO</div>
+<!-- BANNER OFFLINE / PENDIENTES -->
+<div id="banner-offline" style="display:none; background:#f97316; color:#fff; text-align:center; font-weight:600; font-size:13px; padding:6px 0; position:sticky; top:0; z-index:9998;">
+  <span id="banner-offline-text">Sin conexión</span>
+</div>
 
 <!-- HEADER -->
 <header>
-  <div>
-    <div class="header-title">⚖ Notif Judicial</div>
-    <div class="header-sub">Módulo Terreno</div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div>
+      <div class="header-title">⚖ Notif Judicial</div>
+      <div class="header-sub">Módulo Terreno</div>
+    </div>
+    <span id="dot-conexion" style="width:10px; height:10px; border-radius:50%; background:#22c55e; display:inline-block; flex-shrink:0;" title="Con conexión"></span>
   </div>
   <button class="btn-config" onclick="showScreen('config')" title="Configuración">⚙</button>
 </header>
@@ -701,6 +713,10 @@
   <div class="loading" id="loading-causa">
     <div class="spinner"></div>
     Cargando datos de causa...
+  </div>
+  <div style="margin-top:20px; text-align:center;">
+    <button class="btn btn-secondary" onclick="forzarActualizacion()" style="font-size:12px; padding:6px 16px;">↻ Actualizar datos</button>
+    <div id="index-info" style="font-size:11px; color:var(--text2); margin-top:6px;"></div>
   </div>
 </div>
 
@@ -1500,15 +1516,53 @@ let state = {
 };
 
 // ── INIT ─────────────────────────────────
-window.onload = () => {
+document.addEventListener('DOMContentLoaded', () => {
+  // Detectar si Chrome restauró una sesión previa (DOM en estado sucio)
+  const lastScreen = localStorage.getItem('notif_last_screen');
+  if (lastScreen) localStorage.removeItem('notif_last_screen');
+
+  // Reset agresivo del DOM — Chrome puede restaurar estado visual sucio
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('button').forEach(b => { b.disabled = false; b.style.pointerEvents = ''; });
+  document.getElementById('camera-container').classList.remove('active');
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.querySelectorAll('.loading').forEach(l => l.classList.remove('active'));
+
+  // Resetear state JS
+  state.idHex = null;
+  state.causaData = null;
+  state.resultadoPrevio = null;
+  state.videoStream = null;
+  state.scanActive = false;
+
+  // Mostrar pantalla principal INMEDIATAMENTE
   if (!state.refreshToken || !state.appKey || !state.appSecret) {
     showScreen('config');
   } else {
     showScreen('scan');
   }
+
   // E22: load destinatarios frecuentes
   renderDestFrecuentes();
-};
+  // 1. Inicializar offline/pendientes
+  initOffline();
+  // 2. Cargar INDEX_RESPALDO desde localStorage (instantáneo, sin red)
+  cargarIndexDesdeLS();
+  actualizarIndexInfo();
+  // 3. Background: refresh token + index (no bloquea pantalla)
+  if (state.refreshToken && state.appKey && state.appSecret && navigator.onLine) {
+    getAccessToken().catch(() => {});
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL || !_indexCache) {
+      descargarIndex().catch(() => {});
+    }
+  }
+
+  // Registrar Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/notif-judicial/sw.js').catch(() => {});
+  }
+});
 
 // ── NAVEGACIÓN ───────────────────────────
 function showScreen(name) {
@@ -1517,6 +1571,12 @@ function showScreen(name) {
   if (name === 'resultado') {
     updateTipoSections();
     setDefaultFechaHora();
+  }
+  // Trackear pantalla para detectar restauración de Chrome
+  if (name === 'scan' || name === 'config') {
+    localStorage.removeItem('notif_last_screen');
+  } else {
+    localStorage.setItem('notif_last_screen', name);
   }
 }
 
@@ -1542,26 +1602,42 @@ function saveToken() {
 async function getAccessToken() {
   // Si tenemos un access token guardado, usarlo primero
   if (state.accessToken) return state.accessToken;
-  // Obtener nuevo access token usando el refresh token
-  const params = new URLSearchParams({
-    grant_type:    'refresh_token',
-    refresh_token: state.refreshToken,
-    client_id:     state.appKey,
-    client_secret: state.appSecret,
-  });
-  const res = await fetch('https://api.dropbox.com/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString()
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Error al refrescar token: ' + err);
+  // Si estamos offline, usar el token guardado en localStorage aunque pueda estar vencido
+  if (!navigator.onLine) {
+    const saved = localStorage.getItem('dbx_access_token');
+    if (saved) { state.accessToken = saved; return saved; }
+    throw new Error('Sin conexión y sin token guardado');
   }
-  const data = await res.json();
-  state.accessToken = data.access_token;
-  localStorage.setItem('dbx_access_token', data.access_token);
-  return state.accessToken;
+  // Obtener nuevo access token usando el refresh token
+  try {
+    const params = new URLSearchParams({
+      grant_type:    'refresh_token',
+      refresh_token: state.refreshToken,
+      client_id:     state.appKey,
+      client_secret: state.appSecret,
+    });
+    const res = await fetch('https://api.dropbox.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    if (!res.ok) {
+      // Si falla pero tenemos token guardado, usar ese
+      const saved = localStorage.getItem('dbx_access_token');
+      if (saved) { state.accessToken = saved; return saved; }
+      const err = await res.text();
+      throw new Error('Error al refrescar token: ' + err);
+    }
+    const data = await res.json();
+    state.accessToken = data.access_token;
+    localStorage.setItem('dbx_access_token', data.access_token);
+    return state.accessToken;
+  } catch(e) {
+    // Error de red — usar token guardado si existe
+    const saved = localStorage.getItem('dbx_access_token');
+    if (saved) { state.accessToken = saved; return saved; }
+    throw e;
+  }
 }
 
 // ── QR CAMERA ────────────────────────────
@@ -1647,6 +1723,7 @@ function scanJsQR() {
 
 // ── DROPBOX ──────────────────────────────
 async function dbxFetch(url, headers, body) {
+  if (!navigator.onLine) throw new Error('Sin conexión');
   let token = await getAccessToken();
   const doReq = (t) => fetch(url, {
     method: 'POST',
@@ -1697,118 +1774,235 @@ async function dbxCheckExists(path) {
   } catch(e) { return false; }
 }
 
+// ── CACHÉ INDEX_RESPALDO.json con localStorage ─────────────────────
+let _indexCache = null;
+const INDEX_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas
+const LS_INDEX_KEY = 'notif_index_respaldo';
+const LS_INDEX_TS  = 'notif_index_respaldo_ts';
+
+function cargarIndexDesdeLS() {
+  try {
+    const raw = localStorage.getItem(LS_INDEX_KEY);
+    if (raw) { _indexCache = JSON.parse(raw); return true; }
+  } catch(e) { console.warn('Error leyendo index de localStorage'); }
+  return false;
+}
+
+function guardarIndexEnLS(idx) {
+  try {
+    localStorage.setItem(LS_INDEX_KEY, JSON.stringify(idx));
+    localStorage.setItem(LS_INDEX_TS, String(Date.now()));
+  } catch(e) { console.warn('Error guardando index en localStorage'); }
+}
+
+function indexTsLocal() {
+  return parseInt(localStorage.getItem(LS_INDEX_TS) || '0', 10);
+}
+
+async function descargarIndex() {
+  if (!navigator.onLine) return _indexCache;
+  try {
+    const idx = await dbxGet('/causas/INDEX_RESPALDO.json');
+    if (Array.isArray(idx)) {
+      _indexCache = idx;
+      guardarIndexEnLS(idx);
+      actualizarIndexInfo();
+      return idx;
+    }
+  } catch(e) { console.warn('INDEX_RESPALDO.json no disponible'); }
+  return _indexCache;
+}
+
+async function getIndex() {
+  // Si hay caché en memoria, verificar TTL
+  if (_indexCache) {
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL) {
+      // Descargar en background sin bloquear
+      descargarIndex();
+    }
+    return _indexCache;
+  }
+  // Si no hay en memoria, intentar localStorage
+  if (cargarIndexDesdeLS()) {
+    // Verificar si necesita refresh en background
+    const edad = Date.now() - indexTsLocal();
+    if (edad > INDEX_CACHE_TTL) descargarIndex();
+    return _indexCache;
+  }
+  // Última opción: descargar
+  return await descargarIndex();
+}
+
+async function forzarActualizacion() {
+  const infoEl = document.getElementById('index-info');
+  infoEl.textContent = 'Descargando...';
+  await descargarIndex();
+  const n = _indexCache ? _indexCache.length : 0;
+  infoEl.textContent = `✓ ${n} causas cargadas`;
+  showToast('Datos actualizados ✓');
+}
+
+function actualizarIndexInfo() {
+  const el = document.getElementById('index-info');
+  if (!el) return;
+  const ts = indexTsLocal();
+  if (!ts) { el.textContent = ''; return; }
+  const hace = Math.round((Date.now() - ts) / 60000);
+  const n = _indexCache ? _indexCache.length : 0;
+  el.textContent = `${n} causas · actualizado hace ${hace < 1 ? '<1' : hace} min`;
+}
+
+function actualizarIndexLocal(idHex, campos) {
+  if (!_indexCache) return;
+  const entry = _indexCache.find(c => c.id_hex === idHex);
+  if (entry) {
+    Object.assign(entry, campos);
+    guardarIndexEnLS(_indexCache);
+  }
+}
+
+function mapIndexEntry(found) {
+  const d = found.datos || found;
+  return {
+    id_hex:    found.id_hex || d.id_hex,
+    rol:       d.rol || found.rol || '',
+    tribunal:  d.tribunal || found.tribunal || '',
+    demandante:d.demandante || found.demandante || '',
+    demandado: d.demandado || found.demandado || '',
+    rut:       d.rut || found.rut || '',
+    notif_a:   d.notificar_a || d.notif_a || found.notificar_a || found.notif_a || '',
+    direccion: d.direccion || found.direccion || '',
+    estudio:   d.estudio_juridico || d.estudio || found.estudio_juridico || found.estudio || '',
+    piezas:    d.piezas || found.piezas || '',
+    n_solicitud: d.nro_solicitud || found.nro_solicitud || '',
+    ciudad:    d.ciudad || found.ciudad || 'Antofagasta',
+    estado:    found.estado || d.estado || '',
+    historial: found.historial || [],
+  };
+}
+
 // ── CARGAR CAUSA ─────────────────────────
 async function loadCausa(idHex) {
   state.idHex = idHex;
   state.resultadoPrevio = null;
+
+  // 1. Buscar en INDEX_RESPALDO local (instantáneo, sin red)
+  let causaData = null;
+  if (_indexCache) {
+    const found = _indexCache.find(c => c.id_hex === idHex);
+    if (found) causaData = mapIndexEntry(found);
+  }
+
+  // 2. Si está en caché → mostrar INMEDIATAMENTE sin esperar red
+  if (causaData) {
+    state.causaData = causaData;
+    if (causaData.estado === 'suspendida') {
+      showScreenSuspendida(idHex, causaData);
+    } else {
+      _mostrarCausa(idHex, causaData);
+    }
+    // Background: verificar etapas + refrescar datos si hay conexión
+    _verificarEtapasBackground(idHex);
+    _refrescarCausaBackground(idHex);
+    return;
+  }
+
+  // 3. NO está en caché — necesita red (mostrar spinner)
   document.getElementById('loading-causa').classList.add('active');
   showScreen('scan');
   try {
-    // Intentar INDEX.json primero, fallback a causas.json, luego _CAUSA.json individual
-    let causaData = null;
-    try {
-      const index = await dbxGet('/causas/INDEX.json');
-      if (Array.isArray(index)) {
-        const found = index.find(c => c.id_hex === idHex);
-        if (found) {
-          // Mapear campos de INDEX.json al formato que usa fillCausa
-          causaData = {
-            id_hex:    found.id_hex,
-            rol:       found.rol,
-            tribunal:  found.tribunal || '',
-            demandante:found.demandante || '',
-            demandado: found.demandado || '',
-            rut:       found.rut || '',
-            notif_a:   found.notificar_a || found.notif_a || '',
-            direccion: found.direccion || '',
-            estudio:   found.estudio_juridico || found.estudio || '',
-            piezas:    found.piezas || '',
-            n_solicitud: found.nro_solicitud || '',
-            ciudad:    found.ciudad || 'Antofagasta',
-            estado:    found.estado || '',
-          };
-        }
+    // Forzar re-descarga del index (puede ser causa nueva)
+    if (navigator.onLine) {
+      const fresh = await descargarIndex();
+      if (fresh) {
+        const found = fresh.find(c => c.id_hex === idHex);
+        if (found) causaData = mapIndexEntry(found);
       }
-    } catch(e) { console.warn('INDEX.json no disponible, intentando causas.json'); }
-
-    // Fallback 1: causas.json (legacy)
-    if (!causaData) {
-      try {
-        const causasArr = await dbxGet('/causas.json');
-        if (Array.isArray(causasArr)) {
-          causaData = causasArr.find(c => c.id_hex === idHex) || null;
-        }
-      } catch(e) { console.warn('causas.json no disponible'); }
     }
-
-    // Fallback 2: _CAUSA.json individual
-    if (!causaData) {
+    // Fallback: _CAUSA.json individual
+    if (!causaData && navigator.onLine) {
       try {
         const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
         if (individual && individual.datos) {
           const d = individual.datos;
           causaData = {
-            id_hex:    individual.id_hex,
-            rol:       d.rol || '',
-            tribunal:  d.tribunal || '',
-            demandante:d.demandante || '',
-            demandado: d.demandado || '',
-            rut:       d.rut || '',
-            notif_a:   d.notificar_a || d.notif_a || '',
-            direccion: d.direccion || '',
-            estudio:   d.estudio_juridico || d.estudio || '',
-            piezas:    d.piezas || '',
-            n_solicitud: d.nro_solicitud || '',
-            ciudad:    d.ciudad || 'Antofagasta',
-            estado:    individual.estado || '',
+            id_hex: individual.id_hex, rol: d.rol || '', tribunal: d.tribunal || '',
+            demandante: d.demandante || '', demandado: d.demandado || '', rut: d.rut || '',
+            notif_a: d.notificar_a || d.notif_a || '', direccion: d.direccion || '',
+            estudio: d.estudio_juridico || d.estudio || '', piezas: d.piezas || '',
+            n_solicitud: d.nro_solicitud || '', ciudad: d.ciudad || 'Antofagasta',
+            estado: individual.estado || '',
           };
         }
-      } catch(e) { console.warn('_CAUSA.json individual no disponible'); }
+      } catch(e) {}
     }
-
     document.getElementById('loading-causa').classList.remove('active');
     if (!causaData) { showToast('⚠ Causa no encontrada: ' + idHex); return; }
     state.causaData = causaData;
-
-    // Verificar si la causa está suspendida
     if (causaData.estado === 'suspendida') {
       showScreenSuspendida(idHex, causaData);
-      return;
-    }
-
-    fillCausa(idHex, causaData);
-    resetSelections();
-
-    // Mostrar/ocultar botón Editar datos según estado
-    const btnEditCausa = document.getElementById('btn-editar-causa');
-    const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
-    btnEditCausa.style.display = estadoBloquea ? 'none' : '';
-
-    // Verificar etapas existentes (orden: más avanzada primero)
-    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
-    let previo = null;
-    for (const etapa of etapas) {
-      const existe = await dbxCheckExists('/resultados-dev/' + idHex + '_' + etapa + '.json');
-      if (existe) { previo = etapa; break; }
-    }
-
-    // Compatibilidad hacia atrás: archivo sin sufijo (esquema antiguo)
-    if (!previo) {
-      const legacy = await dbxCheckExists('/resultados-dev/' + idHex + '.json');
-      if (legacy) previo = '?';
-    }
-
-    if (previo) {
-      state.resultadoPrevio = previo;
-      showModalYaEnviado(idHex);
     } else {
-      showScreen('causa');
+      _mostrarCausa(idHex, causaData);
+      _verificarEtapasBackground(idHex);
     }
   } catch(e) {
     document.getElementById('loading-causa').classList.remove('active');
-    showToast('Error al cargar causas. Verifica conexión.');
-    console.error(e);
+    showToast('Error al cargar causa. Verifica conexión.');
   }
+}
+
+function _mostrarCausa(idHex, causaData) {
+  fillCausa(idHex, causaData);
+  resetSelections();
+  const btnEditCausa = document.getElementById('btn-editar-causa');
+  const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
+  btnEditCausa.style.display = estadoBloquea ? 'none' : '';
+  showScreen('causa');
+}
+
+async function _verificarEtapasBackground(idHex) {
+  if (!navigator.onLine) return;
+  try {
+    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
+    for (const etapa of etapas) {
+      const existe = await dbxCheckExists('/resultados/' + idHex + '_' + etapa + '.json');
+      if (existe) {
+        state.resultadoPrevio = etapa;
+        showModalYaEnviado(idHex);
+        return;
+      }
+    }
+    // Compatibilidad: archivo sin sufijo
+    const legacy = await dbxCheckExists('/resultados/' + idHex + '.json');
+    if (legacy) { state.resultadoPrevio = '?'; showModalYaEnviado(idHex); }
+  } catch(e) {}
+}
+
+async function _refrescarCausaBackground(idHex) {
+  if (!navigator.onLine) return;
+  try {
+    const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+    if (!individual || !individual.datos) return;
+    const d = individual.datos;
+    const fresh = {
+      id_hex: individual.id_hex, rol: d.rol || '', tribunal: d.tribunal || '',
+      demandante: d.demandante || '', demandado: d.demandado || '', rut: d.rut || '',
+      notif_a: d.notificar_a || d.notif_a || '', direccion: d.direccion || '',
+      estudio: d.estudio_juridico || d.estudio || '', piezas: d.piezas || '',
+      n_solicitud: d.nro_solicitud || '', ciudad: d.ciudad || 'Antofagasta',
+      estado: individual.estado || '',
+    };
+    // Actualizar si hay diferencias
+    let cambio = false;
+    for (const key of Object.keys(fresh)) {
+      if (fresh[key] !== state.causaData[key]) { cambio = true; break; }
+    }
+    if (cambio) {
+      state.causaData = fresh;
+      fillCausa(idHex, fresh);
+    }
+  } catch(e) {}
 }
 
 function showModalYaEnviado(idHex) {
@@ -1899,15 +2093,21 @@ async function showScreenSuspendida(idHex, c) {
     </div>
   `).join('');
 
-  // Obtener motivo de suspensión desde _CAUSA.json individual
+  // Obtener motivo de suspensión desde historial (caché o individual)
   let motivo = 'Sin motivo registrado';
-  try {
-    const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
-    if (individual && individual.historial) {
-      const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
-      if (susp) motivo = susp.motivo || motivo;
-    }
-  } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
+  const hist = c.historial || [];
+  if (hist.length > 0) {
+    const susp = [...hist].reverse().find(h => h.accion === 'suspension');
+    if (susp) motivo = susp.motivo || motivo;
+  } else {
+    try {
+      const individual = await dbxGet('/causas/' + idHex + '_CAUSA.json');
+      if (individual && individual.historial) {
+        const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
+        if (susp) motivo = susp.motivo || motivo;
+      }
+    } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
+  }
 
   document.getElementById('susp-motivo').textContent = motivo;
   showScreen('suspendida');
@@ -1940,7 +2140,7 @@ async function guardarEdicionCausa() {
   btn.textContent = 'Guardando...';
 
   try {
-    // Cargar _CAUSA.json completo desde Dropbox (producción)
+    // Cargar _CAUSA.json completo desde Dropbox
     const causaJson = await dbxGet('/causas/' + idHex + '_CAUSA.json');
     if (!causaJson) throw new Error('No se pudo cargar la causa');
 
@@ -1985,8 +2185,13 @@ async function guardarEdicionCausa() {
       usuario: 'receptora'
     });
 
-    // Subir a /causas/ (producción)
-    await dbxPut('/causas/' + idHex + '_CAUSA.json', causaJson);
+    const envio = { tipo: 'edicion', id_hex: idHex, path: '/causas/' + idHex + '_CAUSA.json', payload: causaJson, timestamp: new Date().toISOString() };
+
+    if (!navigator.onLine) {
+      guardarPendiente(envio);
+    } else {
+      await dbxPut(envio.path, causaJson);
+    }
 
     // Actualizar state local
     for (const [key, val] of Object.entries(campos)) {
@@ -1994,9 +2199,12 @@ async function guardarEdicionCausa() {
       if (key === 'notificar_a') state.causaData.notif_a = val;
     }
 
+    // Actualizar index local con campos modificados
+    actualizarIndexLocal(idHex, campos);
+
     // Refrescar pantalla causa
     fillCausa(idHex, state.causaData);
-    showToast('Datos actualizados ✓');
+    showToast(!navigator.onLine ? 'Guardado offline — se enviará con señal' : 'Datos actualizados ✓');
     showScreen('causa');
   } catch(e) {
     console.error('Error al guardar edición:', e);
@@ -2862,15 +3070,40 @@ async function enviarResultado() {
 
   document.getElementById('loading-envio').classList.add('active');
   document.getElementById('btn-enviar').disabled = true;
+
+  const envio = { tipo: 'resultado', id_hex: state.idHex, path: '/resultados/' + state.idHex + '_' + t + '.json', payload, timestamp: new Date().toISOString() };
+
+  if (!navigator.onLine) {
+    // Guardar offline
+    guardarPendiente(envio);
+    document.getElementById('loading-envio').classList.remove('active');
+    document.getElementById('btn-enviar').disabled = false;
+    actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
+    showConfirm(true, codigos, state.causaData);
+    showToast('Guardado offline — se enviará con señal');
+    return;
+  }
+
   try {
-    await dbxPut('/resultados-dev/' + state.idHex + '_' + t + '.json', payload);
+    await dbxPut(envio.path, payload);
+    // Actualizar index local
+    actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
     document.getElementById('loading-envio').classList.remove('active');
     document.getElementById('btn-enviar').disabled = false;
     showConfirm(true, codigos, state.causaData);
   } catch(e) {
-    document.getElementById('loading-envio').classList.remove('active');
-    document.getElementById('btn-enviar').disabled = false;
-    showConfirm(false, codigos, state.causaData, e.message);
+    // Si falla la red, guardar como pendiente
+    if (!navigator.onLine) {
+      guardarPendiente(envio);
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      showConfirm(true, codigos, state.causaData);
+      showToast('Guardado offline — se enviará con señal');
+    } else {
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      showConfirm(false, codigos, state.causaData, e.message);
+    }
   }
 }
 
@@ -2908,6 +3141,99 @@ function resetApp() {
 
 // ── TOAST ────────────────────────────────
 let toastTimer;
+// ══════════════════════════════════════════════
+// MODO OFFLINE — PENDIENTES
+// ══════════════════════════════════════════════
+const LS_PENDIENTES = 'notif_pendientes';
+
+function getPendientes() {
+  try { return JSON.parse(localStorage.getItem(LS_PENDIENTES) || '[]'); }
+  catch(e) { return []; }
+}
+
+function guardarPendiente(envio) {
+  const arr = getPendientes();
+  arr.push(envio);
+  localStorage.setItem(LS_PENDIENTES, JSON.stringify(arr));
+  actualizarBannerOffline();
+}
+
+function actualizarBannerOffline() {
+  const banner = document.getElementById('banner-offline');
+  const texto = document.getElementById('banner-offline-text');
+  const dot = document.getElementById('dot-conexion');
+  const pendientes = getPendientes();
+  const online = navigator.onLine;
+
+  if (!online) {
+    dot.style.background = '#f97316';
+    dot.style.animation = 'parpadeo 1.5s infinite';
+    dot.title = 'Sin conexión';
+    if (pendientes.length > 0) {
+      banner.style.display = '';
+      texto.textContent = `Sin conexión — ${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''} de enviar`;
+    } else {
+      banner.style.display = '';
+      texto.textContent = 'Sin conexión';
+    }
+  } else if (pendientes.length > 0) {
+    dot.style.background = '#f97316';
+    dot.style.animation = '';
+    dot.title = 'Pendientes por enviar';
+    banner.style.display = '';
+    texto.textContent = `${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''} de enviar...`;
+  } else {
+    dot.style.background = '#22c55e';
+    dot.style.animation = '';
+    dot.title = 'Con conexión';
+    banner.style.display = 'none';
+  }
+}
+
+async function sincronizarPendientes() {
+  const pendientes = getPendientes();
+  if (pendientes.length === 0) { actualizarBannerOffline(); return; }
+  if (!navigator.onLine) return;
+
+  let enviados = 0;
+  const fallidos = [];
+
+  for (const envio of pendientes) {
+    try {
+      await dbxPut(envio.path, envio.payload);
+      enviados++;
+    } catch(e) {
+      console.warn('Error sincronizando pendiente:', e);
+      fallidos.push(envio);
+    }
+  }
+
+  localStorage.setItem(LS_PENDIENTES, JSON.stringify(fallidos));
+  actualizarBannerOffline();
+
+  if (enviados > 0) {
+    showToast(`${enviados} registro${enviados !== 1 ? 's' : ''} enviado${enviados !== 1 ? 's' : ''} correctamente`);
+  }
+  if (fallidos.length > 0) {
+    showToast(`${fallidos.length} no se pudo enviar — se reintentará`);
+  }
+}
+
+function initOffline() {
+  window.addEventListener('online', () => {
+    actualizarBannerOffline();
+    sincronizarPendientes();
+  });
+  window.addEventListener('offline', () => {
+    actualizarBannerOffline();
+  });
+  actualizarBannerOffline();
+  // Si hay pendientes al abrir, sincronizar
+  if (navigator.onLine && getPendientes().length > 0) {
+    setTimeout(sincronizarPendientes, 2000);
+  }
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
