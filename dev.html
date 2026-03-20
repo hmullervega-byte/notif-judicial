@@ -4356,7 +4356,7 @@ async function exportarCorrespondencia() {
   const headers = ['ROL','Juzgado','Demandante','Demandado','Rut Demandado','Domicilio','Ciudad','Monto Mandamiento','Tipo Notificación','Piezas','Notificar a','Fecha Solicitud','','','Estudio','N° Solicitud',''];
   const rows = resultados.map(r => [
     r.rol,
-    r.tribunal,
+    normalizarTribunal(r.tribunal),
     r.demandante,
     r.demandado,
     r.rut,
