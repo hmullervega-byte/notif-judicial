@@ -1207,6 +1207,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <input type="date" id="filter-fecha-desde" style="max-width:140px;">
           <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Hasta</label>
           <input type="date" id="filter-fecha-hasta" style="max-width:140px;">
+          <span id="causas-sel-count" style="font-size:11px; color:var(--blue); font-weight:600; white-space:nowrap; display:none;">0 seleccionadas</span>
+          <button class="btn btn-primary btn-sm" id="btn-exportar-correspondencia" onclick="exportarCorrespondencia()" style="white-space:nowrap;">⬇ Exportar Excel</button>
         </div>
 
         <div class="card">
@@ -1214,6 +1216,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-causas">
               <thead>
                 <tr>
+                  <th style="width:32px; text-align:center;"><input type="checkbox" id="causas-check-all" title="Seleccionar/deseleccionar todas" onchange="toggleAllCausasCheck(this.checked)"></th>
                   <th style="width:80px;">ROL</th>
                   <th style="width:22px;">T</th>
                   <th style="min-width:90px;">Demandante</th>
@@ -1228,7 +1231,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="10">
+                  <td colspan="11">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -3171,17 +3174,24 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
+    // Sync check-all with visible
+    const chkAll = document.getElementById('causas-check-all');
+    if (chkAll) chkAll.checked = false;
     return;
   }
 
   filtered.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
 
+  // Track last filtered set for select-all
+  _lastFilteredHexes = filtered.map(c => c.id_hex);
+
   tbody.innerHTML = filtered.map(c => `
-    <tr>
+    <tr${causasSeleccionadas.has(c.id_hex) ? ' style="background:var(--blue-xs);"' : ''}>
+      <td style="text-align:center;"><input type="checkbox" class="causa-check" data-hex="${c.id_hex}" ${causasSeleccionadas.has(c.id_hex) ? 'checked' : ''} onchange="toggleCausaCheck('${c.id_hex}', this.checked)"></td>
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
@@ -3198,6 +3208,9 @@ function renderCausas() {
       </td>
     </tr>
   `).join('');
+
+  // Sync selection UI after render
+  _actualizarSelUI();
 }
 
 // Filtros reactivos
@@ -4266,6 +4279,129 @@ function exportOptirouteDia() {
   const filename = `${partes[2]}-${partes[1]}-${partes[0]} Optiroute.xlsx`;
   XLSX.writeFile(_buildOptiroute(del_dia), filename);
   showToast(`📤 Exportado: ${filename} (${del_dia.length} causas)`, 'success');
+}
+
+// ══════════════════════════════════════════════
+// SELECCIÓN + EXPORTAR CORRESPONDENCIA
+// ══════════════════════════════════════════════
+const causasSeleccionadas = new Set();
+let _lastFilteredHexes = [];
+
+function toggleCausaCheck(hex, checked) {
+  if (checked) causasSeleccionadas.add(hex);
+  else causasSeleccionadas.delete(hex);
+  _actualizarSelUI();
+}
+
+function toggleAllCausasCheck(checked) {
+  if (checked) _lastFilteredHexes.forEach(h => causasSeleccionadas.add(h));
+  else _lastFilteredHexes.forEach(h => causasSeleccionadas.delete(h));
+  renderCausas();
+}
+
+function _actualizarSelUI() {
+  const n = causasSeleccionadas.size;
+  const el = document.getElementById('causas-sel-count');
+  if (n > 0) { el.textContent = `${n} seleccionada${n !== 1 ? 's' : ''}`; el.style.display = ''; }
+  else { el.style.display = 'none'; }
+  // Update row highlights without full re-render
+  document.querySelectorAll('#causas-body .causa-check').forEach(cb => {
+    const hex = cb.dataset.hex;
+    const tr = cb.closest('tr');
+    if (causasSeleccionadas.has(hex)) { cb.checked = true; tr.style.background = 'var(--blue-xs)'; }
+    else { cb.checked = false; tr.style.background = ''; }
+  });
+  // Sync check-all
+  const chkAll = document.getElementById('causas-check-all');
+  if (chkAll && _lastFilteredHexes.length > 0) {
+    chkAll.checked = _lastFilteredHexes.every(h => causasSeleccionadas.has(h));
+  }
+}
+
+async function exportarCorrespondencia() {
+  if (causasSeleccionadas.size === 0) {
+    showToast('Selecciona al menos una causa para exportar', 'error');
+    return;
+  }
+  showToast('⏳ Preparando exportación...', 'info');
+  const hexes = [...causasSeleccionadas];
+  // Cargar datos completos de cada causa
+  const resultados = [];
+  for (const hex of hexes) {
+    const c = await asegurarCausaCompleta(hex);
+    if (!c) continue;
+    const datos = c._causa_json?.datos || c;
+    resultados.push({
+      rol:               datos.rol               || c.rol               || '',
+      tribunal:          datos.tribunal          || c.tribunal          || '',
+      demandante:        datos.demandante        || c.demandante        || '',
+      demandado:         datos.demandado         || c.demandado         || '',
+      rut:               datos.rut               || c.rut               || '',
+      direccion:         datos.direccion         || c.direccion         || '',
+      ciudad:            datos.ciudad            || c.ciudad            || 'Antofagasta',
+      monto_mandamiento: datos.monto_mandamiento || c.monto_mandamiento || '',
+      tipo_diligencia:   datos.tipo_diligencia   || c.tipo_diligencia   || '',
+      piezas:            datos.piezas            || c.piezas            || '',
+      notificar_a:       datos.notificar_a       || c.notificar_a       || datos.demandado || c.demandado || '',
+      fecha_solicitud:   datos.fecha_solicitud   || c.fecha_solicitud   || '',
+      estudio_juridico:  datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
+      nro_solicitud:     datos.nro_solicitud     || c.nro_solicitud     || ''
+    });
+  }
+  if (resultados.length === 0) { showToast('❌ No se pudieron cargar las causas', 'error'); return; }
+
+  // Limpiar monto (solo número sin $)
+  const limpiarMonto = (m) => { if (!m) return ''; return String(m).replace(/[$.\s]/g, '').trim(); };
+
+  // Normalizar tribunal a nombre completo para Excel
+  const _tribNombreMap = {'1':'Primero','2':'Segundo','3':'Tercero','4':'Cuarto','5':'Quinto'};
+  const _tribTextoMap = {'primer':'Primero','segund':'Segundo','tercer':'Tercero','cuart':'Cuarto','quint':'Quinto'};
+  function _tribExcel(t) {
+    if (!t) return '';
+    const numMatch = t.match(/(\d)/);
+    if (numMatch) return _tribNombreMap[numMatch[1]] || t;
+    const txtMatch = t.toLowerCase().match(/primer|segund|tercer|cuart|quint/);
+    if (txtMatch) return _tribTextoMap[txtMatch[0]] || t;
+    return t;
+  }
+
+  const headers = ['ROL','Juzgado','Demandante','Demandado','Rut Demandado','Domicilio','Ciudad','Monto Mandamiento','Tipo Notificación','Piezas','Notificar a','Fecha Solicitud','Fecha Notificación','Resultado Notificación','Estudio','N° Solicitud','Derechos'];
+  const rows = resultados.map(r => [
+    r.rol,
+    _tribExcel(r.tribunal),
+    r.demandante,
+    r.demandado,
+    r.rut,
+    r.direccion,
+    r.ciudad,
+    limpiarMonto(r.monto_mandamiento),
+    r.tipo_diligencia,
+    r.piezas,
+    r.notificar_a,
+    fmtFecha(r.fecha_solicitud),
+    '', '', // columnas M, N reservadas
+    r.estudio_juridico,
+    r.nro_solicitud,
+    ''  // columna Q reservada
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  // Anchos de columna
+  ws['!cols'] = [
+    {wch:15}, {wch:12}, {wch:35}, {wch:35}, {wch:15}, {wch:40}, {wch:15},
+    {wch:18}, {wch:25}, {wch:60}, {wch:50}, {wch:15}, {wch:20}, {wch:20},
+    {wch:25}, {wch:15}, {wch:15}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'BaseDatos');
+
+  const hoy = new Date();
+  const fechaStr = `${String(hoy.getDate()).padStart(2,'0')}-${String(hoy.getMonth()+1).padStart(2,'0')}-${hoy.getFullYear()}`;
+  const filename = `CombinacionCorrespondencia_${fechaStr}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`✅ Exportado: ${filename} (${resultados.length} causas)`, 'success');
 }
 
 // ══════════════════════════════════════════════
