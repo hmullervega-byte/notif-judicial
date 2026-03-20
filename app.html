@@ -433,6 +433,7 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 .tag-blue   { background: #dbeafe; color: #1d4ed8; }
 .tag-green  { background: #dcfce7; color: #15803d; }
 .tag-yellow { background: #fef9c3; color: #a16207; }
+.tag-orange { background: #ffedd5; color: #c2410c; }
 .tag-red    { background: #fee2e2; color: #b91c1c; }
 .tag-gray   { background: #f1f5f9; color: #475569; }
 .tag-purple { background: #ede9fe; color: #6d28d9; }
@@ -1167,6 +1168,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <select id="filter-estado">
             <option value="">Todos los estados</option>
             <option value="pendiente_validacion">Pendiente validación</option>
+            <option value="devuelta">Devuelta</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
             <option value="resultado_registrado">Resultado registrado</option>
@@ -1214,21 +1216,19 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                 <tr>
                   <th style="width:80px;">ROL</th>
                   <th style="width:22px;">T</th>
-                  <th style="min-width:100px;">Demandante</th>
-                  <th style="min-width:100px;">Demandado</th>
-                  <th style="width:85px;">RUT</th>
-                  <th style="min-width:120px;">Dirección</th>
+                  <th style="min-width:90px;">Demandante</th>
+                  <th style="min-width:90px;">Demandado</th>
+                  <th style="min-width:100px;">Dirección</th>
                   <th style="width:70px;">Tipo</th>
-                  <th style="width:80px;">Estudio</th>
                   <th style="width:70px;">Estado</th>
                   <th style="width:65px;">Fecha</th>
-                  <th style="width:100px;">ID</th>
+                  <th style="width:90px;">ID</th>
                   <th style="width:55px;" class="col-acc">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="12">
+                  <td colspan="10">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -1240,6 +1240,39 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
         </div>
       </div><!-- /view-causas -->
+
+      <!-- ── CAUSAS DEVUELTAS ── -->
+      <div class="view" id="view-devueltas">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Causas Devueltas</div>
+            <div class="page-sub" id="devueltas-count">Cargando...</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarDevueltas()">🔄 Recargar</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="tabla-devueltas">
+              <thead>
+                <tr>
+                  <th style="width:80px;">ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th style="min-width:100px;">Demandado</th>
+                  <th style="min-width:100px;">Dirección</th>
+                  <th style="width:80px;">Tipo</th>
+                  <th style="min-width:140px;">Motivo devolución</th>
+                  <th style="width:70px;">Fecha dev.</th>
+                  <th style="width:100px;">ID</th>
+                  <th style="width:80px;" class="col-acc">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="devueltas-body">
+                <tr><td colspan="9"><div class="empty-state"><span class="icon">✅</span><p>No hay causas devueltas pendientes.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-devueltas -->
 
       <!-- ── VALIDACIÓN JEDI ── -->
       <div class="view" id="view-validacion">
@@ -1256,12 +1289,13 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <table id="tabla-validacion">
               <thead>
                 <tr>
-                  <th>N° Sol.</th>
                   <th>ROL</th>
+                  <th style="width:22px;">T</th>
+                  <th>Demandante</th>
                   <th>Demandado</th>
                   <th>Tipo</th>
                   <th>Dirección</th>
-                  <th>Ingresado por</th>
+                  <th>Estado</th>
                   <th>Fecha</th>
                   <th class="col-acc">Acciones</th>
                 </tr>
@@ -1752,6 +1786,7 @@ const PERFILES = {
       { id: 'dashboard',  icon: '📊', label: 'Dashboard',      view: 'view-dashboard' },
       { id: 'ingreso',    icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'   },
       { id: 'causas',     icon: '📂', label: 'Mis Causas',     view: 'view-causas'    },
+      { id: 'devueltas',  icon: '↩',  label: 'Devueltas',      view: 'view-devueltas' },
       { id: 'ruta',       icon: '🗺', label: 'Ruta', view: 'view-ruta'    },
     ]
   },
@@ -1774,6 +1809,7 @@ const PERFILES = {
       { id: 'ingreso',     icon: '➕', label: 'Ingresar Causa', view: 'view-ingreso'     },
       { id: 'validacion',  icon: '✅', label: 'Validar Causas', view: 'view-validacion'  },
       { id: 'causas',      icon: '📂', label: 'Causas',         view: 'view-causas'      },
+      { id: 'devueltas',   icon: '↩',  label: 'Devueltas',      view: 'view-devueltas'  },
       { id: 'ruta',        icon: '🗺', label: 'Ruta',           view: 'view-ruta'        },
       { id: 'gestion',     icon: '📋', label: 'Gestión Directa', view: 'view-gestion'    },
       { id: 'config-dbx',  icon: '⚙',  label: 'Config. Dropbox', view: null, action: 'reconfigDropbox' },
@@ -1915,6 +1951,7 @@ function showView(viewId) {
   if (viewId === 'view-ruta') cargarRuta();
   if (viewId === 'view-dashboard') buildDashboard();
   if (viewId === 'view-gestion') cargarGestion();
+  if (viewId === 'view-devueltas') cargarDevueltas();
 }
 
 // ══════════════════════════════════════════════
@@ -2468,7 +2505,9 @@ async function guardarCausa(estadoInicial) {
   const tipoDigSel = fval('tipo_diligencia');
   const esGD = esGestionDirecta(tipoDigSel);
   const estadoFinal = esGD ? 'gestion_directa_receptora' : estadoInicial;
-  const accion = esGD ? 'ingreso_gestion_directa' : (estadoInicial === 'ingresada' ? 'ingresada' : 'ingreso');
+  const accion = esGD ? 'ingreso_gestion_directa'
+    : estadoInicial === 'validada' ? 'ingreso_validado'
+    : 'enviado_validacion';
 
   // Estructura canónica {id_hex}_CAUSA.json → Dropbox /causas/
   const payload = {
@@ -3132,7 +3171,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -3147,13 +3186,11 @@ function renderCausas() {
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.rut || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.estudio || c.estudio_juridico || ''}">${c.estudio || c.estudio_juridico || '—'}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
-      <td class="mono" style="font-size:10px; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+      <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
@@ -3211,6 +3248,20 @@ async function verCausa(hex) {
           <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
         </div>
+        ${(() => {
+          const hist = c._causa_json?.historial || [];
+          const msgs = [];
+          if (c.estado === 'devuelta') {
+            const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
+            if (dev) msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`);
+          }
+          // Mostrar último mensaje de reenvío (Marco → Receptora)
+          const reenvio = [...hist].reverse().find(h => h.accion === 'corregida_reenviada' && h.comentario);
+          if (reenvio && c.estado === 'pendiente_validacion') {
+            msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#dbeafe; border:1px solid #bfdbfe; border-radius:4px; font-size:12px; color:#1e40af;"><strong>📤 Reenviada por ${reenvio.usuario || 'Marco'}:</strong> ${reenvio.comentario}</div>`);
+          }
+          return msgs.join('');
+        })()}
         ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
       </div>
       <div id="modal-qr" style="width:100px; height:100px; flex-shrink:0;"></div>
@@ -3229,6 +3280,10 @@ async function verCausa(hex) {
       footerHtml += `<button class="btn btn-warning btn-sm" onclick="reabrirCausa('${c.id_hex}')" title="Reabrir causa cerrada">🔓 Reabrir causa</button>`;
       footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar campos">✏ Editar</button>`;
     }
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
+  } else if (c.estado === 'devuelta') {
+    footerHtml += `<button class="btn btn-secondary btn-sm" onclick="editarCausa('${c.id_hex}')" title="Editar y corregir">✏ Editar</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="imprimirCausa('${c.id_hex}')" title="Imprimir formulario físico">🖨 Imprimir</button>`;
     footerHtml += `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>`;
   } else {
@@ -3299,6 +3354,7 @@ async function editarCausa(hex) {
     const estados = [
       ['ingresada','Ingresada'],
       ['pendiente_validacion','Pendiente validación'],
+      ['devuelta','Devuelta'],
       ['validada','Validada'],
       ['en_ruta','En ruta'],
       ['gestion_directa_receptora','Gestión Directa'],
@@ -3331,13 +3387,15 @@ async function editarCausa(hex) {
 
   document.getElementById('modal-campos').innerHTML = html;
 
+  const esDevuelta = c.estado === 'devuelta';
   document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}')">💾 Guardar cambios</button>
+    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}'${esDevuelta ? ", 'validada'" : ''})">💾 Guardar cambios</button>
+    ${esDevuelta ? `<button class="btn btn-danger btn-sm" onclick="pedirComentarioReenvio('${hex}')">📤 Enviar a Receptora</button>` : ''}
     <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
   `;
 }
 
-async function guardarEdicion(hex) {
+async function guardarEdicion(hex, nuevoEstadoForzado) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
@@ -3385,6 +3443,22 @@ async function guardarEdicion(hex) {
     }
   }
 
+  // Estado forzado (desde causa devuelta: validar o reenviar)
+  if (nuevoEstadoForzado && payload.estado !== nuevoEstadoForzado) {
+    const estadoAnterior = payload.estado;
+    payload.estado = nuevoEstadoForzado;
+    c.estado = nuevoEstadoForzado;
+    cambioEstado = true;
+    const accionDev = nuevoEstadoForzado === 'validada' ? 'corregida_validada' : 'corregida_reenviada';
+    payload.historial.push({
+      accion: accionDev,
+      estado_anterior: estadoAnterior,
+      estado_nuevo: nuevoEstadoForzado,
+      fecha: new Date().toISOString(),
+      usuario: currentUser.nombre
+    });
+  }
+
   if (modificados.length === 0 && !cambioEstado) {
     showToast('Sin cambios', 'info');
     verCausa(hex);
@@ -3413,6 +3487,89 @@ async function guardarEdicion(hex) {
 
   verCausa(hex);
 }
+
+function pedirComentarioReenvio(hex) {
+  // Guardar ediciones primero, luego mostrar modal de comentario
+  document.getElementById('modal-title').textContent = 'Enviar a Receptora';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">Escribe un mensaje para la Receptora explicando las correcciones realizadas:</p>
+    <div class="field">
+      <label>Mensaje para Receptora <span class="req">*</span></label>
+      <textarea id="reenvio-comentario" rows="3" placeholder="Ej: Corregí el tipo de diligencia y la dirección"></textarea>
+    </div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="editarCausa('${hex}')">Cancelar</button>
+    <button class="btn btn-danger btn-sm" onclick="confirmarReenvio('${hex}')">📤 Confirmar envío</button>
+  `;
+  setTimeout(() => document.getElementById('reenvio-comentario').focus(), 100);
+}
+
+async function confirmarReenvio(hex) {
+  const comentario = document.getElementById('reenvio-comentario').value.trim();
+  if (!comentario) {
+    showToast('⚠ Escribe un mensaje para la Receptora', 'warn');
+    document.getElementById('reenvio-comentario').focus();
+    return;
+  }
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  const estadoAnterior = payload.estado;
+  payload.estado = 'pendiente_validacion';
+  c.estado = 'pendiente_validacion';
+  payload.historial.push({
+    accion: 'corregida_reenviada',
+    estado_anterior: estadoAnterior,
+    estado_nuevo: 'pendiente_validacion',
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre,
+    comentario: comentario
+  });
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+      actualizarIndex();
+      showToast('📤 Causa reenviada a Receptora', 'success');
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      return;
+    }
+  }
+  renderCausas();
+  renderDevueltas();
+  renderNotificaciones();
+  closeModal();
+}
+
+async function _corregirDevuelta(hex, nuevoEstado, accion) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  payload.estado = nuevoEstado;
+  c.estado = nuevoEstado;
+  payload.historial.push({
+    accion: accion,
+    fecha: new Date().toISOString(),
+    usuario: currentUser.nombre
+  });
+  if (DBX.isConfigured()) {
+    try {
+      await DBX.upload(`/causas/${hex}_CAUSA.json`, payload);
+      actualizarIndex();
+      const msg = nuevoEstado === 'validada' ? '💾 Causa corregida y validada' : '📤 Causa corregida y reenviada';
+      showToast(msg, 'success');
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      return;
+    }
+  }
+  renderCausas();
+  renderNotificaciones();
+  closeModal();
+}
+async function corregirYValidar(hex) { return _corregirDevuelta(hex, 'validada', 'corregida_validada'); }
+async function corregirYReenviar(hex) { return _corregirDevuelta(hex, 'pendiente_validacion', 'corregida_reenviada'); }
 
 async function imprimirCausa(hex) {
   const c = await asegurarCausaCompleta(hex);
@@ -3481,7 +3638,7 @@ function renderValidacion() {
 
   const tbody = document.getElementById('validacion-body');
   if (pendientes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <span class="icon">✅</span>
       <p>No hay causas pendientes de validación.</p>
     </div></td></tr>`;
@@ -3491,17 +3648,16 @@ function renderValidacion() {
   pendientes.sort((a,b) => (a.ts_ingreso||'').localeCompare(b.ts_ingreso||''));
 
   tbody.innerHTML = pendientes.map(c => {
-    const ingreso = c._causa_json?.historial?.find(h => h.accion === 'ingreso');
-    const usuario = ingreso?.usuario || '—';
     return `
     <tr>
-      <td class="mono" style="white-space:nowrap;">${c.n_solicitud || c.nro_solicitud || '—'}</td>
-      <td class="mono">${c.rol || '—'}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.demandado}">${c.demandado || '—'}</td>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion}">${c.direccion || '—'}</td>
-      <td style="font-size:12px;">${usuario}</td>
-      <td class="mono" style="white-space:nowrap;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td>${estadoBadge(c.estado)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="col-acc" style="white-space:nowrap; display:flex; gap:.35rem;">
         <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
         <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
@@ -3579,6 +3735,8 @@ async function confirmarDevolver(hex) {
   if (!c) return;
 
   const payload = c._causa_json;
+  payload.estado = 'devuelta';
+  c.estado = 'devuelta';
   payload.historial.push({
     accion:     'devuelta',
     fecha:      new Date().toISOString(),
@@ -4111,6 +4269,46 @@ function exportOptirouteDia() {
 }
 
 // ══════════════════════════════════════════════
+// CAUSAS DEVUELTAS
+// ══════════════════════════════════════════════
+async function cargarDevueltas() {
+  if (!_causasCargadas) await cargarCausasDropbox();
+  // Cargar _causa_json de cada devuelta para acceder al historial
+  const devueltas = causas.filter(c => c.estado === 'devuelta' && !c._causa_json);
+  await Promise.all(devueltas.map(c => cargarCausaCompleta(c.id_hex)));
+  renderDevueltas();
+}
+function renderDevueltas() {
+  const devueltas = causas.filter(c => c.estado === 'devuelta');
+  document.getElementById('devueltas-count').textContent =
+    `${devueltas.length} causa${devueltas.length !== 1 ? 's' : ''} devuelta${devueltas.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById('devueltas-body');
+  if (devueltas.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="icon">✅</span><p>No hay causas devueltas pendientes.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = devueltas.map(c => {
+    const hist = c._causa_json?.historial || [];
+    const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
+    const motivo = dev?.comentario || '—';
+    const fechaDev = dev?.fecha ? dev.fecha.slice(0,10) : '—';
+    return `<tr>
+      <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
+      <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
+      <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; font-size:12px; color:#9a3412;" title="${motivo}">${motivo}</td>
+      <td class="mono" style="font-size:11px;">${fmtFecha(fechaDev)}</td>
+      <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
+      <td class="col-acc" style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
 // NOTIFICACIONES
 // ══════════════════════════════════════════════
 function toggleNotifPanel() {
@@ -4133,19 +4331,20 @@ function calcNotificaciones() {
   const notifs = [];
 
   if (perfil === 'padawan') {
-    // Causas devueltas: solo se detectan si _causa_json ya está cargado
+    // Causas devueltas: solo las que siguen en estado devuelta
     causas.forEach(c => {
-      if (!c._causa_json?.historial) return;
-      const devueltas = c._causa_json.historial.filter(h => h.accion === 'devuelta');
-      devueltas.forEach(h => {
+      if (c.estado !== 'devuelta') return;
+      const hist = c._causa_json?.historial || [];
+      const ultimaDev = [...hist].reverse().find(h => h.accion === 'devuelta');
+      if (ultimaDev) {
         notifs.push({
           icon: '↩',
           title: `Causa devuelta: ${c.rol || c.id_hex?.slice(0,8)}`,
-          desc:  h.comentario || 'Sin comentario',
-          fecha: h.fecha,
+          desc:  ultimaDev.comentario || 'Sin comentario',
+          fecha: ultimaDev.fecha,
           hex:   c.id_hex
         });
-      });
+      }
     });
   }
 
@@ -4266,6 +4465,7 @@ function estadoBadge(estado) {
     'estampada':            ['tag-green','Estampada'],
     'boleta_emitida':       ['tag-gray','Boleta emitida'],
     'cerrada':              ['tag-gray','Cerrada'],
+    'devuelta':             ['tag-orange','Devuelta'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
