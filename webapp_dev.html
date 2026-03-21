@@ -2090,9 +2090,9 @@ function fillCausa(idHex, c) {
   document.getElementById('c-estudio').textContent = c.estudio || '—';
   document.getElementById('c-piezas').textContent = c.piezas || '—';
   document.getElementById('not44-piezas-display').textContent = c.piezas || '—';
-  // Resetear edición de piezas
+  // Resetear edición de piezas (cerrar textarea si estaba abierta)
   document.getElementById('campo-piezas-edit').style.display = 'none';
-  document.getElementById('btn-editar-piezas').style.display = '';
+  // No forzar btn-editar-piezas visible — lo controla _mostrarCausa según estado
 }
 
 
