@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notif-prod-v1';
+const CACHE_NAME = 'notif-prod-v2';
 const URLS_TO_CACHE = [
   '/notif-judicial/webapp.html',
   '/notif-judicial/manifest.json',
