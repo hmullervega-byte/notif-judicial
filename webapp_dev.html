@@ -1953,6 +1953,8 @@ function _mostrarCausa(idHex, causaData) {
   btnRegistrar.style.display = soloLectura ? 'none' : '';
   btnEditar.style.display = soloLectura ? 'none' : '';
   btnPiezas.style.display = soloLectura ? 'none' : '';
+  // Cerrar edición de piezas si quedó abierta
+  document.getElementById('campo-piezas-edit').style.display = 'none';
 
   // Mensaje informativo según estado
   if (soloLectura) {
