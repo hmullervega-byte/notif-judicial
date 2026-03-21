@@ -460,6 +460,17 @@ thead th.col-acc { background: #f8fafc; }
 tbody tr:hover td.col-acc { background: #f8fafc; }
 tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
+/* COLUMNAS REDIMENSIONABLES */
+#tabla-causas { table-layout: fixed; }
+#tabla-causas thead th { position: relative; overflow: hidden; }
+.col-resize-handle {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+  cursor: col-resize; background: transparent; z-index: 2;
+}
+.col-resize-handle:hover, .col-resize-handle.active {
+  background: var(--blue);
+}
+
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
 .stat-card {
@@ -1211,6 +1222,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <input type="date" id="filter-fecha-hasta" style="max-width:140px;">
           <span id="causas-sel-count" style="font-size:11px; color:var(--blue); font-weight:600; white-space:nowrap; display:none;">0 seleccionadas</span>
           <button class="btn btn-primary btn-sm" id="btn-exportar-correspondencia" onclick="exportarCorrespondencia()" style="white-space:nowrap;">⬇ Exportar Excel</button>
+          <button class="btn btn-sm darth-only" id="btn-ids-duplicados" onclick="verificarIdsDuplicados()" style="display:none; white-space:nowrap; background:#7c3aed; color:#fff; font-weight:600;">🔍 IDs duplicados</button>
           <button class="btn btn-sm" id="btn-suspender-causa" onclick="iniciarSuspension()" style="display:none; background:#ef4444; color:#fff; font-weight:600; white-space:nowrap;">Suspender</button>
         </div>
 
@@ -5090,6 +5102,116 @@ styleEl.textContent = `
   0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)}
 }`;
 document.head.appendChild(styleEl);
+
+// ══════════════════════════════════════════════
+// COLUMNAS REDIMENSIONABLES — tabla-causas
+// ══════════════════════════════════════════════
+(function initColumnResize() {
+  const LS_KEY = 'notif_col_widths';
+
+  function saveWidths(table) {
+    const ths = table.querySelectorAll('thead th');
+    const widths = {};
+    ths.forEach((th, i) => { widths[i] = th.offsetWidth; });
+    localStorage.setItem(LS_KEY, JSON.stringify(widths));
+  }
+
+  function restoreWidths(table) {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    try {
+      const widths = JSON.parse(raw);
+      const ths = table.querySelectorAll('thead th');
+      ths.forEach((th, i) => {
+        if (widths[i]) th.style.width = widths[i] + 'px';
+      });
+    } catch(e) {}
+  }
+
+  function setupHandles(table) {
+    const ths = table.querySelectorAll('thead th');
+    ths.forEach(th => {
+      // Skip checkbox and acciones columns
+      if (th.querySelector('input[type=checkbox]') || th.classList.contains('col-acc')) return;
+      const handle = document.createElement('div');
+      handle.className = 'col-resize-handle';
+      th.appendChild(handle);
+
+      let startX, startW;
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        startX = e.pageX;
+        startW = th.offsetWidth;
+        handle.classList.add('active');
+
+        const onMove = ev => {
+          const diff = ev.pageX - startX;
+          const newW = Math.max(30, startW + diff);
+          th.style.width = newW + 'px';
+        };
+        const onUp = () => {
+          handle.classList.remove('active');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          saveWidths(table);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
+    restoreWidths(table);
+  }
+
+  // Initialize when DOM is ready (table already exists)
+  const table = document.getElementById('tabla-causas');
+  if (table) setupHandles(table);
+})();
+
+// ══════════════════════════════════════════════
+// VERIFICAR IDs DUPLICADOS
+// ══════════════════════════════════════════════
+function verificarIdsDuplicados() {
+  const conteo = {};
+  causas.forEach(c => {
+    const id = c.id_hex;
+    if (!id) return;
+    if (!conteo[id]) conteo[id] = [];
+    conteo[id].push(c);
+  });
+
+  const duplicados = Object.entries(conteo).filter(([, arr]) => arr.length > 1);
+
+  if (duplicados.length === 0) {
+    showToast(`Sin IDs duplicados en las ${causas.length} causas cargadas`, 'success');
+    return;
+  }
+
+  // Build modal table
+  let html = `<p style="margin-bottom:12px; color:#ef4444; font-weight:600;">Se encontraron ${duplicados.length} ID(s) duplicados:</p>`;
+  html += `<div class="table-wrap"><table style="width:100%; font-size:12px;">
+    <thead><tr>
+      <th>ID hex</th><th>Veces</th><th>Ocurrencias</th>
+    </tr></thead><tbody>`;
+
+  duplicados.forEach(([id, arr]) => {
+    const ocurrencias = arr.map(c =>
+      `<div style="margin:2px 0;"><b>${c.rol || '—'}</b> — ${c.demandado || '—'}</div>`
+    ).join('');
+    html += `<tr>
+      <td class="mono" style="font-size:10px; word-break:break-all;">${id}</td>
+      <td style="text-align:center; font-weight:700; color:#ef4444;">${arr.length}</td>
+      <td>${ocurrencias}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  document.getElementById('modal-title').textContent = 'IDs duplicados';
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-footer').innerHTML =
+    '<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>';
+  document.getElementById('modal-overlay').classList.add('active');
+}
 </script>
 
 <!-- ════════════════════════════════════════
