@@ -1536,7 +1536,12 @@ document.addEventListener('DOMContentLoaded', () => {
     getAccessToken().catch(() => {});
     const edad = Date.now() - indexTsLocal();
     if (edad > INDEX_CACHE_TTL || !_indexCache) {
-      descargarIndex().catch(() => {});
+      descargarIndex().then(() => {
+        if (_indexError) {
+          const el = document.getElementById('index-info');
+          if (el) { el.textContent = '✗ ' + _indexError; el.style.color = '#ef4444'; }
+        }
+      }).catch(() => {});
     }
   }
 
@@ -1758,6 +1763,7 @@ async function dbxCheckExists(path) {
 
 // ── CACHÉ INDEX_RESPALDO.json con localStorage ─────────────────────
 let _indexCache = null;
+let _indexError = null;
 const INDEX_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas
 const LS_INDEX_KEY = 'notif_index_respaldo';
 const LS_INDEX_TS  = 'notif_index_respaldo_ts';
@@ -1784,15 +1790,49 @@ function indexTsLocal() {
 async function descargarIndex() {
   if (!navigator.onLine) return _indexCache;
   try {
-    const idx = await dbxGet('/causas/INDEX_RESPALDO.json');
-    if (Array.isArray(idx)) {
+    const res = await dbxFetch(
+      'https://content.dropboxapi.com/2/files/download',
+      { 'Dropbox-API-Arg': JSON.stringify({ path: '/causas/INDEX_RESPALDO.json' }) },
+      null
+    );
+    if (!res.ok) {
+      const status = res.status;
+      if (status === 401) {
+        _indexError = 'Error de autenticación — verifica las credenciales';
+      } else if (status === 404 || status === 409) {
+        _indexError = 'Archivo no encontrado en /causas/INDEX_RESPALDO.json';
+      } else {
+        _indexError = `Error Dropbox HTTP ${status}`;
+      }
+      console.error('descargarIndex:', _indexError);
+      return _indexCache;
+    }
+    const idx = await res.json();
+    if (idx === null || idx === undefined) {
+      _indexError = 'Error de autenticación — verifica las credenciales';
+      return _indexCache;
+    }
+    if (Array.isArray(idx) && idx.length === 0) {
+      _indexError = 'Archivo vacío';
       _indexCache = idx;
       guardarIndexEnLS(idx);
       actualizarIndexInfo();
       return idx;
     }
-  } catch(e) { console.warn('INDEX_RESPALDO.json no disponible'); }
-  return _indexCache;
+    if (Array.isArray(idx)) {
+      _indexError = null;
+      _indexCache = idx;
+      guardarIndexEnLS(idx);
+      actualizarIndexInfo();
+      return idx;
+    }
+    _indexError = 'INDEX_RESPALDO.json no contiene un array válido';
+    return _indexCache;
+  } catch(e) {
+    _indexError = e.message || 'Error desconocido descargando INDEX_RESPALDO.json';
+    console.error('descargarIndex:', _indexError, e);
+    return _indexCache;
+  }
 }
 
 async function getIndex() {
@@ -1819,10 +1859,23 @@ async function getIndex() {
 async function forzarActualizacion() {
   const infoEl = document.getElementById('index-info');
   infoEl.textContent = 'Descargando...';
+  _indexError = null;
   await descargarIndex();
+  if (_indexError) {
+    infoEl.textContent = '✗ ' + _indexError;
+    infoEl.style.color = '#ef4444';
+    showToast(_indexError, true);
+    return;
+  }
   const n = _indexCache ? _indexCache.length : 0;
-  infoEl.textContent = `✓ ${n} causas cargadas`;
-  showToast('Datos actualizados ✓');
+  infoEl.style.color = '';
+  if (n === 0) {
+    infoEl.textContent = 'Archivo vacío — 0 causas en INDEX_RESPALDO.json';
+    showToast('Archivo vacío');
+  } else {
+    infoEl.textContent = `✓ ${n} causas cargadas`;
+    showToast('Datos actualizados ✓');
+  }
 }
 
 function actualizarIndexInfo() {
@@ -3214,12 +3267,13 @@ function initOffline() {
   }
 }
 
-function showToast(msg) {
+function showToast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.style.background = isError ? '#ef4444' : '#1e293b';
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  toastTimer = setTimeout(() => t.classList.remove('show'), isError ? 5000 : 3000);
 }
 </script>
 </body>
