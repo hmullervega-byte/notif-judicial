@@ -654,26 +654,6 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<!-- SCREEN: SUSPENDIDA                      -->
-<!-- ═══════════════════════════════════════ -->
-<div class="screen" id="screen-suspendida">
-  <div class="causa-id">
-    <span style="color:var(--text2)">ID:</span>
-    <span id="susp-id-display" style="color:var(--accent)">—</span>
-  </div>
-  <div id="susp-campos" style="margin-bottom:16px;"></div>
-  <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:10px; padding:16px; margin-bottom:16px;">
-    <div style="font-size:15px; font-weight:700; color:#b91c1c; margin-bottom:8px;">⛔ Causa suspendida</div>
-    <div id="susp-motivo" style="font-size:13px; color:#991b1b; line-height:1.5;"></div>
-  </div>
-  <div style="text-align:center; font-size:13px; color:var(--text2); margin-bottom:16px;">
-    Esta causa está suspendida. Contacta a la oficina.
-  </div>
-  <div class="bottom-actions">
-    <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════ -->
 <!-- SCREEN: CONFIG                          -->
@@ -781,8 +761,10 @@
     </div>
   </div>
 
+  <div id="causa-estado-msg" style="display:none; border-radius:10px; padding:12px 14px; margin-bottom:8px; font-size:13px; line-height:1.4;"></div>
+
   <div class="bottom-actions">
-    <button class="btn btn-primary" onclick="showScreen('resultado')">Registrar resultado →</button>
+    <button class="btn btn-primary" id="btn-registrar-resultado" onclick="showScreen('resultado')">Registrar resultado →</button>
     <button class="btn btn-secondary" id="btn-editar-causa" onclick="mostrarEdicionCausa()" style="margin-top:10px; display:none;">✏ Editar datos</button>
     <button class="btn btn-secondary" onclick="showScreen('scan')" style="margin-top:10px">← Escanear otro</button>
   </div>
@@ -1900,13 +1882,9 @@ async function loadCausa(idHex) {
   // 2. Si está en caché → mostrar INMEDIATAMENTE sin esperar red
   if (causaData) {
     state.causaData = causaData;
-    if (causaData.estado === 'suspendida') {
-      showScreenSuspendida(idHex, causaData);
-    } else {
-      _mostrarCausa(idHex, causaData);
-    }
+    _mostrarCausa(idHex, causaData);
     // Background: verificar etapas + refrescar datos si hay conexión
-    _verificarEtapasBackground(idHex);
+    if (!_esEstadoSoloLectura(causaData.estado)) _verificarEtapasBackground(idHex);
     _refrescarCausaBackground(idHex);
     return;
   }
@@ -1943,24 +1921,60 @@ async function loadCausa(idHex) {
     document.getElementById('loading-causa').classList.remove('active');
     if (!causaData) { showToast('⚠ Causa no encontrada: ' + idHex); return; }
     state.causaData = causaData;
-    if (causaData.estado === 'suspendida') {
-      showScreenSuspendida(idHex, causaData);
-    } else {
-      _mostrarCausa(idHex, causaData);
-      _verificarEtapasBackground(idHex);
-    }
+    _mostrarCausa(idHex, causaData);
+    if (!_esEstadoSoloLectura(causaData.estado)) _verificarEtapasBackground(idHex);
   } catch(e) {
     document.getElementById('loading-causa').classList.remove('active');
     showToast('Error al cargar causa. Verifica conexión.');
   }
 }
 
+const ESTADOS_SOLO_LECTURA = ['pendiente_validacion','devuelta','suspendida','cerrada'];
+function _esEstadoSoloLectura(estado) { return ESTADOS_SOLO_LECTURA.includes(estado); }
+
+const MENSAJES_ESTADO = {
+  pendiente_validacion: 'Causa pendiente de validación por la oficina',
+  devuelta: 'Causa devuelta a la oficina para corrección',
+  suspendida: null, // se construye dinámicamente con motivo
+  cerrada: 'Causa cerrada',
+};
+
 function _mostrarCausa(idHex, causaData) {
   fillCausa(idHex, causaData);
   resetSelections();
-  const btnEditCausa = document.getElementById('btn-editar-causa');
-  const estadoBloquea = causaData.estado === 'suspendida' || causaData.estado === 'cerrada';
-  btnEditCausa.style.display = estadoBloquea ? 'none' : '';
+
+  const soloLectura = _esEstadoSoloLectura(causaData.estado);
+  const btnRegistrar = document.getElementById('btn-registrar-resultado');
+  const btnEditar = document.getElementById('btn-editar-causa');
+  const btnPiezas = document.getElementById('btn-editar-piezas');
+  const msgEl = document.getElementById('causa-estado-msg');
+
+  // Botones según permisos
+  btnRegistrar.style.display = soloLectura ? 'none' : '';
+  btnEditar.style.display = soloLectura ? 'none' : '';
+  btnPiezas.style.display = soloLectura ? 'none' : '';
+
+  // Mensaje informativo según estado
+  if (soloLectura) {
+    let msg = MENSAJES_ESTADO[causaData.estado] || '';
+    // Para suspendida, agregar motivo desde historial
+    if (causaData.estado === 'suspendida') {
+      msg = 'Causa suspendida';
+      const hist = causaData.historial || [];
+      if (hist.length > 0) {
+        const susp = [...hist].reverse().find(h => h.accion === 'suspension');
+        if (susp && susp.motivo) msg += ' — ' + susp.motivo;
+      }
+    }
+    msgEl.textContent = msg;
+    msgEl.style.display = '';
+    msgEl.style.background = 'var(--surface2)';
+    msgEl.style.color = 'var(--text2)';
+    msgEl.style.border = '1px solid var(--border, #334155)';
+  } else {
+    msgEl.style.display = 'none';
+  }
+
   showScreen('causa');
 }
 
@@ -2079,42 +2093,6 @@ function fillCausa(idHex, c) {
   document.getElementById('btn-editar-piezas').style.display = '';
 }
 
-async function showScreenSuspendida(idHex, c) {
-  document.getElementById('loading-causa').classList.remove('active');
-  document.getElementById('susp-id-display').textContent = idHex;
-
-  // Mostrar campos de la causa en solo lectura
-  const campos = [
-    ['ROL', c.rol], ['Tribunal', c.tribunal], ['Demandado', c.demandado],
-    ['RUT', c.rut], ['Notificar a', c.notif_a], ['Dirección', c.direccion],
-    ['Estudio', c.estudio]
-  ];
-  document.getElementById('susp-campos').innerHTML = campos.map(([label, val]) => `
-    <div class="field-row">
-      <div class="field-label">${label}</div>
-      <div class="field-value" style="opacity:0.7;">${val || '—'}</div>
-    </div>
-  `).join('');
-
-  // Obtener motivo de suspensión desde historial (caché o individual)
-  let motivo = 'Sin motivo registrado';
-  const hist = c.historial || [];
-  if (hist.length > 0) {
-    const susp = [...hist].reverse().find(h => h.accion === 'suspension');
-    if (susp) motivo = susp.motivo || motivo;
-  } else {
-    try {
-      const individual = await dbxGet('/causas-dev/' + idHex + '_CAUSA.json');
-      if (individual && individual.historial) {
-        const susp = [...individual.historial].reverse().find(h => h.accion === 'suspension');
-        if (susp) motivo = susp.motivo || motivo;
-      }
-    } catch(e) { console.warn('No se pudo cargar historial de suspensión'); }
-  }
-
-  document.getElementById('susp-motivo').textContent = motivo;
-  showScreen('suspendida');
-}
 
 // ══════════════════════════════════════════════
 // EDICIÓN DE CAUSA DESDE TERRENO
