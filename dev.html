@@ -2554,12 +2554,31 @@ async function guardarCausa(estadoInicial) {
     return;
   }
 
-  // Detección de causa duplicada
+  // Detección de causa duplicada exacta
   const existente = causas.find(c => c.id_hex === currentHex);
   if (existente) {
     mostrarModalDuplicado(existente, estadoInicial);
     return;
   }
+
+  // Detección de diligencia similar (mismos 5 campos, distinto N° Solicitud)
+  if (!_skipSimilarCheck) {
+    const _rol = fval('rol'), _trib = fval('tribunal'), _dir = fval('direccion'),
+          _not = fval('notificar_a'), _tipo = fval('tipo_diligencia');
+    const similar = causas.find(c =>
+      (c.rol || '') === _rol &&
+      (c.tribunal || '') === _trib &&
+      (c.direccion || '') === _dir &&
+      (c.notificar_a || c.notif_a || '') === _not &&
+      (c.tipo_diligencia || '') === _tipo &&
+      c.id_hex !== currentHex
+    );
+    if (similar) {
+      mostrarModalSimilar(similar, estadoInicial);
+      return;
+    }
+  }
+  _skipSimilarCheck = false;
 
   // Cambio 6: tipos de gestión directa siempre van con estado especial
   const tipoDigSel = fval('tipo_diligencia');
@@ -4461,6 +4480,7 @@ function exportOptirouteDia() {
 const causasSeleccionadas = new Set();
 let _lastFilteredHexes = [];
 let _filtroIdsDup = false;  // true cuando el filtro de IDs duplicados está activo
+let _skipSimilarCheck = false;  // true para saltar verificación de similar al guardar
 
 function toggleCausaCheck(hex, checked) {
   if (checked) causasSeleccionadas.add(hex);
@@ -5414,6 +5434,42 @@ async function guardarEdicionConRecalculo(hex) {
 // ══════════════════════════════════════════════
 // MODAL CAUSA DUPLICADA
 // ══════════════════════════════════════════════
+function mostrarModalSimilar(similar, estadoInicial) {
+  const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:2px;';
+  const val = 'font-size:13px; margin-bottom:6px;';
+  const nroExistente = similar.nro_solicitud || similar.n_solicitud || '—';
+
+  const campos = [
+    ['ROL', similar.rol],
+    ['Tribunal', similar.tribunal],
+    ['Demandado', similar.demandado],
+    ['Tipo', similar.tipo_diligencia],
+    ['Estado', similar.estado ? estadoBadge(similar.estado) : '—'],
+    ['Fecha ingreso', fmtFecha(similar.fecha_solicitud || similar.ts_ingreso)],
+    ['N° Solicitud', nroExistente],
+  ];
+
+  let detalle = `<div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:12px;">
+    <div style="background:#dbeafe; padding:8px 12px; font-weight:700; font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border);">Causa existente similar</div>`;
+  campos.forEach(([label, v]) => {
+    detalle += `<div style="padding:4px 12px; border-bottom:1px solid var(--border); display:flex; gap:8px;">
+      <div style="${lbl} min-width:100px;">${label}</div><div style="${val}">${v || '—'}</div></div>`;
+  });
+  detalle += '</div>';
+
+  const html = `
+    <p style="color:#f59e0b; font-weight:600; margin-bottom:12px;">Ya existe una diligencia similar ingresada con N° Solicitud <span class="mono" style="font-size:12px;">${nroExistente}</span></p>
+    ${detalle}
+    <p style="font-size:12px; color:var(--muted);">La causa nueva tiene N° Solicitud <strong class="mono">${fval('n_solicitud') || '—'}</strong>. Si los datos son correctos, puedes guardar de todas formas.</p>`;
+
+  document.getElementById('modal-title').textContent = 'Diligencia similar encontrada';
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="closeModal(); _skipSimilarCheck = true; guardarCausa('${estadoInicial}');">Guardar de todas formas</button>`;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
 function mostrarModalDuplicado(existente, estadoInicial) {
   const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:2px;';
   const val = 'font-size:13px; margin-bottom:6px;';
