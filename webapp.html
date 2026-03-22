@@ -1979,7 +1979,7 @@ async function loadCausa(idHex) {
   }
 }
 
-const ESTADOS_SOLO_LECTURA = ['pendiente_validacion','devuelta','suspendida','cerrada'];
+const ESTADOS_SOLO_LECTURA = ['pendiente_validacion','devuelta','suspendida','cerrada','revision_darth'];
 function _esEstadoSoloLectura(estado) { return ESTADOS_SOLO_LECTURA.includes(estado); }
 
 const MENSAJES_ESTADO = {
@@ -1987,6 +1987,7 @@ const MENSAJES_ESTADO = {
   devuelta: 'Causa devuelta a la oficina para corrección',
   suspendida: null, // se construye dinámicamente con motivo
   cerrada: 'Causa cerrada',
+  revision_darth: 'Causa pendiente de validación por Helmuth',
 };
 
 function _mostrarCausa(idHex, causaData) {
