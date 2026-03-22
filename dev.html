@@ -3186,8 +3186,8 @@ async function actualizarIndex() {
     fecha_ruta:       c.fecha_ruta || '',
     fecha_2da_positiva: c.fecha_2da_positiva || '',
     ts_ingreso:       c.ts_ingreso || '',
-    resultado:        c.resultado || '',
-    boleta:           c.boleta || '',
+    resultado:        c._causa_json?.datos?.resultado || c._causa_json?.resultado || c.resultado || '',
+    boleta:           c._causa_json?.datos?.boleta || c._causa_json?.boleta || c.boleta || '',
   }));
   try {
     await DBX.upload('/causas-dev/INDEX.json', index);
@@ -3227,6 +3227,8 @@ async function actualizarIndexRespaldo() {
       comentario:         datos.comentario        || c.comentario        || '',
       fecha_ruta:         c.fecha_ruta            || '',
       ts_ingreso:         c.ts_ingreso            || '',
+      resultado:          datos.resultado         || c._causa_json?.resultado || c.resultado || '',
+      boleta:             datos.boleta            || c._causa_json?.boleta    || c.boleta    || '',
       historial:          c._causa_json?.historial || [],
     };
   });
@@ -3372,7 +3374,7 @@ function renderCausas() {
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || '')}</td>
-      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado)}">${resultadoTexto(c.resultado)}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}">${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
@@ -3434,7 +3436,7 @@ async function verCausa(hex) {
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">RESULTADO</span><br>${resultadoTexto(c.resultado || c._causa_json?.resultado || '')}</div>
+          <div><span style="color:var(--muted); font-size:11px;">RESULTADO</span><br>${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || c._causa_json?.resultado || '')}</div>
           <div><span style="color:var(--muted); font-size:11px;">N° BOLETA</span><br><span class="mono">${c.boleta || c._causa_json?.datos?.boleta || c._causa_json?.boleta || '—'}</span></div>
         </div>
         ${(() => {
@@ -4708,6 +4710,8 @@ async function regenerarIndexRespaldo() {
           comentario:         datos.comentario || '',
           fecha_ruta:         data.fecha_ruta || '',
           ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
+          resultado:          datos.resultado || data.resultado || '',
+          boleta:             datos.boleta || data.boleta || '',
           historial:          data.historial || [],
         };
       } catch(e) { console.warn(`Error ${entry.name}:`, e); return null; }
@@ -4722,10 +4726,49 @@ async function regenerarIndexRespaldo() {
 
   try {
     await DBX.upload('/causas-dev/INDEX_RESPALDO.json', respaldo);
-    showToast(`✅ INDEX_RESPALDO.json regenerado: ${respaldo.length} causas`, 'success');
   } catch(e) {
     showToast('❌ Error subiendo INDEX_RESPALDO.json: ' + e.message, 'error');
+    return;
   }
+
+  // También regenerar INDEX.json con resultado y boleta
+  const index = respaldo.map(r => ({
+    id_hex:           r.id_hex,
+    estado:           r.estado,
+    rol:              r.rol,
+    tribunal:         r.tribunal,
+    nro_solicitud:    r.nro_solicitud,
+    demandado:        r.demandado,
+    rut:              r.rut,
+    direccion:        r.direccion,
+    tipo_diligencia:  r.tipo_diligencia,
+    fecha_solicitud:  r.fecha_solicitud,
+    estudio_juridico: r.estudio_juridico,
+    notificar_a:      r.notificar_a,
+    demandante:       r.demandante,
+    ciudad:           r.ciudad || 'Antofagasta',
+    fecha_ruta:       r.fecha_ruta || '',
+    ts_ingreso:       r.ts_ingreso || '',
+    resultado:        r.resultado || '',
+    boleta:           r.boleta || '',
+  }));
+  try {
+    await DBX.upload('/causas-dev/INDEX.json', index);
+  } catch(e) {
+    showToast('⚠ INDEX_RESPALDO ok pero error en INDEX.json: ' + e.message, 'warn');
+    return;
+  }
+
+  // Actualizar causas en memoria con resultado/boleta del respaldo
+  for (const r of respaldo) {
+    const c = causas.find(x => x.id_hex === r.id_hex);
+    if (c) {
+      c.resultado = r.resultado || c.resultado || '';
+      c.boleta = r.boleta || c.boleta || '';
+    }
+  }
+  renderCausas();
+  showToast(`✅ INDEX + INDEX_RESPALDO regenerados: ${respaldo.length} causas`, 'success');
 }
 
 // ══════════════════════════════════════════════
