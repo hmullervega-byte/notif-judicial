@@ -3376,6 +3376,7 @@ async function verCausa(hex) {
   const esDarth = currentUser?.perfil === 'darth';
   let footerHtml = '';
   if (esSuspendida) {
+    // Mostrar motivo de suspensión en recuadro rojo
     const hist = c._causa_json?.historial || [];
     const susp = [...hist].reverse().find(h => h.accion === 'suspension');
     if (susp) {
@@ -4598,7 +4599,7 @@ async function regenerarIndexRespaldo() {
     }));
     respaldo.push(...resultados.filter(Boolean));
     if ((i + 20) % 100 === 0 || i + 20 >= archivos.length) {
-      showToast(`⏳ Regenerando... ${Math.min(i + 20, archivos.length)}/${archivos.length} causas`, 'info');
+      showToast(`⏳ ${Math.min(i + 20, archivos.length)}/${archivos.length} procesadas...`, 'info');
     }
   }
 
@@ -4606,7 +4607,7 @@ async function regenerarIndexRespaldo() {
 
   try {
     await DBX.upload('/causas/INDEX_RESPALDO.json', respaldo);
-    showToast(`✅ Respaldo regenerado con ${respaldo.length} causas`, 'success');
+    showToast(`✅ INDEX_RESPALDO.json regenerado: ${respaldo.length} causas`, 'success');
   } catch(e) {
     showToast('❌ Error subiendo INDEX_RESPALDO.json: ' + e.message, 'error');
   }
@@ -5157,6 +5158,7 @@ document.head.appendChild(styleEl);
   function setupHandles(table) {
     const ths = table.querySelectorAll('thead th');
     ths.forEach(th => {
+      // Skip checkbox and acciones columns
       if (th.querySelector('input[type=checkbox]') || th.classList.contains('col-acc')) return;
       const handle = document.createElement('div');
       handle.className = 'col-resize-handle';
@@ -5187,6 +5189,7 @@ document.head.appendChild(styleEl);
     restoreWidths(table);
   }
 
+  // Initialize when DOM is ready (table already exists)
   const table = document.getElementById('tabla-causas');
   if (table) setupHandles(table);
 })();
@@ -5210,6 +5213,7 @@ function verificarIdsDuplicados() {
     return;
   }
 
+  // Build modal table
   let html = `<p style="margin-bottom:12px; color:#ef4444; font-weight:600;">Se encontraron ${duplicados.length} ID(s) duplicados:</p>`;
   html += `<div class="table-wrap"><table style="width:100%; font-size:12px;">
     <thead><tr>
