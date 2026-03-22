@@ -1270,6 +1270,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <th style="min-width:100px;">Dirección</th>
                   <th style="width:70px;">Tipo</th>
                   <th style="width:75px;">F. Diligencia</th>
+                  <th style="width:65px;">F. Ruta</th>
                   <th style="min-width:90px;">Resultado</th>
                   <th style="width:70px;">Estado</th>
                   <th style="width:90px;">ID</th>
@@ -1278,7 +1279,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="12">
+                  <td colspan="13">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -3147,7 +3148,7 @@ async function toggleVistaCompleta() {
       fecha_solicitud: c.fecha_solicitud, estudio: c.estudio_juridico,
       estudio_juridico: c.estudio_juridico, notificar_a: c.notificar_a,
       demandante: c.demandante, ciudad: c.ciudad || 'Antofagasta',
-      fecha_ruta: c.fecha_ruta || '', fecha_2da_positiva: c.fecha_2da_positiva || '',
+      fecha_ruta: c.fecha_ruta || '', fecha_diligencia: c.fecha_diligencia || '', fecha_2da_positiva: c.fecha_2da_positiva || '',
       ts_ingreso: c.ts_ingreso || '', resultado: c.resultado || '',
       boleta: c.boleta || '', derechos: c.derechos || '',
       _causa_json: null
@@ -3182,7 +3183,7 @@ async function cargarCausasDropbox(forzar = false) {
   _cargando = true;
 
   const tbody = document.getElementById('causas-body');
-  tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+  tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state">
     <span class="icon">⏳</span><p>Cargando causas...</p>
   </div></td></tr>`;
 
@@ -3216,6 +3217,7 @@ async function cargarCausasDropbox(forzar = false) {
       demandante:       c.demandante,
       ciudad:           c.ciudad || 'Antofagasta',
       fecha_ruta:       c.fecha_ruta || '',
+      fecha_diligencia: c.fecha_diligencia || '',
       fecha_2da_positiva: c.fecha_2da_positiva || '',
       ts_ingreso:       c.ts_ingreso || '',
       resultado:        c.resultado || '',
@@ -3273,7 +3275,8 @@ function _causaToIndexEntry(c) {
     tipo_diligencia: c.tipo_diligencia || '',
     resultado: c._causa_json?.datos?.resultado || c._causa_json?.resultado || c.resultado || '',
     fecha_solicitud: c.fecha_solicitud || '',
-    fecha_ruta: c._causa_json?.datos?.fecha_ruta || c._causa_json?.fecha_ruta || c.fecha_ruta || '',
+    fecha_diligencia: c._causa_json?.datos?.fecha_diligencia || c._causa_json?.fecha_diligencia || c.fecha_diligencia || '',
+    fecha_ruta: c.fecha_ruta || '',
     estudio_juridico: c.estudio_juridico || c.estudio || '',
     nro_solicitud: c.nro_solicitud || c.n_solicitud || '',
     derechos: c._causa_json?.datos?.derechos || c.derechos || '',
@@ -3408,7 +3411,8 @@ async function actualizarIndexRespaldo() {
       nro_pagare:         datos.nro_pagare        || datos.n_pagare      || c.nro_pagare || '',
       observacion:        datos.observacion       || datos.comentario    || c.observacion || '',
       comentario:         datos.comentario        || c.comentario        || '',
-      fecha_ruta:         datos.fecha_ruta        || c._causa_json?.fecha_ruta || c.fecha_ruta || '',
+      fecha_diligencia:   datos.fecha_diligencia  || c._causa_json?.fecha_diligencia || c.fecha_diligencia || '',
+      fecha_ruta:         c.fecha_ruta || '',
       ts_ingreso:         c.ts_ingreso            || '',
       resultado:          datos.resultado         || c._causa_json?.resultado || c.resultado || '',
       boleta:             datos.boleta            || c._causa_json?.boleta    || c.boleta    || '',
@@ -3521,7 +3525,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : _filtroIdsDup ? 'Sin IDs duplicados — todas las causas tienen ID único.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -3556,7 +3560,8 @@ function renderCausas() {
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || c._causa_json?.datos?.fecha_ruta || '')}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_diligencia || c._causa_json?.datos?.fecha_diligencia || '')}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || '')}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}">${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
@@ -3614,7 +3619,8 @@ async function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
           ${c.abogado_procurador ? `<div><span style="color:var(--muted); font-size:11px;">ABOGADO / PROCURADOR</span><br>${c.abogado_procurador}</div>` : ''}
-          <div><span style="color:var(--muted); font-size:11px;">FECHA RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">F. DILIGENCIA</span><br><span class="mono">${fmtFecha(c.fecha_diligencia || c._causa_json?.datos?.fecha_diligencia || '')}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">F. RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
@@ -4897,7 +4903,8 @@ async function regenerarIndexRespaldo() {
           nro_pagare:         datos.nro_pagare || datos.n_pagare || '',
           observacion:        datos.observacion || datos.comentario || '',
           comentario:         datos.comentario || '',
-          fecha_ruta:         datos.fecha_ruta || data.fecha_ruta || '',
+          fecha_diligencia:   datos.fecha_diligencia || data.fecha_diligencia || '',
+          fecha_ruta:         data.fecha_ruta || '',
           ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
           resultado:          datos.resultado || data.resultado || '',
           boleta:             datos.boleta || data.boleta || '',
@@ -4936,6 +4943,7 @@ async function regenerarIndexRespaldo() {
     notificar_a:      r.notificar_a,
     demandante:       r.demandante,
     ciudad:           r.ciudad || 'Antofagasta',
+    fecha_diligencia: r.fecha_diligencia || '',
     fecha_ruta:       r.fecha_ruta || '',
     ts_ingreso:       r.ts_ingreso || '',
     resultado:        r.resultado || '',
@@ -4954,6 +4962,7 @@ async function regenerarIndexRespaldo() {
     if (c) {
       c.resultado = r.resultado || c.resultado || '';
       c.boleta = r.boleta || c.boleta || '';
+      c.fecha_diligencia = r.fecha_diligencia || c.fecha_diligencia || '';
       c.fecha_ruta = r.fecha_ruta || c.fecha_ruta || '';
     }
   }
