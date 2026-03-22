@@ -3183,7 +3183,7 @@ async function actualizarIndex() {
     notificar_a:      c.notificar_a || '',
     demandante:       c.demandante || '',
     ciudad:           c.ciudad || 'Antofagasta',
-    fecha_ruta:       c.fecha_ruta || '',
+    fecha_ruta:       c._causa_json?.datos?.fecha_ruta || c._causa_json?.fecha_ruta || c.fecha_ruta || '',
     fecha_2da_positiva: c.fecha_2da_positiva || '',
     ts_ingreso:       c.ts_ingreso || '',
     resultado:        c._causa_json?.datos?.resultado || c._causa_json?.resultado || c.resultado || '',
@@ -3225,7 +3225,7 @@ async function actualizarIndexRespaldo() {
       nro_pagare:         datos.nro_pagare        || datos.n_pagare      || c.nro_pagare || '',
       observacion:        datos.observacion       || datos.comentario    || c.observacion || '',
       comentario:         datos.comentario        || c.comentario        || '',
-      fecha_ruta:         c.fecha_ruta            || '',
+      fecha_ruta:         datos.fecha_ruta        || c._causa_json?.fecha_ruta || c.fecha_ruta || '',
       ts_ingreso:         c.ts_ingreso            || '',
       resultado:          datos.resultado         || c._causa_json?.resultado || c.resultado || '',
       boleta:             datos.boleta            || c._causa_json?.boleta    || c.boleta    || '',
@@ -3373,7 +3373,7 @@ function renderCausas() {
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || '')}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || c._causa_json?.datos?.fecha_ruta || '')}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}">${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
@@ -4708,7 +4708,7 @@ async function regenerarIndexRespaldo() {
           nro_pagare:         datos.nro_pagare || datos.n_pagare || '',
           observacion:        datos.observacion || datos.comentario || '',
           comentario:         datos.comentario || '',
-          fecha_ruta:         data.fecha_ruta || '',
+          fecha_ruta:         datos.fecha_ruta || data.fecha_ruta || '',
           ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
           resultado:          datos.resultado || data.resultado || '',
           boleta:             datos.boleta || data.boleta || '',
@@ -4765,6 +4765,7 @@ async function regenerarIndexRespaldo() {
     if (c) {
       c.resultado = r.resultado || c.resultado || '';
       c.boleta = r.boleta || c.boleta || '';
+      c.fecha_ruta = r.fecha_ruta || c.fecha_ruta || '';
     }
   }
   renderCausas();
