@@ -2135,7 +2135,7 @@ function buildDashboard() {
 // FORMULARIO INGRESO
 // ══════════════════════════════════════════════
 const REQUIRED_FIELDS = ['n_solicitud','rol','tribunal','tipo_diligencia','demandado','notificar_a','direccion'];
-const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud'];
+const HEX_FIELDS = ['rol','tribunal','direccion','notificar_a','n_solicitud','tipo_diligencia'];
 
 let currentHex = null;
 let qrInstance  = null;
@@ -5321,7 +5321,8 @@ async function guardarEdicionConRecalculo(hex) {
   const direccion = payload.datos.direccion || '';
   const notificar_a = payload.datos.notificar_a || payload.datos.notif_a || '';
   const nro_solicitud = payload.datos.nro_solicitud || '';
-  const nuevoHex = await sha256hex16(rol + tribunal + direccion + notificar_a + nro_solicitud);
+  const tipo_diligencia = payload.datos.tipo_diligencia || '';
+  const nuevoHex = await sha256hex16(rol + tribunal + direccion + notificar_a + nro_solicitud + tipo_diligencia);
 
   if (nuevoHex !== hex) {
     // Verificar que el nuevo ID no esté duplicado con otra causa distinta
