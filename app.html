@@ -1206,6 +1206,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="lista_para_estampe">Lista para estampe</option>
             <option value="estampada">Estampada</option>
             <option value="boleta_emitida">Boleta emitida</option>
+            <option value="id_repetida">ID repetida</option>
             <option value="suspendida">Suspendida</option>
           </select>
           <button class="btn btn-secondary btn-sm" id="btn-limpiar-filtros" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
@@ -4874,6 +4875,7 @@ function estadoBadge(estado) {
     'cerrada':              ['tag-gray','Cerrada'],
     'devuelta':             ['tag-orange','Devuelta'],
     'suspendida':           ['tag-red','Suspendida'],
+    'id_repetida':          ['tag-orange','ID repetida'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
