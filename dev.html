@@ -948,6 +948,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <option value="2° Juzgado de Letras de Antofagasta">2° Juzgado de Letras</option>
                     <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
                     <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
+                    <option value="Corte de Apelaciones de Antofagasta">Corte de Apelaciones</option>
+                    <option value="Apelación (Protección) de Antofagasta">Apelación (Protección)</option>
                   </select>
                   <span class="error-msg">Seleccione tribunal</span>
                 </div>
@@ -1219,6 +1221,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="2°">Segundo</option>
             <option value="3°">Tercer</option>
             <option value="4°">Cuarto</option>
+            <option value="Corte de Apelaciones">C. Apelaciones</option>
+            <option value="Apelación (Protección)">Apel. (Protección)</option>
           </select>
           <input type="text" id="filter-demandante" placeholder="Buscar demandante..." style="min-width:160px; max-width:200px;">
           <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Desde</label>
@@ -4764,6 +4768,8 @@ function normalizarTribunal(str) {
   if (!str) return '—';
   const m = str.match(/^(\d+)°/);
   if (m) return m[1] + '°';
+  if (str.includes('Apelación (Protección)')) return 'Apel.(Prot.)';
+  if (str.includes('Corte de Apelaciones') || str.toLowerCase().includes('apelaciones')) return 'C.Apel.';
   const map = { 'primer': '1°', 'primero': '1°', 'segundo': '2°', 'tercer': '3°', 'tercero': '3°', 'cuarto': '4°' };
   const key = str.trim().toLowerCase();
   return map[key] || str;
