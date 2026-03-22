@@ -68,7 +68,7 @@ La columna vertebral es **Dropbox** (`/Apps/notif-judicial/`). Excel es registro
 | `generar_estampes.py` | Mike (M3) | Generador de estampes. Lee JSONs Dropbox, cruza con Excel, genera .docx. 6 tipos: CED, NP, EMB, EMBF, RPP-STANDALONE, CE. |
 | `watcher.py` | Lucas (M4) | Polling Dropbox + escaneo PDFs firmados. Escribe cols N,X,Y,AA,AB,AD,AE en Excel. |
 | `exportar.py` | Soporte | Lee Excel → sube `causas.json` a Dropbox. |
-| `generar_index.py` | Soporte | Regenera INDEX.json e INDEX_RESPALDO.json desde todos los `_CAUSA.json` en Dropbox. |
+| `generar_index.py` | Soporte | Regenera INDEX.json e INDEX_RESPALDO.json desde todos los `_CAUSA.json` en Dropbox. Incluye resultado, boleta, fecha_ruta con fallback datos→root. |
 | `autorizar_dropbox.py` | Soporte | Genera tokens OAuth2 para Dropbox Scoped App. |
 | `BaseDatos.xlsx` | Central | Base de datos Excel, hoja `BaseDatos`. Col W = ID hex 16 chars. |
 | `importar_excel.py` | Soporte | Importación histórica Excel → Dropbox. Cols A-Y. Genera _CAUSA.json + actualiza índices. |
@@ -81,8 +81,8 @@ La columna vertebral es **Dropbox** (`/Apps/notif-judicial/`). Excel es registro
 ```
 causas/                          ← PRODUCCIÓN
   {id_hex}_CAUSA.json            ← 1 archivo por causa
-  INDEX.json                     ← Índice liviano (campos básicos)
-  INDEX_RESPALDO.json            ← Índice completo (todos los campos + historial)
+  INDEX.json                     ← Índice liviano (campos básicos + resultado, boleta, fecha_ruta)
+  INDEX_RESPALDO.json            ← Índice completo (todos los campos + resultado, boleta, fecha_ruta + historial)
 
 causas-dev/                      ← DESARROLLO
   {id_hex}_CAUSA.json
@@ -115,11 +115,10 @@ estados/
 
 ```
 pendiente_validacion → validada → en_ruta →
-resultado_registrado → lista_para_estampe →
-estampada → boleta_emitida → cerrada
+resultado_registrado → cerrada
 ```
 
-Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`, `revision_darth`, `id_repetida`, `pendiente_estado`
+Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`, `id_repetida`, `revision_darth`, `pendiente_estado`
 
 | Estado | Significado | Quién lo cambia |
 |---|---|---|
@@ -127,16 +126,15 @@ Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`, `revi
 | `validada` | Lista para ruta | Max (Guardar / Jedi valida) |
 | `en_ruta` | Marco seleccionó para ruta del día | Max (generar ruta) |
 | `resultado_registrado` | Receptora registró resultado en terreno | Lucas (watcher.py) |
-| `lista_para_estampe` | Lucas procesó, Mike puede generar | Lucas (watcher.py) |
-| `estampada` | Mike generó el .docx | Mike (generar_estampes.py) |
-| `boleta_emitida` | Helmuth asignó boleta | Max (Darth, futuro) |
 | `cerrada` | Causa cerrada | Max (Darth) |
-| `suspendida` | Causa suspendida con motivo | Max (botón Suspender) |
 | `devuelta` | Jedi devolvió a Marco para corrección | Max (Jedi) |
-| `gestion_directa_receptora` | Diligencia sin ruta (embargo CBR, etc.) | Max |
+| `suspendida` | Causa suspendida con motivo | Max (botón Suspender) |
+| `id_repetida` | Causa con ID hex duplicado (importación o ingreso) | Max (auto) / importar_excel.py |
 | `revision_darth` | Marco intentó guardar causa con ID duplicada — Darth aprueba o rechaza | Max → Darth |
-| `id_repetida` | Causa importada con ID duplicada en Dropbox | importar_excel.py |
-| `pendiente_estado` | Causa importada sin estado claro — Darth asigna manualmente | importar_excel.py |
+| `gestion_directa_receptora` | Diligencia sin ruta (embargo CBR, etc.) | Max |
+| `pendiente_estado` | Migrada desde estado obsoleto o importada sin estado claro — Darth asigna | Max (auto-migración) / importar_excel.py |
+
+**Estados eliminados (2026-03-22):** `lista_para_estampe`, `estampada`, `boleta_emitida` — causas con esos estados se migran automáticamente a `pendiente_estado` al cargar.
 
 ### Suspensión / Reactivación
 - Botón SUSPENDER en Mis Causas (visible con 1 checkbox marcado, fondo rojo #ef4444)
@@ -242,9 +240,14 @@ ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-
 - Login: solo usuario (3 perfiles). Credenciales Dropbox en localStorage.
 - Guardar causa → `{id_hex}_CAUSA.json` directo a Dropbox.
 - INDEX.json + INDEX_RESPALDO.json se sincronizan al guardar/validar/devolver/generar ruta.
+- INDEX.json incluye campos: resultado, boleta, fecha_ruta (con fallback desde datos.*).
 - dev.html usa `/causas-dev/`, app.html usa `/causas/`.
 - Formulario físico imprimible (3 hojas) con QR, checkboxes, timbre base64.
 - Vistas: dashboard, ingreso, causas, validación, ruta.
+- Tabla Mis Causas columnas: ☑ | ROL | T | Demandante | Demandado | Dirección | Tipo | F.Diligencia | Resultado | Estado | ID | Acc.
+- Modal detalle: max-width 700px, incluye campos Resultado (texto legible) y N° Boleta.
+- Regenerar respaldo (Darth): actualiza INDEX_RESPALDO.json + INDEX.json con resultado, boleta, fecha_ruta.
+- Auto-migración al cargar: causas con estados obsoletos → `pendiente_estado`.
 
 ### webapp.html / webapp_dev.html (Eleven)
 - PWA HTML/JS puro. jsQR local.
