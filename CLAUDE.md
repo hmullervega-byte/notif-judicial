@@ -71,6 +71,8 @@ La columna vertebral es **Dropbox** (`/Apps/notif-judicial/`). Excel es registro
 | `generar_index.py` | Soporte | Regenera INDEX.json e INDEX_RESPALDO.json desde todos los `_CAUSA.json` en Dropbox. |
 | `autorizar_dropbox.py` | Soporte | Genera tokens OAuth2 para Dropbox Scoped App. |
 | `BaseDatos.xlsx` | Central | Base de datos Excel, hoja `BaseDatos`. Col W = ID hex 16 chars. |
+| `importar_excel.py` | Soporte | Importación histórica Excel → Dropbox. Cols A-Y. Genera _CAUSA.json + actualiza índices. |
+| `importar_excel.bat` | Soporte | Lanza importar_excel.py con doble-click. |
 | `derechos.json` | Mike | Tarifas de derechos por estudio/demandante. |
 | `dropbox_token.json` | Soporte | Credenciales Dropbox. NO subir a GitHub. |
 
@@ -117,7 +119,7 @@ resultado_registrado → lista_para_estampe →
 estampada → boleta_emitida → cerrada
 ```
 
-Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`
+Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`, `revision_darth`, `id_repetida`, `pendiente_estado`
 
 | Estado | Significado | Quién lo cambia |
 |---|---|---|
@@ -132,6 +134,9 @@ Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`
 | `suspendida` | Causa suspendida con motivo | Max (botón Suspender) |
 | `devuelta` | Jedi devolvió a Marco para corrección | Max (Jedi) |
 | `gestion_directa_receptora` | Diligencia sin ruta (embargo CBR, etc.) | Max |
+| `revision_darth` | Marco intentó guardar causa con ID duplicada — Darth aprueba o rechaza | Max → Darth |
+| `id_repetida` | Causa importada con ID duplicada en Dropbox | importar_excel.py |
+| `pendiente_estado` | Causa importada sin estado claro — Darth asigna manualmente | importar_excel.py |
 
 ### Suspensión / Reactivación
 - Botón SUSPENDER en Mis Causas (visible con 1 checkbox marcado, fondo rojo #ef4444)
@@ -147,6 +152,9 @@ Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`
 | `devuelta` | Si | No | No |
 | `suspendida` | Si | No | No |
 | `cerrada` | Si | No | No |
+| `revision_darth` | Si | No | No |
+| `id_repetida` | Si | No | No |
+| `pendiente_estado` | Si | No | No |
 | `validada` | Si | Si | Si |
 | `en_ruta` | Si | Si | Si |
 | `gestion_directa_receptora` | Si | Si | Si |
@@ -169,7 +177,7 @@ Estados especiales: `gestion_directa_receptora`, `devuelta`, `suspendida`
 
 ## Tipos de gestión directa (no van en ruta)
 
-ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-CBR, EMBARGO-CUENTA-CORRIENTE, EMBARGO-FRUSTRADO, EMBARGO-OTROS, EMBARGO-RVM, EMBARGO-TESORERIA, PRUEBA-CONFESIONAL, PRUEBA-TESTIMONIAL, REQ-PAGO-TRIBUNAL
+ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-CBR, EMBARGO-CUENTA-CORRIENTE, EMBARGO-FRUSTRADO, EMBARGO-OTROS, EMBARGO-RVM, EMBARGO-TESORERIA, PRUEBA-CONFESIONAL, PRUEBA-TESTIMONIAL, REQ-PAGO-TRIBUNAL, OPOS-RETIRO
 
 ## Sistema de códigos
 
@@ -192,7 +200,7 @@ ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-
 | K | Notificar a (notif_a) | Parte del ID hex. Cuerpo estampes. Fallback a col D. |
 | N | Resultado | Escrita por Lucas |
 | P | N° Solicitud | Parte del ID hex |
-| W | **ID hex 16 chars** | **Clave primaria.** Hash de cols A+B+F+K+P. Mayúsculas. |
+| W | **ID hex 16 chars** | **Clave primaria.** Hash de cols A+B+F+K+P+I. Mayúsculas. |
 
 ## Tipos de diligencia
 
@@ -216,6 +224,7 @@ ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-
 - **No reemplazar** Optiroute, Plataforma Poder Judicial ni la firma digital de Helmuth.
 - **Un JSON por causa** en Dropbox (no monolítico). Evita colisiones de escritura.
 - **ID hex 16 chars mayúsculas** es la clave universal que conecta todo.
+- **Fórmula ID hex:** `SHA256(ROL + Tribunal + Dirección + NotificarA + N°Solicitud + TipoDiligencia)[:16].upper()` — 6 campos.
 
 ### generar_estampes.py (Mike)
 - Modo producción: `python generar_estampes.py` (lee Dropbox).
@@ -256,7 +265,7 @@ ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-
 ## Pendientes importantes
 
 ### Alta prioridad
-- Migración histórica: ~400 causas desde enero 2026 desde BaseDatos.xlsx a JSONs
+- Migración histórica: ~400 causas desde enero 2026 — script `importar_excel.py` listo, pendiente ejecución
 - `derechos.json`: poblar con tarifas reales + agregar clave `embargo_rpf`
 - Panel Darth: pagos, estados de pago, cobranza
 
@@ -264,6 +273,31 @@ ALZAMIENTO-CBR, ALZAMIENTO-RVM, ALZAMIENTO-TESORERIA, ALZAMIENTO-OTROS, EMBARGO-
 - Lucas (watcher.py): activar cuando flujo completo esté listo
 - Marcha blanca Fase 2: NOT44 y NP
 - Mike: agregar punto seguido al final de las piezas en el estampe
+
+## Importación histórica (importar_excel.py)
+
+- Script: `importar_excel.py` + `importar_excel.bat` en `C:\Users\hmull\Escritorio\Nueva Maestra\`
+- Lee Excel sin fila de encabezado, columnas A-Y
+- Columnas: A=ROL, B=Tribunal, C=Demandante, D=Demandado, E=RUT, F=Dirección, G=Ciudad, H=Monto, I=Tipo Diligencia, J=Piezas, K=Notificar a, L=Fecha Solicitud, M=Fecha Ruta, N=Resultado, O=Estudio, P=N°Solicitud, Q=Derechos, R=Boleta, S=ignorar, T=Observación, U=Estado, V=Abogado/Procurador, W=Banco Representado, X=N°Pagaré/Operación, Y=Motivo Suspensión
+- Lógica de estados: Col U="Listo"→cerrada, Col U="N/A"→suspendida, Col I en gestión directa→gestion_directa_receptora, otro→pendiente_estado, ID repetida→id_repetida
+- Sube _CAUSA.json en lotes de 10 paralelos, actualiza INDEX.json e INDEX_RESPALDO.json
+
+## Detección de duplicados (app.html / dev.html)
+
+- **ID exacta duplicada:** Al guardar causa nueva, si el id_hex ya existe → modal bloqueante con comparación lado a lado + motivo obligatorio (min 10 chars) → guarda con estado `revision_darth` usando ID único con timestamp. Darth aprueba (→ validada) o rechaza (→ elimina) desde vista Validar Causas.
+- **Diligencia similar:** Si mismos 5 campos (ROL+Tribunal+Dirección+NotificarA+Tipo) pero distinto N°Solicitud → modal de advertencia no bloqueante con datos de la causa existente → botón "Guardar de todas formas" continúa guardado normal.
+
+## Estudios jurídicos
+
+Agecob, BanPro, CG Cobranzas Generales, Conseil, Dell'Oro Abogados, Exhortos Frias, Exhortos Chile, Mellado y Cia, Recsa, Servicobranza, Socofin, Zapico, TURNO, PARTICULAR
+
+## Bancos representados
+
+Banco Internacional, Scotiabank, Banco Itaú
+
+## Tribunales
+
+1° Juzgado de Letras de Antofagasta, 2° Juzgado de Letras de Antofagasta, 3° Juzgado de Letras de Antofagasta, 4° Juzgado de Letras de Antofagasta, Corte de Apelaciones de Antofagasta, Apelación (Protección) de Antofagasta
 
 ## Comandos útiles
 
@@ -287,4 +321,7 @@ git add -A && git commit -m "descripción" && git push origin main
 
 # Regenerar INDEX.json desde Dropbox
 python generar_index.py
+
+# Importar causas históricas desde Excel
+python importar_excel.py
 ```
