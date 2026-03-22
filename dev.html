@@ -471,6 +471,19 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
   background: var(--blue);
 }
 
+/* FILTRO IDs DUPLICADOS */
+#btn-ids-duplicados.active {
+  background: #5b21b6 !important; outline: 2px solid #a78bfa; outline-offset: 1px;
+}
+#banner-ids-dup {
+  display: none; padding: 8px 16px; background: #fef3c7; border: 1px solid #f59e0b;
+  border-radius: 8px; margin-bottom: 8px; font-size: 12px; color: #92400e;
+  font-weight: 600; align-items: center; gap: 8px;
+}
+#banner-ids-dup.visible { display: flex; }
+.dup-group-even { background: #fef9ee !important; }
+.dup-group-odd  { background: #eef2ff !important; }
+
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
 .stat-card {
@@ -1233,6 +1246,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <button class="btn btn-primary btn-sm" id="btn-exportar-correspondencia" onclick="exportarCorrespondencia()" style="white-space:nowrap;">⬇ Exportar Excel</button>
           <button class="btn btn-sm darth-only" id="btn-ids-duplicados" onclick="verificarIdsDuplicados()" style="display:none; white-space:nowrap; background:#7c3aed; color:#fff; font-weight:600;">🔍 IDs duplicados</button>
           <button class="btn btn-sm" id="btn-suspender-causa" onclick="iniciarSuspension()" style="display:none; background:#ef4444; color:#fff; font-weight:600; white-space:nowrap;">Suspender</button>
+        </div>
+
+        <div id="banner-ids-dup">
+          <span>⚠</span>
+          <span id="banner-ids-dup-text"></span>
+          <button class="btn btn-sm" onclick="verificarIdsDuplicados()" style="margin-left:auto; font-size:11px; background:#92400e; color:#fff;">✕ Quitar filtro</button>
         </div>
 
         <div class="card">
@@ -3239,6 +3258,27 @@ function renderCausas() {
     return matchSearch && matchTipo && matchEstado && matchEstudio && matchTribunal && matchDemandante && matchDesde && matchHasta;
   });
 
+  // Filtro IDs duplicados
+  if (_filtroIdsDup) {
+    const conteo = {};
+    filtered.forEach(c => { if (c.id_hex) { conteo[c.id_hex] = (conteo[c.id_hex] || 0) + 1; } });
+    const idsDup = new Set(Object.keys(conteo).filter(id => conteo[id] > 1));
+    // También contar en el total de causas (no solo filtered)
+    const conteoTotal = {};
+    causas.forEach(c => { if (c.id_hex) { conteoTotal[c.id_hex] = (conteoTotal[c.id_hex] || 0) + 1; } });
+    const idsDupTotal = new Set(Object.keys(conteoTotal).filter(id => conteoTotal[id] > 1));
+    filtered = filtered.filter(c => idsDupTotal.has(c.id_hex));
+    const banner = document.getElementById('banner-ids-dup');
+    const bannerText = document.getElementById('banner-ids-dup-text');
+    if (filtered.length > 0) {
+      bannerText.textContent = `Mostrando ${filtered.length} causas con ID duplicado — ${idsDupTotal.size} IDs distintos afectados`;
+      banner.classList.add('visible');
+    } else {
+      bannerText.textContent = 'Sin IDs duplicados encontrados';
+      banner.classList.add('visible');
+    }
+  }
+
   document.getElementById('causas-count').textContent =
     `${filtered.length} causa${filtered.length !== 1 ? 's' : ''} encontrada${filtered.length !== 1 ? 's' : ''}`;
 
@@ -3246,21 +3286,32 @@ function renderCausas() {
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
-      <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : 'Sin resultados para los filtros aplicados.'}</p>
+      <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : _filtroIdsDup ? 'Sin IDs duplicados — todas las causas tienen ID único.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
-    // Sync check-all with visible
     const chkAll = document.getElementById('causas-check-all');
     if (chkAll) chkAll.checked = false;
     return;
   }
 
-  filtered.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+  // Agrupar por id_hex para colores alternados en modo duplicados
+  let dupGroupMap = {};
+  if (_filtroIdsDup) {
+    const uniqueIds = [...new Set(filtered.map(c => c.id_hex))];
+    uniqueIds.forEach((id, i) => { dupGroupMap[id] = i % 2 === 0 ? 'dup-group-even' : 'dup-group-odd'; });
+    // Ordenar por id_hex para agrupar visualmente
+    filtered.sort((a, b) => a.id_hex.localeCompare(b.id_hex) || (b.ts_ingreso || '').localeCompare(a.ts_ingreso || ''));
+  } else {
+    filtered.sort((a,b) => (b.ts_ingreso||'').localeCompare(a.ts_ingreso||''));
+  }
 
   // Track last filtered set for select-all
   _lastFilteredHexes = filtered.map(c => c.id_hex);
 
-  tbody.innerHTML = filtered.map(c => `
-    <tr${causasSeleccionadas.has(c.id_hex) ? ' style="background:var(--blue-xs);"' : ''}>
+  tbody.innerHTML = filtered.map(c => {
+    const dupClass = _filtroIdsDup ? dupGroupMap[c.id_hex] || '' : '';
+    const selBg = causasSeleccionadas.has(c.id_hex) ? ' style="background:var(--blue-xs);"' : '';
+    return `
+    <tr class="${dupClass}"${!dupClass ? selBg : ''}>
       <td style="text-align:center;"><input type="checkbox" class="causa-check" data-hex="${c.id_hex}" ${causasSeleccionadas.has(c.id_hex) ? 'checked' : ''} onchange="toggleCausaCheck('${c.id_hex}', this.checked)"></td>
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
@@ -3276,8 +3327,8 @@ function renderCausas() {
         <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir formulario" onclick="imprimirCausa('${c.id_hex}')">🖨</button>
         ${currentUser?.perfil === 'darth' ? `<button class="btn btn-danger btn-sm btn-icon" title="Eliminar causa" onclick="eliminarCausa('${c.id_hex}')">🗑</button>` : ''}
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   // Sync selection UI after render
   _actualizarSelUI();
@@ -3487,12 +3538,20 @@ async function editarCausa(hex) {
     </div>`;
   }).join('');
 
+  // Aviso modo corrección de duplicados
+  if (_filtroIdsDup && currentUser?.perfil === 'darth') {
+    html = `<div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:12px; color:#92400e; font-weight:600;">
+      ⚠ Modo corrección de ID duplicado — el ID se recalculará al guardar
+    </div>` + html;
+  }
+
   document.getElementById('modal-campos').innerHTML = html;
 
   const esDevuelta = c.estado === 'devuelta';
+  const usarRecalculo = _filtroIdsDup && currentUser?.perfil === 'darth';
   document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="guardarEdicion('${hex}'${esDevuelta ? ", 'validada'" : ''})">💾 Guardar cambios</button>
-    ${esDevuelta ? `<button class="btn btn-danger btn-sm" onclick="pedirComentarioReenvio('${hex}')">📤 Enviar a Receptora</button>` : ''}
+    <button class="btn btn-success btn-sm" onclick="${usarRecalculo ? `guardarEdicionConRecalculo('${hex}')` : `guardarEdicion('${hex}'${esDevuelta ? ", 'validada'" : ''})`}">💾 Guardar cambios</button>
+    ${esDevuelta && !usarRecalculo ? `<button class="btn btn-danger btn-sm" onclick="pedirComentarioReenvio('${hex}')">📤 Enviar a Receptora</button>` : ''}
     <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
   `;
 }
@@ -4375,6 +4434,7 @@ function exportOptirouteDia() {
 // ══════════════════════════════════════════════
 const causasSeleccionadas = new Set();
 let _lastFilteredHexes = [];
+let _filtroIdsDup = false;  // true cuando el filtro de IDs duplicados está activo
 
 function toggleCausaCheck(hex, checked) {
   if (checked) causasSeleccionadas.add(hex);
@@ -5179,49 +5239,134 @@ document.head.appendChild(styleEl);
 })();
 
 // ══════════════════════════════════════════════
-// VERIFICAR IDs DUPLICADOS
+// FILTRO IDs DUPLICADOS (toggle)
 // ══════════════════════════════════════════════
 function verificarIdsDuplicados() {
-  const conteo = {};
-  causas.forEach(c => {
-    const id = c.id_hex;
-    if (!id) return;
-    if (!conteo[id]) conteo[id] = [];
-    conteo[id].push(c);
+  _filtroIdsDup = !_filtroIdsDup;
+  const btn = document.getElementById('btn-ids-duplicados');
+  const banner = document.getElementById('banner-ids-dup');
+  if (_filtroIdsDup) {
+    // Verificar si hay duplicados antes de activar
+    const conteo = {};
+    causas.forEach(c => { if (c.id_hex) conteo[c.id_hex] = (conteo[c.id_hex] || 0) + 1; });
+    const hayDup = Object.values(conteo).some(n => n > 1);
+    if (!hayDup) {
+      _filtroIdsDup = false;
+      showToast(`Sin IDs duplicados en las ${causas.length} causas cargadas`, 'success');
+      return;
+    }
+    btn.classList.add('active');
+    btn.textContent = '🔍 IDs duplicados ✓';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '🔍 IDs duplicados';
+    banner.classList.remove('visible');
+  }
+  renderCausas();
+}
+
+// ══════════════════════════════════════════════
+// EDICIÓN CON RECÁLCULO DE ID (modo duplicados)
+// ══════════════════════════════════════════════
+async function guardarEdicionConRecalculo(hex) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+
+  // Leer campos editados
+  const campos = ['rol','n_solicitud','tribunal','demandante','demandado','rut',
+    'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion','fecha_solicitud'];
+  const modificados = [];
+
+  campos.forEach(key => {
+    const el = document.getElementById('edit-' + key);
+    if (!el) return;
+    const nuevo = el.value.trim();
+    const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
+                     key === 'observacion' ? 'comentario' :
+                     key === 'estudio' ? 'estudio_juridico' : key;
+    const anterior = (payload.datos[datosKey] || '').toString();
+    if (nuevo !== anterior) {
+      modificados.push(key);
+      payload.datos[datosKey] = nuevo;
+      c[key] = nuevo;
+      if (key === 'n_solicitud') { c.nro_solicitud = nuevo; c.n_solicitud = nuevo; }
+      if (key === 'estudio') { c.estudio_juridico = nuevo; }
+    }
   });
 
-  const duplicados = Object.entries(conteo).filter(([, arr]) => arr.length > 1);
+  // Estado (solo Darth)
+  const editEstadoEl = document.getElementById('edit-estado');
+  let cambioEstado = false;
+  if (editEstadoEl) {
+    const nuevoEstado = editEstadoEl.value;
+    if (nuevoEstado !== payload.estado) {
+      payload.historial.push({ accion: 'cambio_estado', estado_anterior: payload.estado, estado_nuevo: nuevoEstado, fecha: new Date().toISOString(), usuario: currentUser.nombre });
+      payload.estado = nuevoEstado;
+      c.estado = nuevoEstado;
+      cambioEstado = true;
+    }
+  }
 
-  if (duplicados.length === 0) {
-    showToast(`Sin IDs duplicados en las ${causas.length} causas cargadas`, 'success');
+  if (modificados.length === 0 && !cambioEstado) {
+    showToast('Sin cambios', 'info');
     return;
   }
 
-  // Build modal table
-  let html = `<p style="margin-bottom:12px; color:#ef4444; font-weight:600;">Se encontraron ${duplicados.length} ID(s) duplicados:</p>`;
-  html += `<div class="table-wrap"><table style="width:100%; font-size:12px;">
-    <thead><tr>
-      <th>ID hex</th><th>Veces</th><th>Ocurrencias</th>
-    </tr></thead><tbody>`;
+  // Recalcular id_hex
+  const rol = payload.datos.rol || '';
+  const tribunal = payload.datos.tribunal || '';
+  const direccion = payload.datos.direccion || '';
+  const notificar_a = payload.datos.notificar_a || payload.datos.notif_a || '';
+  const nro_solicitud = payload.datos.nro_solicitud || '';
+  const nuevoHex = await sha256hex16(rol + tribunal + direccion + notificar_a + nro_solicitud);
 
-  duplicados.forEach(([id, arr]) => {
-    const ocurrencias = arr.map(c =>
-      `<div style="margin:2px 0;"><b>${c.rol || '—'}</b> — ${c.demandado || '—'}</div>`
-    ).join('');
-    html += `<tr>
-      <td class="mono" style="font-size:10px; word-break:break-all;">${id}</td>
-      <td style="text-align:center; font-weight:700; color:#ef4444;">${arr.length}</td>
-      <td>${ocurrencias}</td>
-    </tr>`;
-  });
+  if (nuevoHex !== hex) {
+    // Verificar que el nuevo ID no esté duplicado con otra causa distinta
+    const otrosConNuevoId = causas.filter(x => x.id_hex === nuevoHex && x !== c);
+    if (otrosConNuevoId.length > 0) {
+      showToast('El nuevo ID también está duplicado — modifica más campos', 'error');
+      return;
+    }
 
-  html += `</tbody></table></div>`;
+    // Renombrar en Dropbox: borrar viejo, crear nuevo
+    try {
+      await DBX.deleteFile(`/causas-dev/${hex}_CAUSA.json`);
+    } catch(e) { /* puede no existir */ }
 
-  document.getElementById('modal-title').textContent = 'IDs duplicados';
-  document.getElementById('modal-body').innerHTML = html;
-  document.getElementById('modal-footer').innerHTML =
-    '<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>';
-  document.getElementById('modal-overlay').classList.add('active');
+    payload.id_hex = nuevoHex;
+    c.id_hex = nuevoHex;
+    payload.historial.push({
+      accion: 'recalculo_id',
+      id_anterior: hex,
+      id_nuevo: nuevoHex,
+      fecha: new Date().toISOString(),
+      usuario: currentUser.nombre,
+      campos_modificados: modificados
+    });
+  } else if (modificados.length > 0) {
+    payload.historial.push({
+      accion: 'edicion',
+      fecha: new Date().toISOString(),
+      usuario: currentUser.nombre,
+      campos_modificados: modificados
+    });
+  }
+
+  // Subir con nuevo (o mismo) nombre
+  try {
+    await DBX.upload(`/causas-dev/${c.id_hex}_CAUSA.json`, payload);
+    await actualizarIndex();
+    showToast(nuevoHex !== hex
+      ? `✅ ID recalculado: ${hex.slice(0,8)}… → ${nuevoHex.slice(0,8)}…`
+      : `✅ ${modificados.length} campo(s) actualizado(s)`, 'success');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+    return;
+  }
+
+  closeModal();
+  renderCausas();
 }
 </script>
 
