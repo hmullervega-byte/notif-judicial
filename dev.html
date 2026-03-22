@@ -1207,6 +1207,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="estampada">Estampada</option>
             <option value="boleta_emitida">Boleta emitida</option>
             <option value="id_repetida">ID repetida</option>
+            <option value="revision_darth">Revisión Darth</option>
             <option value="suspendida">Suspendida</option>
           </select>
           <button class="btn btn-secondary btn-sm" id="btn-limpiar-filtros" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
@@ -2553,6 +2554,13 @@ async function guardarCausa(estadoInicial) {
     return;
   }
 
+  // Detección de causa duplicada
+  const existente = causas.find(c => c.id_hex === currentHex);
+  if (existente) {
+    mostrarModalDuplicado(existente, estadoInicial);
+    return;
+  }
+
   // Cambio 6: tipos de gestión directa siempre van con estado especial
   const tipoDigSel = fval('tipo_diligencia');
   const esGD = esGestionDirecta(tipoDigSel);
@@ -3795,11 +3803,14 @@ async function cargarValidacion() {
 
 function renderValidacion() {
   const pendientes = causas.filter(c => c.estado === 'pendiente_validacion');
+  const revDarth = currentUser?.perfil === 'darth' ? causas.filter(c => c.estado === 'revision_darth') : [];
+  const totalPend = pendientes.length + revDarth.length;
   document.getElementById('validacion-count').textContent =
-    `${pendientes.length} causa${pendientes.length !== 1 ? 's' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de validación`;
+    `${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''} de validación` +
+    (revDarth.length ? ` · ${revDarth.length} duplicada${revDarth.length !== 1 ? 's' : ''} por revisar` : '');
 
   const tbody = document.getElementById('validacion-body');
-  if (pendientes.length === 0) {
+  if (totalPend === 0) {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <span class="icon">✅</span>
       <p>No hay causas pendientes de validación.</p>
@@ -3807,23 +3818,37 @@ function renderValidacion() {
     return;
   }
 
-  pendientes.sort((a,b) => (a.ts_ingreso||'').localeCompare(b.ts_ingreso||''));
+  const todas = [...pendientes, ...revDarth];
+  todas.sort((a,b) => (a.ts_ingreso||'').localeCompare(b.ts_ingreso||''));
 
-  tbody.innerHTML = pendientes.map(c => {
+  tbody.innerHTML = todas.map(c => {
+    const esRevDarth = c.estado === 'revision_darth';
+    const hist = c._causa_json?.historial || [];
+    const solicitud = [...hist].reverse().find(h => h.accion === 'solicitud_validacion_duplicado');
+    const motivo = solicitud ? solicitud.motivo : '';
+    const hexExistente = solicitud ? solicitud.id_hex_existente : '';
+
     return `
-    <tr>
+    <tr style="${esRevDarth ? 'background:#fef9ee;' : ''}">
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
-      <td>${estadoBadge(c.estado)}</td>
+      <td>${estadoBadge(c.estado)}${esRevDarth && motivo ? `<div style="font-size:10px; color:#92400e; margin-top:2px;" title="${motivo.replace(/"/g,'&quot;')}">📝 ${motivo.length > 30 ? motivo.slice(0,30) + '…' : motivo}</div>` : ''}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="col-acc" style="white-space:nowrap; display:flex; gap:.35rem;">
-        <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
-        <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
+        ${esRevDarth ? `
+          ${hexExistente ? `<button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${hexExistente}')" title="Ver causa existente">📄</button>` : ''}
+          <button class="btn btn-success btn-sm" onclick="aprobarRevisionDarth('${c.id_hex}')" title="Aprobar duplicado">✓ Aprobar</button>
+          <button class="btn btn-danger btn-sm" onclick="rechazarRevisionDarth('${c.id_hex}')" title="Rechazar y eliminar">✗ Rechazar</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
+        ` : `
+          <button class="btn btn-success btn-sm" onclick="validarCausa('${c.id_hex}')" title="Aprobar causa">✓ Validar</button>
+          <button class="btn btn-danger btn-sm" onclick="mostrarDevolver('${c.id_hex}')" title="Devolver con comentario">↩ Devolver</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="verCausa('${c.id_hex}')" title="Ver detalle">🔍</button>
+        `}
       </td>
     </tr>`;
   }).join('');
@@ -4752,6 +4777,19 @@ function calcNotificaciones() {
     }
   }
 
+  if (perfil === 'darth') {
+    const revDarth = causas.filter(c => c.estado === 'revision_darth');
+    if (revDarth.length > 0) {
+      notifs.push({
+        icon: '⚠',
+        title: `${revDarth.length} causa${revDarth.length !== 1 ? 's' : ''} duplicada${revDarth.length !== 1 ? 's' : ''} por revisar`,
+        desc:  revDarth.slice(0,3).map(c => c.rol || c.demandado).join(', ') + (revDarth.length > 3 ? '...' : ''),
+        fecha: revDarth[0]?.ts_ingreso,
+        action: 'view-validacion'
+      });
+    }
+  }
+
   // Ordenar por fecha desc
   notifs.sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   return notifs;
@@ -4860,6 +4898,7 @@ function estadoBadge(estado) {
     'devuelta':             ['tag-orange','Devuelta'],
     'suspendida':           ['tag-red','Suspendida'],
     'id_repetida':          ['tag-orange','ID repetida'],
+    'revision_darth':       ['tag-yellow','Revisión Darth'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
@@ -5370,6 +5409,183 @@ async function guardarEdicionConRecalculo(hex) {
 
   closeModal();
   renderCausas();
+}
+
+// ══════════════════════════════════════════════
+// MODAL CAUSA DUPLICADA
+// ══════════════════════════════════════════════
+function mostrarModalDuplicado(existente, estadoInicial) {
+  const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:2px;';
+  const val = 'font-size:13px; margin-bottom:6px;';
+
+  const camposComparar = [
+    ['ROL', existente.rol, fval('rol')],
+    ['Tribunal', existente.tribunal, fval('tribunal')],
+    ['Demandado', existente.demandado, fval('demandado')],
+    ['Tipo', existente.tipo_diligencia, fval('tipo_diligencia')],
+    ['Dirección', existente.direccion, fval('direccion')],
+    ['Estado', existente.estado, '(nueva)'],
+    ['Fecha ingreso', fmtFecha(existente.fecha_solicitud || existente.ts_ingreso), fval('fecha_solicitud')],
+  ];
+
+  let tabla = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <div style="background:#fef3c7; padding:8px 12px; font-weight:700; font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border);">Causa existente</div>
+    <div style="background:#dbeafe; padding:8px 12px; font-weight:700; font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border);">Causa nueva (ingresando)</div>`;
+
+  camposComparar.forEach(([label, valExist, valNueva]) => {
+    const diff = (valExist || '').toLowerCase() !== (valNueva || '').toLowerCase();
+    const highlight = diff ? 'background:#fef9ee;' : '';
+    tabla += `
+      <div style="padding:4px 12px; border-bottom:1px solid var(--border); ${highlight}">
+        <div style="${lbl}">${label}</div>
+        <div style="${val}">${valExist || '—'}</div>
+      </div>
+      <div style="padding:4px 12px; border-bottom:1px solid var(--border); ${highlight}">
+        <div style="${lbl}">${label}</div>
+        <div style="${val}">${valNueva || '—'}</div>
+      </div>`;
+  });
+  tabla += '</div>';
+
+  const html = `
+    <p style="color:#ef4444; font-weight:600; margin-bottom:12px;">El ID <span class="mono" style="font-size:11px;">${currentHex}</span> ya existe en el sistema.</p>
+    ${tabla}
+    <div style="margin-top:16px;">
+      <label style="font-size:12px; font-weight:600; color:var(--muted);">Motivo de la solicitud <span style="color:#ef4444;">*</span></label>
+      <textarea id="dup-motivo" rows="3" placeholder="Explica por qué esta causa debe ingresarse (ej: distinto mandamiento, dirección actualizada...)" style="width:100%; margin-top:4px; font-size:13px;"></textarea>
+      <div id="dup-motivo-hint" style="font-size:10px; color:var(--muted); margin-top:2px;">Mínimo 10 caracteres</div>
+    </div>`;
+
+  document.getElementById('modal-title').textContent = 'Causa ya existe en el sistema';
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-sm" id="btn-dup-enviar" disabled onclick="guardarDuplicadoParaRevision('${existente.id_hex}', '${estadoInicial}')" style="background:#f59e0b; color:#fff; font-weight:600;">Enviar a Helmuth para validar</button>`;
+  document.getElementById('modal-overlay').classList.add('active');
+
+  // Habilitar botón cuando haya 10+ chars
+  document.getElementById('dup-motivo').addEventListener('input', function() {
+    const btn = document.getElementById('btn-dup-enviar');
+    btn.disabled = this.value.trim().length < 10;
+  });
+}
+
+async function guardarDuplicadoParaRevision(hexExistente, estadoInicial) {
+  const motivo = document.getElementById('dup-motivo').value.trim();
+  if (motivo.length < 10) return;
+
+  // Generar ID único agregando timestamp
+  const ts = Date.now().toString();
+  const partes = HEX_FIELDS.map(fval).join('') + ts;
+  const nuevoHex = await sha256hex16(partes);
+
+  const tipoDigSel = fval('tipo_diligencia');
+  const payload = {
+    id_hex:  nuevoHex,
+    estado:  'revision_darth',
+    datos: {
+      fecha_solicitud:   fval('fecha_solicitud'),
+      nro_solicitud:     fval('n_solicitud'),
+      estudio_juridico:  fval('estudio'),
+      abogado_procurador: fval('abogado_procurador'),
+      banco_representado: fval('banco_representado'),
+      tipo_diligencia:   tipoDigSel,
+      rol:               fval('rol'),
+      tribunal:          fval('tribunal'),
+      demandante:        fval('demandante'),
+      demandado:         fval('demandado'),
+      rut:               fval('rut'),
+      direccion:         fval('direccion'),
+      notificar_a:       fval('notificar_a'),
+      ciudad:            fval('ciudad') || 'Antofagasta',
+      monto_mandamiento: fval('mandamiento') ? Number(fval('mandamiento').replace(/[^0-9]/g,'')) || fval('mandamiento') : '',
+      piezas:            fval('piezas'),
+      nro_pagare:        fval('n_pagare'),
+      comentario:        fval('observacion')
+    },
+    historial: [
+      {
+        accion:  'ingreso_duplicado',
+        fecha:   new Date().toISOString(),
+        usuario: currentUser.nombre
+      },
+      {
+        accion: 'solicitud_validacion_duplicado',
+        motivo: motivo,
+        id_hex_existente: hexExistente,
+        fecha:  new Date().toISOString(),
+        usuario: currentUser.nombre
+      }
+    ]
+  };
+
+  if (!DBX.isConfigured()) {
+    showToast('⚠ Dropbox no configurado', 'warn');
+    return;
+  }
+
+  const btnEnviar = document.getElementById('btn-dup-enviar');
+  btnEnviar.disabled = true;
+  btnEnviar.textContent = '⏳ Enviando…';
+
+  try {
+    await DBX.upload(`/causas-dev/${nuevoHex}_CAUSA.json`, payload);
+    causas.push({ id_hex: nuevoHex, estado: 'revision_darth',
+      ...payload.datos, ts_ingreso: payload.historial[0].fecha,
+      _causa_json: payload });
+    actualizarIndex();
+    buildDashboard();
+    renderNotificaciones();
+    limpiarFormulario();
+    closeModal();
+    showToast('📤 Causa enviada a Helmuth para revisión', 'success');
+    showView('view-causas');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+    btnEnviar.disabled = false;
+    btnEnviar.textContent = 'Enviar a Helmuth para validar';
+  }
+}
+
+// ══════════════════════════════════════════════
+// APROBAR / RECHAZAR DUPLICADO (Darth)
+// ══════════════════════════════════════════════
+async function aprobarRevisionDarth(hex) {
+  const c = await asegurarCausaCompleta(hex);
+  if (!c) return;
+  const payload = c._causa_json;
+  payload.estado = 'validada';
+  c.estado = 'validada';
+  payload.historial.push({
+    accion: 'duplicado_aprobado',
+    fecha:  new Date().toISOString(),
+    usuario: currentUser.nombre
+  });
+  try {
+    await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
+    actualizarIndex();
+    renderValidacion();
+    buildDashboard();
+    renderNotificaciones();
+    showToast('✅ Causa duplicada aprobada', 'success');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+async function rechazarRevisionDarth(hex) {
+  if (!confirm('¿Rechazar y eliminar esta causa duplicada?')) return;
+  try {
+    await DBX.deleteFile(`/causas-dev/${hex}_CAUSA.json`);
+    causas = causas.filter(x => x.id_hex !== hex);
+    actualizarIndex();
+    renderValidacion();
+    buildDashboard();
+    renderNotificaciones();
+    showToast('🗑 Causa duplicada eliminada', 'success');
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
 }
 </script>
 
