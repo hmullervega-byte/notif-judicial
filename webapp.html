@@ -1528,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDestFrecuentes();
   // 1. Inicializar offline/pendientes
   initOffline();
-  // 2. Cargar INDEX_RESPALDO desde localStorage (instantáneo, sin red)
+  // 2. Cargar INDEX_RUTA desde localStorage (instantáneo, sin red)
   cargarIndexDesdeLS();
   actualizarIndexInfo();
   // 3. Background: refresh token + index (no bloquea pantalla)
@@ -1536,12 +1536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     getAccessToken().catch(() => {});
     const edad = Date.now() - indexTsLocal();
     if (edad > INDEX_CACHE_TTL || !_indexCache) {
-      descargarIndex().then(() => {
-        if (_indexError) {
-          const el = document.getElementById('index-info');
-          if (el) { el.textContent = '✗ ' + _indexError; el.style.color = '#ef4444'; }
-        }
-      }).catch(() => {});
+      descargarIndex().catch(() => {});
     }
   }
 
@@ -1761,12 +1756,11 @@ async function dbxCheckExists(path) {
   } catch(e) { return false; }
 }
 
-// ── CACHÉ INDEX_RESPALDO.json con localStorage ─────────────────────
+// ── CACHÉ INDEX_RUTA.json con localStorage ─────────────────────
 let _indexCache = null;
-let _indexError = null;
 const INDEX_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas
-const LS_INDEX_KEY = 'notif_index_respaldo';
-const LS_INDEX_TS  = 'notif_index_respaldo_ts';
+const LS_INDEX_KEY = 'notif_index_ruta';
+const LS_INDEX_TS  = 'notif_index_ruta_ts';
 
 function cargarIndexDesdeLS() {
   try {
@@ -1790,49 +1784,25 @@ function indexTsLocal() {
 async function descargarIndex() {
   if (!navigator.onLine) return _indexCache;
   try {
-    const res = await dbxFetch(
-      'https://content.dropboxapi.com/2/files/download',
-      { 'Dropbox-API-Arg': JSON.stringify({ path: '/causas/INDEX_RESPALDO.json' }) },
-      null
-    );
-    if (!res.ok) {
-      const status = res.status;
-      if (status === 401) {
-        _indexError = 'Error de autenticación — verifica las credenciales';
-      } else if (status === 404 || status === 409) {
-        _indexError = 'Archivo no encontrado en /causas/INDEX_RESPALDO.json';
-      } else {
-        _indexError = `Error Dropbox HTTP ${status}`;
-      }
-      console.error('descargarIndex:', _indexError);
-      return _indexCache;
-    }
-    const idx = await res.json();
-    if (idx === null || idx === undefined) {
-      _indexError = 'Error de autenticación — verifica las credenciales';
-      return _indexCache;
-    }
-    if (Array.isArray(idx) && idx.length === 0) {
-      _indexError = 'Archivo vacío';
-      _indexCache = idx;
-      guardarIndexEnLS(idx);
-      actualizarIndexInfo();
-      return idx;
-    }
+    const idx = await dbxGet('/causas/INDEX_RUTA.json');
     if (Array.isArray(idx)) {
-      _indexError = null;
       _indexCache = idx;
       guardarIndexEnLS(idx);
       actualizarIndexInfo();
+      if (idx.length === 0) {
+        const infoEl = document.getElementById('index-info');
+        if (infoEl) infoEl.textContent = 'No hay causas en ruta actualmente';
+      }
       return idx;
+    } else if (idx === null || idx === undefined) {
+      const infoEl = document.getElementById('index-info');
+      if (infoEl) infoEl.textContent = 'No hay causas en ruta actualmente';
+      _indexCache = [];
+      guardarIndexEnLS([]);
+      return [];
     }
-    _indexError = 'INDEX_RESPALDO.json no contiene un array válido';
-    return _indexCache;
-  } catch(e) {
-    _indexError = e.message || 'Error desconocido descargando INDEX_RESPALDO.json';
-    console.error('descargarIndex:', _indexError, e);
-    return _indexCache;
-  }
+  } catch(e) { console.warn('INDEX_RUTA.json no disponible'); }
+  return _indexCache;
 }
 
 async function getIndex() {
@@ -1859,23 +1829,10 @@ async function getIndex() {
 async function forzarActualizacion() {
   const infoEl = document.getElementById('index-info');
   infoEl.textContent = 'Descargando...';
-  _indexError = null;
   await descargarIndex();
-  if (_indexError) {
-    infoEl.textContent = '✗ ' + _indexError;
-    infoEl.style.color = '#ef4444';
-    showToast(_indexError, true);
-    return;
-  }
   const n = _indexCache ? _indexCache.length : 0;
-  infoEl.style.color = '';
-  if (n === 0) {
-    infoEl.textContent = 'Archivo vacío — 0 causas en INDEX_RESPALDO.json';
-    showToast('Archivo vacío');
-  } else {
-    infoEl.textContent = `✓ ${n} causas cargadas`;
-    showToast('Datos actualizados ✓');
-  }
+  infoEl.textContent = `✓ ${n} causas cargadas`;
+  showToast('Datos actualizados ✓');
 }
 
 function actualizarIndexInfo() {
@@ -1885,7 +1842,9 @@ function actualizarIndexInfo() {
   if (!ts) { el.textContent = ''; return; }
   const hace = Math.round((Date.now() - ts) / 60000);
   const n = _indexCache ? _indexCache.length : 0;
-  el.textContent = `${n} causas · actualizado hace ${hace < 1 ? '<1' : hace} min`;
+  el.textContent = n === 0
+    ? 'No hay causas en ruta actualmente'
+    : `${n} causas en ruta · actualizado hace ${hace < 1 ? '<1' : hace} min`;
 }
 
 function actualizarIndexLocal(idHex, campos) {
@@ -1922,7 +1881,7 @@ async function loadCausa(idHex) {
   state.idHex = idHex;
   state.resultadoPrevio = null;
 
-  // 1. Buscar en INDEX_RESPALDO local (instantáneo, sin red)
+  // 1. Buscar en INDEX_RUTA local (instantáneo, sin red)
   let causaData = null;
   if (_indexCache) {
     const found = _indexCache.find(c => c.id_hex === idHex);
