@@ -547,7 +547,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .modal {
   background: var(--surface); border-radius: var(--r8);
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  width: 100%; max-width: 480px; overflow: hidden;
+  width: 100%; max-width: 700px; overflow: hidden;
 }
 .modal-header {
   background: var(--navy2); color: #fff;
@@ -1198,17 +1198,17 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </select>
           <select id="filter-estado">
             <option value="">Todos los estados</option>
-            <option value="pendiente_validacion">Pendiente validación</option>
-            <option value="devuelta">Devuelta</option>
+            <option value="pendiente_validacion">Pdte. validación</option>
             <option value="validada">Validada</option>
             <option value="en_ruta">En ruta</option>
             <option value="resultado_registrado">Resultado registrado</option>
-            <option value="lista_para_estampe">Lista para estampe</option>
-            <option value="estampada">Estampada</option>
-            <option value="boleta_emitida">Boleta emitida</option>
+            <option value="cerrada">Cerrada</option>
+            <option value="devuelta">Devuelta</option>
+            <option value="suspendida">Suspendida</option>
             <option value="id_repetida">ID repetida</option>
             <option value="revision_darth">Revisión Darth</option>
-            <option value="suspendida">Suspendida</option>
+            <option value="gestion_directa_receptora">Gestión Directa</option>
+            <option value="pendiente_estado">Pendiente estado</option>
           </select>
           <button class="btn btn-secondary btn-sm" id="btn-limpiar-filtros" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
         </div>
@@ -1268,15 +1268,16 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                   <th style="min-width:90px;">Demandado</th>
                   <th style="min-width:100px;">Dirección</th>
                   <th style="width:70px;">Tipo</th>
+                  <th style="width:75px;">F. Diligencia</th>
+                  <th style="min-width:90px;">Resultado</th>
                   <th style="width:70px;">Estado</th>
-                  <th style="width:65px;">Fecha</th>
                   <th style="width:90px;">ID</th>
                   <th style="width:55px;" class="col-acc">Acc.</th>
                 </tr>
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="11">
+                  <td colspan="12">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -1437,7 +1438,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                       </tr>
                     </thead>
                     <tbody id="ruta-body">
-                      <tr><td colspan="11"><div class="empty-state"><span class="icon">🗺</span><p>No hay causas validadas disponibles para ruta.</p></div></td></tr>
+                      <tr><td colspan="12"><div class="empty-state"><span class="icon">🗺</span><p>No hay causas validadas disponibles para ruta.</p></div></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -2080,9 +2081,7 @@ function buildDashboard() {
     validada:             causas.filter(c => c.estado === 'validada').length,
     en_ruta:              causas.filter(c => c.estado === 'en_ruta').length,
     resultado_registrado: causas.filter(c => c.estado === 'resultado_registrado').length,
-    lista_para_estampe:   causas.filter(c => c.estado === 'lista_para_estampe').length,
-    estampada:            causas.filter(c => c.estado === 'estampada').length,
-    boleta_emitida:       causas.filter(c => c.estado === 'boleta_emitida').length,
+    cerrada:              causas.filter(c => c.estado === 'cerrada').length,
   };
   const total = causas.length;
 
@@ -2104,11 +2103,11 @@ function buildDashboard() {
       <div class="stat-label">En ruta</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--purple)">${stats.resultado_registrado + stats.lista_para_estampe}</div>
+      <div class="stat-value" style="color:var(--purple)">${stats.resultado_registrado}</div>
       <div class="stat-label">Con resultado</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:var(--green)">${stats.estampada + stats.boleta_emitida}</div>
+      <div class="stat-value" style="color:var(--green)">${stats.cerrada}</div>
       <div class="stat-label">Cerradas</div>
     </div>
   `;
@@ -3125,8 +3124,31 @@ async function cargarCausasDropbox(forzar = false) {
       fecha_ruta:       c.fecha_ruta || '',
       fecha_2da_positiva: c.fecha_2da_positiva || '',
       ts_ingreso:       c.ts_ingreso || '',
+      resultado:        c.resultado || '',
+      boleta:           c.boleta || '',
       _causa_json:      null  // se carga bajo demanda
     }));
+
+    // Auto-migración: estados obsoletos → pendiente_estado
+    const ESTADOS_OBSOLETOS = ['lista_para_estampe', 'estampada', 'boleta_emitida'];
+    const migrar = causas.filter(c => ESTADOS_OBSOLETOS.includes(c.estado));
+    for (const c of migrar) {
+      c.estado = 'pendiente_estado';
+      // Actualizar CAUSA.json en Dropbox en background
+      try {
+        const full = await DBX.download(`/causas-dev/${c.id_hex}_CAUSA.json`);
+        if (full) {
+          full.estado = 'pendiente_estado';
+          if (!full.historial) full.historial = [];
+          full.historial.push({ accion: 'migracion_estado_obsoleto', fecha: new Date().toISOString(), estado_anterior: full.estado, estado_nuevo: 'pendiente_estado' });
+          await DBX.upload(`/causas-dev/${c.id_hex}_CAUSA.json`, full);
+        }
+      } catch(e) { console.warn('Error migrando estado obsoleto:', c.id_hex, e); }
+    }
+    if (migrar.length > 0) {
+      console.log(`Migradas ${migrar.length} causas con estado obsoleto → pendiente_estado`);
+      actualizarIndex();
+    }
 
     _causasCargadas = true;
     renderCausas();
@@ -3164,6 +3186,8 @@ async function actualizarIndex() {
     fecha_ruta:       c.fecha_ruta || '',
     fecha_2da_positiva: c.fecha_2da_positiva || '',
     ts_ingreso:       c.ts_ingreso || '',
+    resultado:        c.resultado || '',
+    boleta:           c.boleta || '',
   }));
   try {
     await DBX.upload('/causas-dev/INDEX.json', index);
@@ -3312,7 +3336,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : _filtroIdsDup ? 'Sin IDs duplicados — todas las causas tienen ID único.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -3347,8 +3371,9 @@ function renderCausas() {
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandado || ''}">${c.demandado || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || '')}</td>
+      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado)}">${resultadoTexto(c.resultado)}</td>
       <td>${estadoBadge(c.estado)}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
@@ -3409,6 +3434,8 @@ async function verCausa(hex) {
           <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
           <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">RESULTADO</span><br>${resultadoTexto(c.resultado || c._causa_json?.resultado || '')}</div>
+          <div><span style="color:var(--muted); font-size:11px;">N° BOLETA</span><br><span class="mono">${c.boleta || c._causa_json?.datos?.boleta || c._causa_json?.boleta || '—'}</span></div>
         </div>
         ${(() => {
           const hist = c._causa_json?.historial || [];
@@ -3539,11 +3566,9 @@ async function editarCausa(hex) {
       ['en_ruta','En ruta'],
       ['gestion_directa_receptora','Gestión Directa'],
       ['resultado_registrado','Resultado registrado'],
-      ['lista_para_estampe','Lista para estampe'],
-      ['estampada','Estampada'],
-      ['boleta_emitida','Boleta emitida'],
       ['cerrada','Cerrada'],
       ['suspendida','Suspendida'],
+      ['pendiente_estado','Pendiente estado'],
     ];
     const estadoOpts = estados.map(([v,l]) =>
       `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
@@ -4067,7 +4092,7 @@ function selCalRuta(iso) {
 async function cargarRuta() {
   if (!_causasCargadas && DBX.isConfigured()) {
     const tbody = document.getElementById('ruta-body');
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
       <span class="icon">⏳</span><p>Cargando causas desde Dropbox...</p>
     </div></td></tr>`;
     await cargarCausasDropbox();
@@ -4120,7 +4145,7 @@ function renderRuta() {
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><span class="icon">🗺</span>
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">🗺</span>
       <p>${enRuta.length > 0 ? 'Todas las causas validadas ya están en ruta.' : 'No hay causas validadas disponibles.'}</p>
     </div></td></tr>`;
     document.getElementById('btn-generar-ruta').disabled = true;
@@ -4911,10 +4936,8 @@ function estadoBadge(estado) {
     'validada':             ['tag-green','Validada'],
     'en_ruta':              ['tag-blue','En ruta'],
     'resultado_registrado': ['tag-purple','Resultado registrado'],
-    'lista_para_estampe':   ['tag-purple','Lista para estampe'],
-    'estampada':            ['tag-green','Estampada'],
-    'boleta_emitida':       ['tag-gray','Boleta emitida'],
     'cerrada':              ['tag-gray','Cerrada'],
+    'pendiente_estado':     ['tag-yellow','Pendiente estado'],
     'devuelta':             ['tag-orange','Devuelta'],
     'suspendida':           ['tag-red','Suspendida'],
     'id_repetida':          ['tag-orange','ID repetida'],
@@ -4929,6 +4952,34 @@ function fmtFecha(iso) {
   if (!iso) return '—';
   const [y,m,d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+
+function resultadoTexto(res) {
+  if (!res) return '—';
+  const map = {
+    'BN': 'Búsqueda Negativa',
+    'BP+BP2+NOT44+RP': 'B. Positiva + Not.44 + Req. Pago',
+    'BP+BP2+NOT44': 'B. Positiva + Not.44',
+    'BP+NP+RPP': 'B. Positiva + Not. Personal + RPP',
+    'NC': 'Notificación Cédula',
+    'NC52': 'Notificación Cédula Art.52',
+    'NP': 'Notificación Personal',
+    'NP+RPP': 'Not. Personal + Req. Pago',
+    'EF': 'Embargo Frustrado',
+    'EMBARGO-CBR': 'Embargo CBR',
+    'EMBARGO-RVM': 'Embargo RVM',
+    'EMBARGO-TESORERIA': 'Embargo Tesorería',
+    'EMBARGO-CUENTA-CORRIENTE': 'Embargo Cta. Corriente',
+    'ALZAMIENTO-CBR': 'Alzamiento CBR',
+    'ALZAMIENTO-RVM': 'Alzamiento RVM',
+    'ALZAMIENTO-TESORERIA': 'Alzamiento Tesorería',
+    'OPOS-RETIRO': 'Oposición al Retiro',
+    'PRUEBA-CONFESIONAL': 'Prueba Confesional',
+    'REQ-PAGO-TRIBUNAL': 'Req. Pago Tribunal',
+    'NOT-MEDIDA-PRECAUTORIA': 'Not. Medida Precautoria',
+    'NOT': 'Notificación',
+  };
+  return map[res] || res;
 }
 
 function showToast(msg, type = 'info') {
@@ -5118,10 +5169,8 @@ function mostrarReactivar(hex) {
     ['en_ruta','En ruta'],
     ['gestion_directa_receptora','Gestión Directa'],
     ['resultado_registrado','Resultado registrado'],
-    ['lista_para_estampe','Lista para estampe'],
-    ['estampada','Estampada'],
-    ['boleta_emitida','Boleta emitida'],
     ['cerrada','Cerrada'],
+    ['pendiente_estado','Pendiente estado'],
   ];
   const opts = estados.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
   document.getElementById('modal-title').textContent = 'Reactivar causa — ' + (c.rol || hex.slice(0,8));
