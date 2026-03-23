@@ -3682,6 +3682,7 @@ async function verCausa(hex) {
 async function editarCausa(hex) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
+  _editCausaHex = hex;
 
   // Clonar opciones del select tribunal del formulario
   // Comparar por abreviatura para matching robusto (ej. "1 Juzgado..." = "1° Juzgado...")
@@ -3840,6 +3841,52 @@ async function editarCausa(hex) {
 }
 
 // Toggle resultado campos condicionales en modal edición
+// Tarifas de derechos por estudio/demandante/resultado
+const TARIFAS_DERECHOS = {
+  "Agecob":{"CAR S.A.":{"BN":10000},"PROMOTORA CMR FALABELLA S.A":{"BN":{"_tipo":"cuantia","menor":5500,"mayor":10000,"umbral":1000000}}},
+  "CG Cobranzas Generales":{"COOPERATIVA DE AHORRO Y CRÉDITO COOPEUCH":{"BN":20000},"Pontificia Universidad Católica De Chile":{"BN":10000},"UC CHRISTUS SERVICIOS CLINICOS SPA":{"BN":10000}},
+  "Conseil":{"BANCO FALABELLA S.A.":{"BN":10000},"PROMOTORA CMR FALABELLA S.A":{"BN":{"_tipo":"cuantia","menor":5500,"mayor":10000,"umbral":1000000}}},
+  "Dell'Oro Abogados":{"ACG FINANCIAL SPA":{"BN":22409},"ARRENDADORA DE VEHÍCULOS S.A.":{"BN":null},"AUTOFIN S.A.":{"BN":22409},"BK SpA":{"BN":35398},"CATARI CHILE SPA":{"BN":22409},"Comercial Motores de los Andes SpA":{"BN":null},"FORUM SERVICIOS FINANCIEROS S.A.":{"BN":14000},"General Motors Financial Chile Sociedad Anónima":{"BN":null},"INCOFIN LEASING S.A.":{"BN":23599},"KAUFMANN S.A. VEHÍCULOS MOTORIZADOS":{"BN":null},"LA VINOTECA S.A.":{"BN":null},"MARUBENI AUTO FINANCE LTDA.":{"BN":null},"NISSAN TANNER FINANCIAL SERVICES RETAIL SPA":{"BN":null},"NUEVO CAPITAL S.A.":{"BN":null},"Porsche Volkswagen Servicios Financieros Chile SpA":{"BN":22570},"SALINAS Y FABRES SOCIEDAD ANONIMA":{"BN":22799},"SAN RAFAEL INGENIERÍA Y SERVICIOS LIMITADA":{"BN":null},"Santander Consumer Finance Limitada":{"BN":23407},"SERVICIOS FINANCIEROS MUNDO CREDITO S.A.":{"BN":null},"TANNER SERVICIOS FINANCIEROS S.A.":{"BN":23363},"TRACSA SPA":{"BN":null},"UNIDAD CRÉDITOS S.A.":{"BN":22759}},
+  "Mellado y Cia":{"BANCO DE CRÉDITO E INVERSIONES":{"BN":12000}},
+  "PARTICULAR":{"_default":{"BN":18260}},
+  "Recsa":{"BANCO DEL ESTADO DE CHILE":{"BN":15000},"BANCO ITAU CHILE":{"BN":22222},"BANCO SANTANDER-CHILE":{"BN":22599},"CLÍNICA SANTA MARÍA SPA":{"BN":20000},"COOPERATIVA DE AHORRO Y CRÉDITO UNIÓN Y PATRIA LTDA":{"BN":20000},"INSTITUTO DE DIAGNOSTICO S.A":{"BN":null},"ITAU CORPBANCA S.A":{"BN":22222},"PROMOTORA CMR FALABELLA S.A":{"BN":{"_tipo":"cuantia","menor":5500,"mayor":10000,"umbral":1000000}},"SOLVENTA CRÉDITOS LIMITADA":{"BN":20000},"UNIVERSIDAD DE CHILE":{"BN":12000}},
+  "Servicobranza":{"CAJA DE COMPENSACION DE ASIGNACION FAMILIAR LOS ANDES":{"BN":12000},"CAT ADMINISTRADORA DE TARJETAS S.A.":{"BN":15000}},
+  "Socofin":{"BANCO DE CHILE":{"BN":20000}},
+  "Zapico":{"CAR. S.A.":{"BN":10000}}
+};
+
+let _editCausaHex = null; // hex de la causa actualmente en edición
+
+function _autocompletarDerechos(resultado) {
+  const derEl = document.getElementById('edit-derechos');
+  if (!derEl || derEl.value.trim()) return; // no sobreescribir
+  const c = _editCausaHex ? causas.find(x => x.id_hex === _editCausaHex) : null;
+  if (!c) return;
+  const estudio = c.estudio_juridico || c.estudio || c._causa_json?.datos?.estudio_juridico || '';
+  const demandante = c.demandante || c._causa_json?.datos?.demandante || '';
+  const estudioData = TARIFAS_DERECHOS[estudio];
+  if (!estudioData) return;
+  const demData = estudioData[demandante] || estudioData['_default'];
+  if (!demData) return;
+  // Mapear resultado compuesto al código base de tarifa (BN es el único por ahora)
+  let clave = resultado;
+  // Todos los resultados actuales mapean a BN como tarifa base
+  if (['BN','BP','BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPF','BP+BP2+NOT44','NP+RPP','BP+NP+RPP','CED','CED52','EF','ALZ_CBR','ALZ_RVM','OPO_RETIRO'].includes(resultado)) {
+    clave = 'BN';
+  }
+  const tarifa = demData[clave];
+  if (tarifa === null || tarifa === undefined) return;
+  if (typeof tarifa === 'object' && tarifa._tipo === 'cuantia') {
+    const monto = parseInt((c._causa_json?.datos?.monto_mandamiento || c.monto_mandamiento || '0').toString().replace(/\D/g,''), 10) || 0;
+    derEl.value = monto >= tarifa.umbral ? tarifa.mayor : tarifa.menor;
+  } else {
+    derEl.value = tarifa;
+  }
+  // Indicador visual
+  derEl.style.borderColor = 'var(--green, #22c55e)';
+  setTimeout(() => { derEl.style.borderColor = ''; }, 1000);
+}
+
 function _toggleResultadoCampos() {
   const sel = document.getElementById('edit-resultado');
   if (!sel) return;
@@ -3864,6 +3911,8 @@ function _toggleResultadoCampos() {
   } else if (v && v !== 'OTRO' || v === 'OTRO') {
     _showWrap('fecha_diligencia');
   }
+  // Autocompletar derechos
+  if (v) _autocompletarDerechos(v);
 }
 function _showWrap(f) { const w = document.getElementById('wrap-' + f); if (w) w.style.display = ''; }
 function _syncFechaDiligencia() {
