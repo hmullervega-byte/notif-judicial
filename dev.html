@@ -1263,15 +1263,14 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               <thead>
                 <tr>
                   <th style="width:32px; text-align:center;"><input type="checkbox" id="causas-check-all" title="Seleccionar/deseleccionar todas" onchange="toggleAllCausasCheck(this.checked)"></th>
-                  <th style="width:80px;">ROL</th>
+                  <th style="width:80px; resize:horizontal; overflow:hidden;">ROL</th>
                   <th style="width:22px;">T</th>
-                  <th style="min-width:90px;">Demandante</th>
-                  <th style="min-width:90px;">Demandado</th>
-                  <th style="min-width:100px;">Dirección</th>
-                  <th style="width:70px;">Tipo</th>
-                  <th style="width:75px;">F. Diligencia</th>
-                  <th style="width:65px;">F. Ruta</th>
-                  <th style="min-width:90px;">Resultado</th>
+                  <th style="min-width:90px; resize:horizontal; overflow:hidden;">Demandante</th>
+                  <th style="min-width:90px; resize:horizontal; overflow:hidden;">Demandado</th>
+                  <th style="min-width:100px; resize:horizontal; overflow:hidden;">Dirección</th>
+                  <th style="width:70px; resize:horizontal; overflow:hidden;">Tipo</th>
+                  <th style="width:75px; resize:horizontal; overflow:hidden;">F. Diligencia</th>
+                  <th style="min-width:90px; resize:horizontal; overflow:hidden;">Resultado</th>
                   <th style="width:70px;">Estado</th>
                   <th style="width:90px;">ID</th>
                   <th style="width:55px;" class="col-acc">Acc.</th>
@@ -1279,7 +1278,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
               </thead>
               <tbody id="causas-body">
                 <tr>
-                  <td colspan="13">
+                  <td colspan="12">
                     <div class="empty-state">
                       <span class="icon">📂</span>
                       <p>No hay causas ingresadas aún.<br>Use el botón <strong>+ Nueva causa</strong> para comenzar.</p>
@@ -3143,7 +3142,7 @@ async function cargarCausasDropbox(forzar = false) {
   _cargando = true;
 
   const tbody = document.getElementById('causas-body');
-  tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state">
+  tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
     <span class="icon">⏳</span><p>Cargando causas...</p>
   </div></td></tr>`;
 
@@ -3482,7 +3481,7 @@ function renderCausas() {
 
   const tbody = document.getElementById('causas-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
       <span class="icon">${causas.length === 0 ? '📂' : '🔍'}</span>
       <p>${causas.length === 0 ? 'No hay causas ingresadas aún.' : _filtroIdsDup ? 'Sin IDs duplicados — todas las causas tienen ID único.' : 'Sin resultados para los filtros aplicados.'}</p>
     </div></td></tr>`;
@@ -3518,7 +3517,6 @@ function renderCausas() {
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_diligencia || c._causa_json?.datos?.fecha_diligencia || '')}</td>
-      <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_ruta || '')}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;" title="${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}">${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || '')}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
@@ -5118,8 +5116,9 @@ function normalizarTribunal(str) {
   if (!str) return '—';
   const m = str.match(/^(\d+)°/);
   if (m) return m[1] + '°';
+  if (str.includes('Familia')) return 'Familia';
   if (str.includes('Apelación (Protección)')) return 'Apel.(Prot.)';
-  if (str.includes('Corte de Apelaciones') || str.toLowerCase().includes('apelaciones')) return 'C.Apel.';
+  if (str.includes('Corte de Apelaciones') || str.toLowerCase().includes('apelaciones')) return 'C. Apelaciones';
   const map = { 'primer': '1°', 'primero': '1°', 'segundo': '2°', 'tercer': '3°', 'tercero': '3°', 'cuarto': '4°' };
   const key = str.trim().toLowerCase();
   return map[key] || str;
