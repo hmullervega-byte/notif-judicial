@@ -3240,6 +3240,7 @@ function _causaToIndexEntry(c) {
     id_hex: c.id_hex, estado: c.estado,
     rol: c.rol || '', tribunal: c.tribunal || '',
     demandante: c.demandante || '', demandado: c.demandado || '',
+    rut: c._causa_json?.datos?.rut || c.rut || '',
     direccion: c.direccion || '', ciudad: c.ciudad || 'Antofagasta',
     tipo_diligencia: c.tipo_diligencia || '',
     resultado: c._causa_json?.datos?.resultado || c._causa_json?.resultado || c.resultado || '',
@@ -3396,10 +3397,15 @@ async function cargarCausaCompleta(hex) {
       // Sincronizar estado y campos que no están en INDEX.json
       c.estado = data.estado;
       if (data.datos) {
+        c.rut = data.datos.rut || '';
         c.piezas = data.datos.piezas || '';
         c.abogado_procurador = data.datos.abogado_procurador || '';
-        c.observacion = data.datos.comentario || '';
+        c.observacion = data.datos.observacion || data.datos.comentario || '';
         c.comentario = data.datos.comentario || '';
+        c.monto_mandamiento = data.datos.monto_mandamiento || '';
+        c.resultado = data.datos.resultado || '';
+        c.derechos = data.datos.derechos || '';
+        c.boleta = data.datos.boleta || '';
       }
     }
     return data;
