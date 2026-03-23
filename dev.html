@@ -3768,6 +3768,37 @@ async function editarCausa(hex) {
   `;
 }
 
+// Fecha ruta pendiente — se setea desde el prompt y se consume en guardarEdicion
+let _fechaRutaPendiente = null;
+
+function _pedirFechaRuta(hex, nuevoEstadoForzado) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  document.getElementById('modal-title').textContent = 'Fecha de ruta';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">¿Para qué fecha se pone en ruta esta causa?</p>
+    <div class="field">
+      <label>Fecha ruta</label>
+      <input type="date" id="prompt-fecha-ruta" value="${hoy}" style="width:100%; font-size:14px; padding:.5rem;">
+    </div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="_cancelarFechaRuta('${hex}')">Cancelar</button>
+    <button class="btn btn-success btn-sm" onclick="_confirmarFechaRuta('${hex}', ${nuevoEstadoForzado ? `'${nuevoEstadoForzado}'` : 'null'})">Confirmar</button>
+  `;
+}
+
+function _cancelarFechaRuta(hex) {
+  _fechaRutaPendiente = null;
+  editarCausa(hex);
+}
+
+function _confirmarFechaRuta(hex, nuevoEstadoForzado) {
+  const fecha = document.getElementById('prompt-fecha-ruta').value;
+  if (!fecha) { showToast('Selecciona una fecha', 'warn'); return; }
+  _fechaRutaPendiente = fecha;
+  guardarEdicion(hex, nuevoEstadoForzado);
+}
+
 async function guardarEdicion(hex, nuevoEstadoForzado) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
@@ -3801,6 +3832,12 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   if (editEstadoEl) {
     const nuevoEstado = editEstadoEl.value;
     if (nuevoEstado !== payload.estado) {
+      // Si cambia a en_ruta o gestion_directa, pedir fecha_ruta
+      const necesitaFecha = (nuevoEstado === 'en_ruta' || nuevoEstado === 'gestion_directa_receptora');
+      if (necesitaFecha && !_fechaRutaPendiente) {
+        _pedirFechaRuta(hex, nuevoEstadoForzado);
+        return;
+      }
       const estadoAnterior = payload.estado;
       payload.estado = nuevoEstado;
       c.estado = nuevoEstado;
@@ -3812,6 +3849,13 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
         fecha: new Date().toISOString(),
         usuario: currentUser.nombre
       });
+      // Guardar fecha_ruta si viene del prompt
+      if (necesitaFecha && _fechaRutaPendiente) {
+        payload.datos.fecha_ruta = _fechaRutaPendiente;
+        c.fecha_ruta = _fechaRutaPendiente;
+        modificados.push('fecha_ruta');
+        _fechaRutaPendiente = null;
+      }
     }
   }
 
@@ -3871,6 +3915,8 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
     try {
       await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, payload);
       actualizarIndex(hex);
+      // Regenerar INDEX_RUTA si la causa entró o salió de ruta
+      if (cambioEstado) await regenerarIndexRuta();
       showToast(`✅ ${modificados.length} campo${modificados.length > 1 ? 's' : ''} actualizado${modificados.length > 1 ? 's' : ''}`, 'success');
     } catch(err) {
       showToast('❌ Error: ' + err.message, 'error');
@@ -3878,6 +3924,8 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
     }
   }
 
+  renderCausas();
+  buildDashboard();
   verCausa(hex);
 }
 
