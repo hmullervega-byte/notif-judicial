@@ -5114,14 +5114,20 @@ async function eliminarCausa(hex) {
 
 function normalizarTribunal(str) {
   if (!str) return '—';
-  const m = str.match(/^(\d+)°/);
+  const s = str.trim();
+  // "1° Juzgado..." o "1 Juzgado..."
+  const m = s.match(/^(\d+)[°\s]/);
   if (m) return m[1] + '°';
-  if (str.includes('Familia')) return 'Familia';
-  if (str.includes('Apelación (Protección)')) return 'Apel.(Prot.)';
-  if (str.includes('Corte de Apelaciones') || str.toLowerCase().includes('apelaciones')) return 'C. Apelaciones';
-  const map = { 'primer': '1°', 'primero': '1°', 'segundo': '2°', 'tercer': '3°', 'tercero': '3°', 'cuarto': '4°' };
-  const key = str.trim().toLowerCase();
-  return map[key] || str;
+  // "Primer", "Segundo", etc.
+  const low = s.toLowerCase();
+  if (/primer/.test(low)) return '1°';
+  if (/segund/.test(low)) return '2°';
+  if (/tercer/.test(low)) return '3°';
+  if (/cuart/.test(low)) return '4°';
+  if (/familia/.test(low)) return 'Familia';
+  if (/protección|proteccion/.test(low)) return 'Apel.(Prot.)';
+  if (/apelaciones/.test(low)) return 'C. Apelaciones';
+  return s;
 }
 
 function tipoBadge(tipo) {
