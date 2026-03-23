@@ -3653,13 +3653,13 @@ async function editarCausa(hex) {
   if (!c) return;
 
   // Clonar opciones del select tribunal del formulario
-  // Mapear valores legacy ("Primer","Segundo"...) al formato del select
-  const tribMap = {'primer':'1°','primero':'1°','segundo':'2°','tercer':'3°','tercero':'3°','cuarto':'4°'};
+  // Comparar por abreviatura para matching robusto (ej. "1 Juzgado..." = "1° Juzgado...")
   const tribVal = (c.tribunal||'').trim();
-  const tribNorm = tribMap[tribVal.toLowerCase()] || '';
+  const tribAbrev = normalizarTribunal(tribVal);
   const tribOpts = Array.from(document.getElementById('f-tribunal').options)
     .map(o => {
-      const sel = o.value === tribVal || (tribNorm && o.value.startsWith(tribNorm)) ? 'selected' : '';
+      const optAbrev = normalizarTribunal(o.value);
+      const sel = o.value === tribVal || (tribAbrev !== '—' && optAbrev === tribAbrev) ? 'selected' : '';
       return `<option value="${o.value}" ${sel}>${o.textContent}</option>`;
     }).join('');
 
@@ -3720,6 +3720,13 @@ async function editarCausa(hex) {
       `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
     ).join('');
     html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}">${estadoOpts}</select></div>`;
+    // Resultado, Derechos, Boleta (solo Darth)
+    const resVal = (c.resultado || c._causa_json?.datos?.resultado || '').replace(/"/g,'&quot;');
+    const derVal = (c.derechos || c._causa_json?.datos?.derechos || '').replace(/"/g,'&quot;');
+    const bolVal = (c.boleta || c._causa_json?.datos?.boleta || '').replace(/"/g,'&quot;');
+    html += `<div><label style="${lbl}">Resultado</label><input type="text" id="edit-resultado" value="${resVal}" style="${inp}" placeholder="BN, BP, NOT44_RPP..."></div>`;
+    html += `<div><label style="${lbl}">Derechos ($)</label><input type="text" id="edit-derechos" value="${derVal}" style="${inp}" placeholder="Monto derechos"></div>`;
+    html += `<div><label style="${lbl}">N° Boleta</label><input type="text" id="edit-boleta" value="${bolVal}" style="${inp}" placeholder="N° boleta(s)"></div>`;
   } else {
     html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
   }
@@ -3801,6 +3808,19 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
       });
     }
   }
+
+  // Resultado, Derechos, Boleta (solo Darth)
+  ['resultado', 'derechos', 'boleta'].forEach(campo => {
+    const el = document.getElementById('edit-' + campo);
+    if (!el) return;
+    const nuevo = el.value.trim();
+    const anterior = (payload.datos[campo] || '').toString();
+    if (nuevo !== anterior) {
+      modificados.push(campo);
+      payload.datos[campo] = nuevo;
+      c[campo] = nuevo;
+    }
+  });
 
   // Estado forzado (desde causa devuelta: validar o reenviar)
   if (nuevoEstadoForzado && payload.estado !== nuevoEstadoForzado) {
