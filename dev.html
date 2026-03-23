@@ -2653,10 +2653,15 @@ async function guardarCausa(estadoInicial) {
       direccion:         fval('direccion'),
       notificar_a:       fval('notificar_a'),
       ciudad:            fval('ciudad') || 'Antofagasta',
-      monto_mandamiento: fval('mandamiento') ? Number(fval('mandamiento').replace(/[^0-9]/g,'')) || fval('mandamiento') : '',
+      monto_mandamiento: fval('mandamiento') || '',
       piezas:            fval('piezas'),
       nro_pagare:        fval('n_pagare'),
-      comentario:        fval('observacion')
+      observacion:       fval('observacion'),
+      derechos:          '',
+      boleta:            '',
+      resultado:         '',
+      fecha_diligencia:  '',
+      fecha_ruta:        '',
     },
     historial: [
       {
@@ -3815,7 +3820,6 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
     const nuevo = el.value.trim();
     // Mapear al nombre correcto en datos
     const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
-                     key === 'observacion' ? 'comentario' :
                      key === 'estudio' ? 'estudio_juridico' : key;
     const anterior = (payload.datos[datosKey] || '').toString();
     if (nuevo !== anterior) {
@@ -5635,7 +5639,6 @@ async function guardarEdicionConRecalculo(hex) {
     if (!el) return;
     const nuevo = el.value.trim();
     const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
-                     key === 'observacion' ? 'comentario' :
                      key === 'estudio' ? 'estudio_juridico' : key;
     const anterior = (payload.datos[datosKey] || '').toString();
     if (nuevo !== anterior) {
@@ -5845,10 +5848,15 @@ async function guardarDuplicadoParaRevision(hexExistente, estadoInicial) {
       direccion:         fval('direccion'),
       notificar_a:       fval('notificar_a'),
       ciudad:            fval('ciudad') || 'Antofagasta',
-      monto_mandamiento: fval('mandamiento') ? Number(fval('mandamiento').replace(/[^0-9]/g,'')) || fval('mandamiento') : '',
+      monto_mandamiento: fval('mandamiento') || '',
       piezas:            fval('piezas'),
       nro_pagare:        fval('n_pagare'),
-      comentario:        fval('observacion')
+      observacion:       fval('observacion'),
+      derechos:          '',
+      boleta:            '',
+      resultado:         '',
+      fecha_diligencia:  '',
+      fecha_ruta:        '',
     },
     historial: [
       {
