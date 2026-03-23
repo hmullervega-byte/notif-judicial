@@ -3756,13 +3756,45 @@ async function editarCausa(hex) {
     const esRuta = (c.estado === 'en_ruta' || c.estado === 'gestion_directa_receptora');
     const hoy = new Date().toISOString().slice(0, 10);
     html += `<div id="wrap-fecha-ruta-edit" style="${esRuta ? '' : 'display:none;'}"><label style="${lbl}">Fecha ruta</label><input type="date" id="edit-fecha_ruta" value="${frVal || hoy}" style="${inp}"></div>`;
-    // Resultado, Derechos, Boleta (solo Darth)
-    const resVal = (c.resultado || c._causa_json?.datos?.resultado || '').replace(/"/g,'&quot;');
+    // Resultado como select (solo Darth)
+    const resVal = (c.resultado || c._causa_json?.datos?.resultado || '');
+    const _resOpts = [
+      ['','— Sin resultado —'],['BN','BN — Búsqueda Negativa'],['BP','BP — Búsqueda Positiva'],
+      ['NOT44','NOT44 — Notificación Art. 44'],['NOT44_RPP','NOT44_RPP — NOT44 + Req. Pago Presencial'],
+      ['NOT44_RPF','NOT44_RPF — NOT44 + Req. Pago Rebeldía'],['NP','NP — Notificación Personal'],
+      ['NP_RPP','NP_RPP — NP + Req. Pago Presencial'],['NP_RPF','NP_RPF — NP + Req. Pago Rebeldía'],
+      ['CED','CED — Cédula'],['CED52','CED52 — Cédula Art. 52'],['CE','CE — Cédula Espera'],
+      ['EMB','EMB — Embargo'],['EMBF','EMBF — Embargo Frustrado'],
+      ['ALZ_CBR','ALZ_CBR — Alzamiento CBR'],['ALZ_RVM','ALZ_RVM — Alzamiento RVM'],
+      ['OPO_RETIRO','OPO_RETIRO — Oposición al Retiro'],['OTRO','OTRO — Otro']
+    ];
+    const _resSelHtml = _resOpts.map(([v,l]) => `<option value="${v}"${v === resVal ? ' selected' : ''}>${l}</option>`).join('');
+    html += `<div><label style="${lbl}">Resultado</label><select id="edit-resultado" style="${inp}" onchange="_toggleResultadoOtro()">${_resSelHtml}</select></div>`;
+    html += `<div id="wrap-resultado-otro" style="${resVal === 'OTRO' ? '' : 'display:none;'}"><label style="${lbl}">Especificar resultado</label><input type="text" id="edit-resultado-otro" value="${resVal === 'OTRO' ? '' : (!_resOpts.some(([v]) => v === resVal) && resVal ? resVal : '').replace(/"/g,'&quot;')}" style="${inp}" placeholder="Especificar..."></div>`;
+    // Si el valor actual no está en la lista, preseleccionar OTRO y poner el valor en el input
+    if (resVal && !_resOpts.some(([v]) => v === resVal)) {
+      // Force OTRO selected via script after render
+      setTimeout(() => {
+        const sel = document.getElementById('edit-resultado');
+        if (sel) { sel.value = 'OTRO'; _toggleResultadoOtro(); }
+        const inp2 = document.getElementById('edit-resultado-otro');
+        if (inp2) inp2.value = resVal;
+      }, 50);
+    }
     const derVal = (c.derechos || c._causa_json?.datos?.derechos || '').replace(/"/g,'&quot;');
     const bolVal = (c.boleta || c._causa_json?.datos?.boleta || '').replace(/"/g,'&quot;');
-    html += `<div><label style="${lbl}">Resultado</label><input type="text" id="edit-resultado" value="${resVal}" style="${inp}" placeholder="BN, BP, NOT44_RPP..."></div>`;
     html += `<div><label style="${lbl}">Derechos ($)</label><input type="text" id="edit-derechos" value="${derVal}" style="${inp}" placeholder="Monto derechos"></div>`;
     html += `<div><label style="${lbl}">N° Boleta</label><input type="text" id="edit-boleta" value="${bolVal}" style="${inp}" placeholder="N° boleta(s)"></div>`;
+    // Fechas de diligencia (solo Darth)
+    const datos = c._causa_json?.datos || {};
+    const fd1 = datos.fecha_1ra_busqueda || '';
+    const fd2 = datos.fecha_2da_busqueda || '';
+    const fdR = datos.fecha_requerimiento || '';
+    const fdD = datos.fecha_diligencia || c.fecha_diligencia || '';
+    html += `<div><label style="${lbl}">F. 1ª Búsqueda</label><input type="date" id="edit-fecha_1ra_busqueda" value="${fd1}" style="${inp}"></div>`;
+    html += `<div><label style="${lbl}">F. 2ª Búsqueda/NOT44</label><input type="date" id="edit-fecha_2da_busqueda" value="${fd2}" style="${inp}"></div>`;
+    html += `<div><label style="${lbl}">F. Req. Pago</label><input type="date" id="edit-fecha_requerimiento" value="${fdR}" style="${inp}"></div>`;
+    html += `<div><label style="${lbl}">F. Diligencia</label><input type="date" id="edit-fecha_diligencia" value="${fdD}" style="${inp}"></div>`;
   } else {
     html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
   }
@@ -3796,6 +3828,14 @@ async function editarCausa(hex) {
     ${esDevuelta && !usarRecalculo ? `<button class="btn btn-danger btn-sm" onclick="pedirComentarioReenvio('${hex}')">📤 Enviar a Receptora</button>` : ''}
     <button class="btn btn-secondary btn-sm" onclick="verCausa('${hex}')">Cancelar</button>
   `;
+}
+
+// Toggle resultado "Otro" en modal edición
+function _toggleResultadoOtro() {
+  const sel = document.getElementById('edit-resultado');
+  const wrap = document.getElementById('wrap-resultado-otro');
+  if (!sel || !wrap) return;
+  wrap.style.display = sel.value === 'OTRO' ? '' : 'none';
 }
 
 // Toggle fecha ruta en modal edición
@@ -3867,7 +3907,22 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   }
 
   // Resultado, Derechos, Boleta (solo Darth)
-  ['resultado', 'derechos', 'boleta'].forEach(campo => {
+  const resEl = document.getElementById('edit-resultado');
+  if (resEl) {
+    let nuevoRes = resEl.value;
+    if (nuevoRes === 'OTRO') {
+      const otroEl = document.getElementById('edit-resultado-otro');
+      nuevoRes = otroEl ? otroEl.value.trim() : '';
+      if (!nuevoRes) nuevoRes = 'OTRO';
+    }
+    const anteriorRes = (payload.datos.resultado || '').toString();
+    if (nuevoRes !== anteriorRes) {
+      modificados.push('resultado');
+      payload.datos.resultado = nuevoRes;
+      c.resultado = nuevoRes;
+    }
+  }
+  ['derechos', 'boleta'].forEach(campo => {
     const el = document.getElementById('edit-' + campo);
     if (!el) return;
     const nuevo = el.value.trim();
@@ -3876,6 +3931,19 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
       modificados.push(campo);
       payload.datos[campo] = nuevo;
       c[campo] = nuevo;
+    }
+  });
+
+  // Fechas de diligencia (solo Darth)
+  ['fecha_1ra_busqueda', 'fecha_2da_busqueda', 'fecha_requerimiento', 'fecha_diligencia'].forEach(campo => {
+    const el = document.getElementById('edit-' + campo);
+    if (!el) return;
+    const nuevo = el.value || '';
+    const anterior = (payload.datos[campo] || '').toString();
+    if (nuevo !== anterior) {
+      modificados.push(campo);
+      payload.datos[campo] = nuevo;
+      if (campo === 'fecha_diligencia') c.fecha_diligencia = nuevo;
     }
   });
 
@@ -5411,7 +5479,7 @@ function _fechaIngreso(c) {
 }
 
 function renderGestion() {
-  const todas = causas.filter(c => esGestionDirecta(c.tipo_diligencia));
+  const todas = causas.filter(c => esGestionDirecta(c.tipo_diligencia) && c.estado !== 'suspendida');
   const pendientes = todas.filter(c => c.estado !== 'cerrada');
   const terminadas = todas.filter(c => c.estado === 'cerrada');
 
