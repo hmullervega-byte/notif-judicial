@@ -856,6 +856,10 @@
       <span class="code-tag" style="color:#e8c46a">EMBF</span>
       <span class="code-desc">Embargo frustrado</span>
     </button>
+    <button class="code-btn" data-group="tipo" data-code="OPOS" onclick="selectTipo(this)">
+      <span class="code-tag" style="color:#f59e0b">OPOS</span>
+      <span class="code-desc">Oposición al retiro de vehículo</span>
+    </button>
   </div>
 
   <!-- ── RPP/RPF: campos requerimiento ── -->
@@ -1402,6 +1406,91 @@
     </div>
   </div><!-- /seccion-embf -->
 
+  <!-- ═══ SECCION OPOS-RETIRO ═══ -->
+  <div id="seccion-opos" style="display:none">
+    <div style="background:var(--surface2); border-radius:10px; padding:14px 16px; margin:12px 0; border-left:3px solid #f59e0b;">
+      <div style="font-family:var(--mono); font-size:12px; color:#f59e0b; margin-bottom:4px;">OPOSICIÓN AL RETIRO</div>
+      <div style="font-size:13px; color:var(--text2);">Se intentó retirar vehículo embargado y hubo oposición.</div>
+    </div>
+
+    <!-- Tipo de oposición -->
+    <div class="section-title" style="margin-top:12px">Tipo de oposición *</div>
+    <div class="radio-group" id="opos-tipo-group">
+      <label class="radio-option" onclick="selectOposTipo(this,'demandado')">
+        <input type="radio" name="opos_tipo"> El propio demandado
+      </label>
+      <label class="radio-option" onclick="selectOposTipo(this,'persona_presente')">
+        <input type="radio" name="opos_tipo"> Otra persona presente
+      </label>
+      <label class="radio-option" onclick="selectOposTipo(this,'puerta_cerrada')">
+        <input type="radio" name="opos_tipo"> Puerta cerrada (nadie asistió)
+      </label>
+      <label class="radio-option" onclick="selectOposTipo(this,'oficina_virtual')">
+        <input type="radio" name="opos_tipo"> Oficina virtual / sin bienes
+      </label>
+    </div>
+
+    <!-- Campos persona_presente (condicional) -->
+    <div id="opos-persona-fields" style="display:none; transition:all 0.3s ease;">
+      <div class="section-title" style="margin-top:12px">Datos de la persona *</div>
+      <div style="font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:0.08em; margin:8px 0 6px;">Sexo *</div>
+      <div class="toggle-row" id="opos-sexo-row">
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_sexo','masculino')">Masculino</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_sexo','femenino')">Femenino</button>
+      </div>
+      <div class="obs-box" style="margin-top:8px">
+        <div class="field-label" style="margin-bottom:6px">Nombre (opcional)</div>
+        <input type="text" id="opos-nombre" placeholder="Nombre si se identificó" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div style="margin-top:8px; padding:10px 14px; background:var(--surface2); border-radius:8px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+          <input type="checkbox" id="opos-se-identifico" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent);">
+          <span>¿Se identificó?</span>
+        </label>
+      </div>
+      <div style="margin-top:6px; padding:10px 14px; background:var(--surface2); border-radius:8px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+          <input type="checkbox" id="opos-firmo-persona" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent);">
+          <span>¿Firmó?</span>
+        </label>
+      </div>
+      <div style="font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:0.08em; margin:12px 0 6px;">Relación con demandado *</div>
+      <div class="toggle-row" id="opos-relacion-row" style="flex-wrap:wrap;">
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','familiar')">Familiar</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','hijo')">Hijo(a)</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','pareja')">Pareja</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','trabajador')">Trabajador(a)</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','administrador')">Administrador(a)</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','residente')">Residente</button>
+        <button class="toggle-btn" onclick="selectToggle(this,'opos_relacion','otro')">Otro</button>
+      </div>
+    </div>
+
+    <!-- Campos demandado (condicional) -->
+    <div id="opos-demandado-fields" style="display:none; transition:all 0.3s ease;">
+      <div style="margin-top:12px; padding:10px 14px; background:var(--surface2); border-radius:8px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+          <input type="checkbox" id="opos-firmo-demandado" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent);">
+          <span>¿Firmó?</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Situación del vehículo (siempre visible) -->
+    <div class="section-title" style="margin-top:16px">Situación del vehículo *</div>
+    <div class="toggle-row" id="opos-vehiculo-row">
+      <button class="toggle-btn" onclick="selectToggle(this,'opos_vehiculo','no_encontrado')">No se encontró</button>
+      <button class="toggle-btn" onclick="selectToggle(this,'opos_vehiculo','encontrado')">Se encontró</button>
+      <button class="toggle-btn" onclick="selectToggle(this,'opos_vehiculo','no_aplica')">No aplica</button>
+    </div>
+
+    <!-- Observación OPOS -->
+    <div class="obs-box" style="margin-top:12px">
+      <div class="field-label" style="margin-bottom:6px">Observación (opcional)</div>
+      <textarea id="opos-observacion" placeholder="Detalles adicionales (ej: vehículo fue sustraído, adjunto foto...)" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none; min-height:60px; resize:vertical;"></textarea>
+    </div>
+  </div><!-- /seccion-opos -->
+
   <!-- FECHA Y HORA -->
   <div id="seccion-fecha-hora">
   <div class="section-title">Fecha y hora de la diligencia</div>
@@ -1492,6 +1581,11 @@ let state = {
     metodo_entrega: null,
     tipo_demandado: null,
     motivo_embf: null,
+    // OPOS-RETIRO
+    opos_tipo: null,
+    opos_sexo: null,
+    opos_relacion: null,
+    opos_vehiculo: null,
   },
   videoStream: null,
   scanActive: false
@@ -1993,7 +2087,7 @@ function _mostrarCausa(idHex, causaData) {
 async function _verificarEtapasBackground(idHex) {
   if (!navigator.onLine) return;
   try {
-    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF'];
+    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF','OPOS'];
     for (const etapa of etapas) {
       const existe = await dbxCheckExists('/resultados/' + idHex + '_' + etapa + '.json');
       if (existe) {
@@ -2272,7 +2366,11 @@ function updateTipoSections() {
   show('seccion-ced',  t === 'CED');
   show('seccion-np',   t === 'NP');
   show('seccion-embf', t === 'EMBF');
+  show('seccion-opos', t === 'OPOS');
 
+  // OPOS uses its own observación field; hide the shared one
+  document.getElementById('obs-label').style.display = t === 'OPOS' ? 'none' : '';
+  document.querySelector('#obs-label + .obs-box').style.display = t === 'OPOS' ? 'none' : '';
 
   const lbl = document.getElementById('seccion-quien-label');
   if (lbl) {
@@ -2532,6 +2630,30 @@ function selectToggle(btn, groupName, value) {
   }
 }
 
+// ── OPOS-RETIRO: tipo oposición selection ──
+function selectOposTipo(label, value) {
+  const group = label.closest('.radio-group');
+  group.querySelectorAll('.radio-option').forEach(o => o.classList.remove('ro-selected'));
+  label.classList.add('ro-selected');
+  label.querySelector('input[type="radio"]').checked = true;
+  state.selections.opos_tipo = value;
+  // Show/hide conditional fields with animation
+  show('opos-persona-fields',  value === 'persona_presente');
+  show('opos-demandado-fields', value === 'demandado');
+  // Reset sub-fields when changing tipo
+  if (value !== 'persona_presente') {
+    state.selections.opos_sexo = null;
+    state.selections.opos_relacion = null;
+    document.querySelectorAll('#opos-sexo-row .toggle-btn, #opos-relacion-row .toggle-btn').forEach(b => b.classList.remove('tgl-selected'));
+    const n = document.getElementById('opos-nombre'); if (n) n.value = '';
+    const si = document.getElementById('opos-se-identifico'); if (si) si.checked = false;
+    const fp = document.getElementById('opos-firmo-persona'); if (fp) fp.checked = false;
+  }
+  if (value !== 'demandado') {
+    const fd = document.getElementById('opos-firmo-demandado'); if (fd) fd.checked = false;
+  }
+}
+
 // ── E22: Destinatarios frecuentes (localStorage) ──
 function getDestFrecuentes() {
   try { return JSON.parse(localStorage.getItem('dest_frecuentes') || '[]'); }
@@ -2729,6 +2851,25 @@ function resetSubSelections() {
   state.selections.metodo_entrega = null;
   state.selections.tipo_demandado = null;
   state.selections.motivo_embf = null;
+  // OPOS-RETIRO
+  state.selections.opos_tipo = null;
+  state.selections.opos_sexo = null;
+  state.selections.opos_relacion = null;
+  state.selections.opos_vehiculo = null;
+  show('opos-persona-fields', false);
+  show('opos-demandado-fields', false);
+  const oposNombre = document.getElementById('opos-nombre');
+  if (oposNombre) oposNombre.value = '';
+  const oposSeId = document.getElementById('opos-se-identifico');
+  if (oposSeId) oposSeId.checked = false;
+  const oposFirmoP = document.getElementById('opos-firmo-persona');
+  if (oposFirmoP) oposFirmoP.checked = false;
+  const oposFirmoD = document.getElementById('opos-firmo-demandado');
+  if (oposFirmoD) oposFirmoD.checked = false;
+  const oposObs = document.getElementById('opos-observacion');
+  if (oposObs) oposObs.value = '';
+  document.querySelectorAll('#opos-sexo-row .toggle-btn, #opos-relacion-row .toggle-btn, #opos-vehiculo-row .toggle-btn').forEach(b => b.classList.remove('tgl-selected'));
+  document.querySelectorAll('#opos-tipo-group .radio-option').forEach(o => { o.classList.remove('ro-selected'); const r = o.querySelector('input[type="radio"]'); if(r) r.checked = false; });
   document.querySelectorAll('[data-group="Q"]').forEach(b => b.classList.remove('selected-p'));
   document.querySelectorAll('[data-group="sexo"],[data-group="n44sexo"],[data-group="Q01met"],[data-group="Q09sub"],[data-group="Q05cal"]').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.r-btn,.n44-btn').forEach(b => b.classList.remove('selected'));
@@ -2772,7 +2913,8 @@ function resetSelections() {
     rpp_resultado:null, subtipo_rpp:null, resultado_embargo:null,
     resultado_np:null, verificacion_id:null, tipo_causa:null,
     parte_notificada:null, metodo_entrega:null, tipo_demandado:null,
-    motivo_embf:null
+    motivo_embf:null,
+    opos_tipo:null, opos_sexo:null, opos_relacion:null, opos_vehiculo:null
   };
   document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected','selected-p','selected-c'));
   document.querySelectorAll('.radio-option').forEach(o => { o.classList.remove('ro-selected'); const r = o.querySelector('input[type="radio"]'); if(r) r.checked = false; });
@@ -2792,8 +2934,15 @@ function resetSelections() {
   ['seccion-bn','seccion-rpprf','seccion-quien','seccion-sexo','seccion-R',
    'seccion-not44-n44','seccion-not44-cit',
    'seccion-domicilio-laboral','seccion-obs-acceso',
-   'seccion-ced','seccion-np','seccion-embf',
+   'seccion-ced','seccion-np','seccion-embf','seccion-opos',
+   'opos-persona-fields','opos-demandado-fields',
    ].forEach(c => show(c, false));
+  // Reset OPOS-specific inputs
+  const oposNombre = document.getElementById('opos-nombre'); if (oposNombre) oposNombre.value = '';
+  const oposSeId = document.getElementById('opos-se-identifico'); if (oposSeId) oposSeId.checked = false;
+  const oposFirmoP = document.getElementById('opos-firmo-persona'); if (oposFirmoP) oposFirmoP.checked = false;
+  const oposFirmoD = document.getElementById('opos-firmo-demandado'); if (oposFirmoD) oposFirmoD.checked = false;
+  const oposObs = document.getElementById('opos-observacion'); if (oposObs) oposObs.value = '';
   show('hora-block', true);
   document.getElementById('obs-input').value = '';
 }
@@ -2987,6 +3136,74 @@ async function enviarResultado() {
       const txt = document.getElementById('texto-embf-otro')?.value.trim();
       if (txt) codigos.push('motivo_embf_texto:' + txt);
     }
+  }
+
+  else if (t === 'OPOS') {
+    // OPOS-RETIRO: validaciones y payload especial
+    if (!state.selections.opos_tipo) { showToast('Selecciona el tipo de oposición'); return; }
+    if (!state.selections.opos_vehiculo) { showToast('Selecciona la situación del vehículo'); return; }
+    if (state.selections.opos_tipo === 'persona_presente') {
+      if (!state.selections.opos_sexo) { showToast('Selecciona el sexo de la persona'); return; }
+      if (!state.selections.opos_relacion) { showToast('Selecciona la relación con el demandado'); return; }
+    }
+    const fecha = document.getElementById('fecha-input').value;
+    const hora  = pad(document.getElementById('hora-hh').value) + ':' + pad(document.getElementById('hora-mm').value);
+    const oposicion = { tipo_oposicion: state.selections.opos_tipo };
+    if (state.selections.opos_tipo === 'persona_presente') {
+      oposicion.sexo = state.selections.opos_sexo;
+      const nombre = document.getElementById('opos-nombre')?.value.trim();
+      if (nombre) oposicion.nombre = nombre;
+      oposicion.se_identifico = !!document.getElementById('opos-se-identifico')?.checked;
+      oposicion.firmo = !!document.getElementById('opos-firmo-persona')?.checked;
+      oposicion.relacion = state.selections.opos_relacion;
+    } else if (state.selections.opos_tipo === 'demandado') {
+      oposicion.firmo = !!document.getElementById('opos-firmo-demandado')?.checked;
+    }
+    const oposObs = document.getElementById('opos-observacion')?.value.trim();
+    const oposPayload = {
+      id_hex: state.idHex,
+      tipo: 'OPOS-RETIRO',
+      fecha: fecha,
+      hora: hora,
+      oposicion: oposicion,
+      vehiculo: state.selections.opos_vehiculo,
+      observacion: oposObs || null,
+      registrado_por: 'receptora',
+      timestamp: new Date().toISOString()
+    };
+    // Enviar directamente con path _OPOS.json
+    document.getElementById('loading-envio').classList.add('active');
+    document.getElementById('btn-enviar').disabled = true;
+    const oposEnvio = { tipo: 'resultado', id_hex: state.idHex, path: '/resultados/' + state.idHex + '_OPOS.json', payload: oposPayload, timestamp: new Date().toISOString() };
+    if (!navigator.onLine) {
+      guardarPendiente(oposEnvio);
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
+      showConfirm(true, ['OPOS-RETIRO'], state.causaData);
+      showToast('Guardado offline — se enviará con señal');
+      return;
+    }
+    try {
+      await dbxPut(oposEnvio.path, oposPayload);
+      actualizarIndexLocal(state.idHex, { estado: 'resultado_registrado' });
+      document.getElementById('loading-envio').classList.remove('active');
+      document.getElementById('btn-enviar').disabled = false;
+      showConfirm(true, ['OPOS-RETIRO'], state.causaData);
+    } catch(e) {
+      if (!navigator.onLine) {
+        guardarPendiente(oposEnvio);
+        document.getElementById('loading-envio').classList.remove('active');
+        document.getElementById('btn-enviar').disabled = false;
+        showConfirm(true, ['OPOS-RETIRO'], state.causaData);
+        showToast('Guardado offline — se enviará con señal');
+      } else {
+        document.getElementById('loading-envio').classList.remove('active');
+        document.getElementById('btn-enviar').disabled = false;
+        showConfirm(false, ['OPOS-RETIRO'], state.causaData, e.message);
+      }
+    }
+    return; // OPOS has its own submission flow
   }
 
   // E03/E04: domicilio laboral for BP/NOT44
