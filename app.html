@@ -1178,7 +1178,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox(true)" title="Recargar desde Dropbox">🔄 Recargar</button>
             <button class="btn btn-secondary btn-sm darth-only" id="btn-regen-respaldo" onclick="regenerarIndexRespaldo()" title="Regenerar INDEX_RESPALDO.json desde todas las causas" style="display:none;">🔄 Regenerar respaldo</button>
-            <button class="btn btn-secondary btn-sm darth-only" id="btn-ver-todas" onclick="toggleVistaCompleta()" title="Cargar todas las causas (cerradas, suspendidas...)" style="display:none;">📋 Ver todas</button>
             <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
           </div>
         </div>
@@ -1198,6 +1197,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="OTRO">Otros</option>
           </select>
           <select id="filter-estado">
+            <option value="activas" selected>Solo activas</option>
             <option value="">Todos los estados</option>
             <option value="pendiente_validacion">Pdte. validación</option>
             <option value="validada">Validada</option>
@@ -3232,9 +3232,10 @@ async function cargarCausasDropbox(forzar = false) {
   }
 }
 
-// Actualiza INDEX.json en Dropbox con el estado actual de causas[]
-const ESTADOS_EXCLUIDOS_INDEX = new Set(['cerrada', 'suspendida', 'id_repetida']);
+// Estados no activos (filtro "Solo activas")
+const ESTADOS_NO_ACTIVOS = new Set(['cerrada', 'suspendida', 'id_repetida']);
 
+// Actualiza INDEX.json en Dropbox con el estado actual de causas[]
 function _causaToIndexEntry(c) {
   return {
     id_hex: c.id_hex, estado: c.estado,
@@ -3266,9 +3267,7 @@ async function actualizarIndex(hexOrHexes) {
     try {
       const { data: index, rev } = await DBX.downloadWithRev(carpeta + '/INDEX.json');
       if (!index || !rev) {
-        const nuevoIndex = causas
-          .filter(c => !ESTADOS_EXCLUIDOS_INDEX.has(c.estado))
-          .map(c => _causaToIndexEntry(c));
+        const nuevoIndex = causas.map(c => _causaToIndexEntry(c));
         await DBX.upload(carpeta + '/INDEX.json', nuevoIndex);
         return;
       }
@@ -3276,7 +3275,7 @@ async function actualizarIndex(hexOrHexes) {
       for (const hex of hexes) {
         const c = causas.find(x => x.id_hex === hex);
         const idx = index.findIndex(x => x.id_hex === hex);
-        if (!c || ESTADOS_EXCLUIDOS_INDEX.has(c.estado)) {
+        if (!c) {
           if (idx >= 0) index.splice(idx, 1);
         } else {
           const entry = _causaToIndexEntry(c);
@@ -3301,7 +3300,7 @@ async function actualizarIndex(hexOrHexes) {
           for (const hex of hexes) {
             const c = causas.find(x => x.id_hex === hex);
             const idx = index.findIndex(x => x.id_hex === hex);
-            if (!c || ESTADOS_EXCLUIDOS_INDEX.has(c.estado)) {
+            if (!c) {
               if (idx >= 0) index.splice(idx, 1);
             } else {
               const entry = _causaToIndexEntry(c);
@@ -3445,7 +3444,9 @@ function renderCausas() {
       c.estudio_juridico?.toLowerCase().includes(search) ||
       c.id_hex?.toLowerCase().includes(search);
     const matchTipo   = !fTipo   || c.tipo_diligencia?.startsWith(fTipo);
-    const matchEstado = !fEstado || c.estado === fEstado;
+    const matchEstado = fEstado === 'activas'
+      ? !ESTADOS_NO_ACTIVOS.has(c.estado)
+      : (!fEstado || c.estado === fEstado);
     const est = (c.estudio || c.estudio_juridico || '');
     const matchEstudio = !fEstudio || est === fEstudio;
     const matchTribunal = !fTribunal || (c.tribunal || '').includes(fTribunal);
@@ -3548,7 +3549,7 @@ document.getElementById('filter-fecha-hasta').addEventListener('change', renderC
 document.getElementById('btn-limpiar-filtros').addEventListener('click', () => {
   document.getElementById('search-causas').value = '';
   document.getElementById('filter-tipo').value = '';
-  document.getElementById('filter-estado').value = '';
+  document.getElementById('filter-estado').value = 'activas';
   document.getElementById('filter-estudio').value = '';
   document.getElementById('filter-tribunal').value = '';
   document.getElementById('filter-demandante').value = '';
@@ -5112,53 +5113,6 @@ async function eliminarCausa(hex) {
   buildDashboard();
   renderNotificaciones();
   showToast('🗑 Causa eliminada: ' + (c.rol || hex.slice(0,8)), 'success');
-}
-
-let _vistaCompleta = false;
-
-async function toggleVistaCompleta() {
-  const btn = document.getElementById('btn-ver-todas');
-  if (_vistaCompleta) {
-    _vistaCompleta = false;
-    btn.textContent = '📋 Ver todas';
-    btn.title = 'Cargar todas las causas (cerradas, suspendidas...)';
-    await cargarCausasDropbox(true);
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = '⏳ Cargando...';
-  try {
-    const completo = await DBX.download('/causas/INDEX_COMPLETO.json');
-    if (!completo || !Array.isArray(completo)) {
-      showToast('❌ INDEX_COMPLETO.json vacío o no existe', 'error');
-      btn.disabled = false;
-      btn.textContent = '📋 Ver todas';
-      return;
-    }
-    causas = completo.map(c => ({
-      id_hex: c.id_hex, estado: c.estado, rol: c.rol,
-      tribunal: c.tribunal, n_solicitud: c.nro_solicitud,
-      nro_solicitud: c.nro_solicitud, demandado: c.demandado,
-      rut: c.rut, direccion: c.direccion, tipo_diligencia: c.tipo_diligencia,
-      fecha_solicitud: c.fecha_solicitud, estudio: c.estudio_juridico,
-      estudio_juridico: c.estudio_juridico, notificar_a: c.notificar_a,
-      demandante: c.demandante, ciudad: c.ciudad || 'Antofagasta',
-      fecha_ruta: c.fecha_ruta || '', fecha_diligencia: c.fecha_diligencia || '', fecha_2da_positiva: c.fecha_2da_positiva || '',
-      ts_ingreso: c.ts_ingreso || '', resultado: c.resultado || '',
-      boleta: c.boleta || '', derechos: c.derechos || '',
-      _causa_json: null
-    }));
-    _vistaCompleta = true;
-    btn.textContent = '📋 Solo activas';
-    btn.title = 'Volver a mostrar solo causas activas';
-    renderCausas();
-    buildDashboard();
-    showToast(`📋 Mostrando ${causas.length} causas (todas)`, 'info');
-  } catch(e) {
-    showToast('❌ Error: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
 }
 
 function normalizarTribunal(str) {
