@@ -2172,6 +2172,9 @@ function buildDashboard() {
     </div>
   `;
 
+  // Verificación de integridad: comparar causas en memoria vs archivos en Dropbox
+  _verificarIntegridad();
+
   if (causas.length === 0) {
     document.getElementById('dash-empty').style.display = 'block';
     document.getElementById('dash-recent').style.display = 'none';
@@ -2188,6 +2191,29 @@ function buildDashboard() {
         <td class="mono">${fmtFecha(c.fecha_solicitud)}</td>
       </tr>
     `).join('');
+  }
+}
+
+async function _verificarIntegridad() {
+  if (!DBX.isConfigured()) return;
+  const alertId = 'integridad-alert';
+  const existente = document.getElementById(alertId);
+  if (existente) existente.remove();
+  try {
+    const archivos = await DBX.listFolder('/causas');
+    const nDropbox = archivos.filter(e => e.name.endsWith('_CAUSA.json')).length;
+    const nMemoria = causas.length;
+    if (nDropbox !== nMemoria) {
+      const diff = Math.abs(nDropbox - nMemoria);
+      const statsGrid = document.getElementById('dash-stats');
+      const alert = document.createElement('div');
+      alert.id = alertId;
+      alert.style.cssText = 'background:#fef2f2; border:2px solid #dc2626; border-radius:8px; padding:12px 16px; margin-bottom:1rem; font-size:13px; color:#991b1b; font-weight:600;';
+      alert.innerHTML = `⚠ <strong>Alerta de integridad:</strong> Dropbox tiene <strong>${nDropbox}</strong> causas pero se cargaron <strong>${nMemoria}</strong>. Diferencia: <strong>${diff}</strong> causas. Ejecutar <strong>"Regenerar respaldo"</strong> para corregir.`;
+      statsGrid.parentNode.insertBefore(alert, statsGrid);
+    }
+  } catch (e) {
+    console.warn('Error verificando integridad:', e);
   }
 }
 
