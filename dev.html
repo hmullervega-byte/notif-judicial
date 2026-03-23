@@ -1407,12 +1407,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                 <input type="text" id="ruta-filter-search" placeholder="Buscar ROL, ID, dirección, demandado, demandante, notificar a…" style="flex:1; min-width:200px; font-size:12px;">
                 <select id="ruta-filter-tipo" style="min-width:130px; font-size:12px;">
                   <option value="">Todos los tipos</option>
-                  <option value="NOT">Notificaciones</option>
-                  <option value="EMBARGO">Embargos</option>
-                  <option value="ALZAMIENTO">Alzamientos</option>
-                  <option value="PRUEBA">Pruebas</option>
-                  <option value="REQ">Requerimientos</option>
-                  <option value="OTRO">Otros</option>
                 </select>
                 <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosRuta()" title="Limpiar filtros">✕ Limpiar</button>
               </div>
@@ -1428,7 +1422,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:30px;"><input type="checkbox" class="ruta-check" id="ruta-check-all" onchange="toggleAllRuta(this.checked)"></th>
                         <th style="width:75px;">ROL</th>
                         <th style="width:22px;">T</th>
-                        <th style="width:120px;">Demandante</th>
                         <th style="width:120px;">Notificar a</th>
                         <th>Dirección</th>
                         <th style="width:80px;">Tipo</th>
@@ -1439,7 +1432,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                       </tr>
                     </thead>
                     <tbody id="ruta-body">
-                      <tr><td colspan="12"><div class="empty-state"><span class="icon">🗺</span><p>No hay causas validadas disponibles para ruta.</p></div></td></tr>
+                      <tr><td colspan="10"><div class="empty-state"><span class="icon">🗺</span><p>No hay causas validadas disponibles para ruta.</p></div></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1448,6 +1441,13 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
             <!-- Panel VER RUTAS POR DÍA -->
             <div id="panel-ver" style="display:none;">
+              <div class="filter-bar" style="margin-bottom:8px; flex-wrap:wrap;">
+                <input type="text" id="ruta-dia-filter-search" placeholder="Buscar ROL, ID, dirección, demandado, notificar a…" style="flex:1; min-width:200px; font-size:12px;">
+                <select id="ruta-dia-filter-tipo" style="min-width:130px; font-size:12px;">
+                  <option value="">Todos los tipos</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosRutaDia()" title="Limpiar filtros">✕ Limpiar</button>
+              </div>
               <div class="ruta-toolbar">
                 <span class="counter" id="ruta-dia-info">Selecciona un día en el calendario</span>
                 <span class="counter" id="ruta-dia-sel-count" style="display:none;"></span>
@@ -1464,11 +1464,11 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                         <th style="width:30px;"><input type="checkbox" class="ruta-check" id="ruta-dia-check-all" onchange="toggleAllRutaDia(this.checked)"></th>
                         <th style="width:75px;">ROL</th>
                         <th style="width:22px;">T</th>
-                        <th style="width:120px;">Demandante</th>
                         <th style="width:120px;">Notificar a</th>
                         <th>Dirección</th>
                         <th style="width:80px;">Tipo</th>
                         <th style="width:70px;">F. Sol.</th>
+                        <th style="width:70px;">F. Ruta</th>
                         <th style="width:110px;">ID</th>
                         <th style="width:55px;" class="col-acc">Acc.</th>
                       </tr>
@@ -4355,10 +4355,21 @@ function limpiarFiltrosRuta() {
 document.getElementById('ruta-filter-search').addEventListener('input', renderRuta);
 document.getElementById('ruta-filter-tipo').addEventListener('change', renderRuta);
 
+function _poblarFiltroTipo(selectId, lista) {
+  const sel = document.getElementById(selectId);
+  const prev = sel.value;
+  const tipos = [...new Set(lista.map(c => c.tipo_diligencia).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t => `<option value="${t}"${t === prev ? ' selected' : ''}>${t}</option>`).join('');
+}
+
 function renderRuta() {
   // Excluir tipos de gestión directa de la selección de ruta
-  let validadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
+  const todasValidadas = causas.filter(c => c.estado === 'validada' && !esGestionDirecta(c.tipo_diligencia));
+  let validadas = [...todasValidadas];
   const enRuta = causas.filter(c => c.estado === 'en_ruta');
+
+  // Poblar filtro tipo dinámicamente con los tipos que existen
+  _poblarFiltroTipo('ruta-filter-tipo', todasValidadas);
 
   // Aplicar filtros
   const fSearch = document.getElementById('ruta-filter-search').value.toLowerCase();
@@ -4368,17 +4379,16 @@ function renderRuta() {
     (c.id_hex||'').toLowerCase().includes(fSearch) ||
     (c.direccion||'').toLowerCase().includes(fSearch) ||
     (c.demandado||'').toLowerCase().includes(fSearch) ||
-    (c.demandante||'').toLowerCase().includes(fSearch) ||
     (c.notificar_a||'').toLowerCase().includes(fSearch)
   );
-  if (fTipo) validadas = validadas.filter(c => (c.tipo_diligencia||'').startsWith(fTipo));
+  if (fTipo) validadas = validadas.filter(c => (c.tipo_diligencia||'') === fTipo);
 
   document.getElementById('ruta-count').textContent =
     `${validadas.length} para asignar · ${enRuta.length} en ruta`;
 
   const tbody = document.getElementById('ruta-body');
   if (validadas.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="icon">🗺</span>
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><span class="icon">🗺</span>
       <p>${enRuta.length > 0 ? 'Todas las causas validadas ya están en ruta.' : 'No hay causas validadas disponibles.'}</p>
     </div></td></tr>`;
     document.getElementById('btn-generar-ruta').disabled = true;
@@ -4392,7 +4402,6 @@ function renderRuta() {
            onchange="toggleRutaCheck('${c.id_hex}', this.checked)"></td>
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
-      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.notificar_a || ''}">${c.notificar_a || c.demandado || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
@@ -4409,6 +4418,14 @@ function renderRuta() {
 }
 
 // ── Render tabla ver por día ──
+function limpiarFiltrosRutaDia() {
+  document.getElementById('ruta-dia-filter-search').value = '';
+  document.getElementById('ruta-dia-filter-tipo').value = '';
+  renderRutaDia();
+}
+document.getElementById('ruta-dia-filter-search').addEventListener('input', renderRutaDia);
+document.getElementById('ruta-dia-filter-tipo').addEventListener('change', renderRutaDia);
+
 function renderRutaDia() {
   const tbody = document.getElementById('ruta-dia-body');
   const btnExp = document.getElementById('btn-export-optiroute');
@@ -4425,10 +4442,27 @@ function renderRutaDia() {
     if (btnExp) btnExp.style.display = 'none';
     return;
   }
-  const del_dia = causas.filter(c => {
+  const todasDelDia = causas.filter(c => {
     const fr = _fechaRuta(c) || c.fecha_ruta || '';
     return fr === calRutaSelected || c.fecha_2da_positiva === calRutaSelected;
   });
+
+  // Poblar filtro tipo dinámicamente con los tipos del día
+  _poblarFiltroTipo('ruta-dia-filter-tipo', todasDelDia);
+
+  // Aplicar filtros
+  let del_dia = [...todasDelDia];
+  const fSearch = document.getElementById('ruta-dia-filter-search').value.toLowerCase();
+  const fTipo = document.getElementById('ruta-dia-filter-tipo').value;
+  if (fSearch) del_dia = del_dia.filter(c =>
+    (c.rol||'').toLowerCase().includes(fSearch) ||
+    (c.id_hex||'').toLowerCase().includes(fSearch) ||
+    (c.direccion||'').toLowerCase().includes(fSearch) ||
+    (c.demandado||'').toLowerCase().includes(fSearch) ||
+    (c.notificar_a||'').toLowerCase().includes(fSearch)
+  );
+  if (fTipo) del_dia = del_dia.filter(c => (c.tipo_diligencia||'') === fTipo);
+
   const fmtSel = calRutaSelected.split('-').reverse().join('/');
   document.getElementById('ruta-dia-info').innerHTML = `<strong>${del_dia.length}</strong> causa${del_dia.length !== 1 ? 's' : ''} en ruta del <strong>${fmtSel}</strong>`;
   if (btnExp) btnExp.style.display = del_dia.length > 0 ? '' : 'none';
@@ -4442,11 +4476,11 @@ function renderRutaDia() {
            onchange="toggleRutaDiaCheck('${c.id_hex}', this.checked)"></td>
       <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
       <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
-      <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.demandante || ''}">${c.demandante || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.notificar_a || ''}">${c.notificar_a || c.demandado || '—'}</td>
       <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;" title="${c.direccion || ''}">${c.direccion || '—'}</td>
       <td>${tipoBadge(c.tipo_diligencia)}</td>
       <td class="mono" style="white-space:nowrap; font-size:11px;">${fmtFecha(c.fecha_solicitud)}</td>
+      <td class="mono" style="white-space:nowrap; font-size:11px;">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</td>
       <td class="mono" style="font-size:10px; overflow:hidden; text-overflow:ellipsis;">${c.id_hex || '—'}</td>
       <td class="col-acc" style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
