@@ -3761,39 +3761,49 @@ async function editarCausa(hex) {
     const resVal = (c.resultado || c._causa_json?.datos?.resultado || '');
     const _resOpts = [
       ['','— Sin resultado —'],['BN','BN — Búsqueda Negativa'],['BP','BP — Búsqueda Positiva'],
-      ['NOT44','NOT44 — Notificación Art. 44'],['NOT44_RPP','NOT44_RPP — NOT44 + Req. Pago Presencial'],
-      ['NOT44_RPF','NOT44_RPF — NOT44 + Req. Pago Rebeldía'],['NP','NP — Notificación Personal'],
-      ['NP_RPP','NP_RPP — NP + Req. Pago Presencial'],['NP_RPF','NP_RPF — NP + Req. Pago Rebeldía'],
-      ['CED','CED — Cédula'],['CED52','CED52 — Cédula Art. 52'],['CE','CE — Cédula Espera'],
-      ['EMB','EMB — Embargo'],['EMBF','EMBF — Embargo Frustrado'],
+      ['BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPP — NOT44 + Req. Pago Presencial'],
+      ['BP+BP2+NOT44+RPF','BP+BP2+NOT44+RPF — NOT44 + Req. Pago Rebeldía'],
+      ['BP+BP2+NOT44','BP+BP2+NOT44 — NOT44 sin Requerimiento'],
+      ['NP+RPP','NP+RPP — Not. Personal + Req. Pago'],
+      ['BP+NP+RPP','BP+NP+RPP — BP + Not. Personal + Req. Pago'],
+      ['CED','CED — Cédula'],['CED52','CED52 — Cédula Art. 52'],
+      ['EF','EF — Embargo Frustrado'],
       ['ALZ_CBR','ALZ_CBR — Alzamiento CBR'],['ALZ_RVM','ALZ_RVM — Alzamiento RVM'],
       ['OPO_RETIRO','OPO_RETIRO — Oposición al Retiro'],['OTRO','OTRO — Otro']
     ];
     const _resSelHtml = _resOpts.map(([v,l]) => `<option value="${v}"${v === resVal ? ' selected' : ''}>${l}</option>`).join('');
-    html += `<div><label style="${lbl}">Resultado</label><select id="edit-resultado" style="${inp}" onchange="_toggleResultadoOtro()">${_resSelHtml}</select></div>`;
-    html += `<div id="wrap-resultado-otro" style="${resVal === 'OTRO' ? '' : 'display:none;'}"><label style="${lbl}">Especificar resultado</label><input type="text" id="edit-resultado-otro" value="${resVal === 'OTRO' ? '' : (!_resOpts.some(([v]) => v === resVal) && resVal ? resVal : '').replace(/"/g,'&quot;')}" style="${inp}" placeholder="Especificar..."></div>`;
+    html += `<div><label style="${lbl}">Resultado</label><select id="edit-resultado" style="${inp}" onchange="_toggleResultadoCampos()">${_resSelHtml}</select></div>`;
+    html += `<div id="wrap-resultado-otro" style="display:none;"><label style="${lbl}">Especificar resultado</label><input type="text" id="edit-resultado-otro" value="" style="${inp}" placeholder="Especificar..."></div>`;
+    // Si el valor actual no está en la lista, preseleccionar OTRO
     if (resVal && !_resOpts.some(([v]) => v === resVal)) {
       setTimeout(() => {
         const sel = document.getElementById('edit-resultado');
-        if (sel) { sel.value = 'OTRO'; _toggleResultadoOtro(); }
+        if (sel) { sel.value = 'OTRO'; }
         const inp2 = document.getElementById('edit-resultado-otro');
         if (inp2) inp2.value = resVal;
+        _toggleResultadoCampos();
       }, 50);
     }
     const derVal = (c.derechos || c._causa_json?.datos?.derechos || '').replace(/"/g,'&quot;');
     const bolVal = (c.boleta || c._causa_json?.datos?.boleta || '').replace(/"/g,'&quot;');
     html += `<div><label style="${lbl}">Derechos ($)</label><input type="text" id="edit-derechos" value="${derVal}" style="${inp}" placeholder="Monto derechos"></div>`;
     html += `<div><label style="${lbl}">N° Boleta</label><input type="text" id="edit-boleta" value="${bolVal}" style="${inp}" placeholder="N° boleta(s)"></div>`;
-    // Fechas de diligencia (solo Darth)
+    // Fechas de diligencia (solo Darth) — se muestran/ocultan según resultado
     const datos = c._causa_json?.datos || {};
     const fd1 = datos.fecha_1ra_busqueda || '';
     const fd2 = datos.fecha_2da_busqueda || '';
     const fdR = datos.fecha_requerimiento || '';
     const fdD = datos.fecha_diligencia || c.fecha_diligencia || '';
-    html += `<div><label style="${lbl}">F. 1ª Búsqueda</label><input type="date" id="edit-fecha_1ra_busqueda" value="${fd1}" style="${inp}"></div>`;
-    html += `<div><label style="${lbl}">F. 2ª Búsqueda/NOT44</label><input type="date" id="edit-fecha_2da_busqueda" value="${fd2}" style="${inp}"></div>`;
-    html += `<div><label style="${lbl}">F. Req. Pago</label><input type="date" id="edit-fecha_requerimiento" value="${fdR}" style="${inp}"></div>`;
-    html += `<div><label style="${lbl}">F. Diligencia</label><input type="date" id="edit-fecha_diligencia" value="${fdD}" style="${inp}"></div>`;
+    const fdBP = datos.fecha_bp || '';
+    const fdNPR = datos.fecha_np_rpp || '';
+    html += `<div id="wrap-fecha_1ra_busqueda" style="display:none;"><label style="${lbl}">F. 1ª Búsqueda</label><input type="date" id="edit-fecha_1ra_busqueda" value="${fd1}" style="${inp}"></div>`;
+    html += `<div id="wrap-fecha_2da_busqueda" style="display:none;"><label style="${lbl}">F. 2ª Búsqueda/NOT44</label><input type="date" id="edit-fecha_2da_busqueda" value="${fd2}" style="${inp}" onchange="_syncFechaDiligencia()"></div>`;
+    html += `<div id="wrap-fecha_requerimiento" style="display:none;"><label style="${lbl}">F. Req. Pago</label><input type="date" id="edit-fecha_requerimiento" value="${fdR}" style="${inp}"></div>`;
+    html += `<div id="wrap-fecha_diligencia" style="display:none;"><label style="${lbl}">F. Diligencia</label><input type="date" id="edit-fecha_diligencia" value="${fdD}" style="${inp}"></div>`;
+    html += `<div id="wrap-fecha_bp" style="display:none;"><label style="${lbl}">F. Búsqueda Positiva</label><input type="date" id="edit-fecha_bp" value="${fdBP}" style="${inp}"></div>`;
+    html += `<div id="wrap-fecha_np_rpp" style="display:none;"><label style="${lbl}">F. Not. Personal/RPP</label><input type="date" id="edit-fecha_np_rpp" value="${fdNPR}" style="${inp}" onchange="_syncFechaDiligenciaNP()"></div>`;
+    // Inicializar visibilidad después del render
+    setTimeout(() => _toggleResultadoCampos(), 60);
   } else {
     html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
   }
@@ -3829,12 +3839,42 @@ async function editarCausa(hex) {
   `;
 }
 
-// Toggle resultado "Otro" en modal edición
-function _toggleResultadoOtro() {
+// Toggle resultado campos condicionales en modal edición
+function _toggleResultadoCampos() {
   const sel = document.getElementById('edit-resultado');
-  const wrap = document.getElementById('wrap-resultado-otro');
-  if (!sel || !wrap) return;
-  wrap.style.display = sel.value === 'OTRO' ? '' : 'none';
+  if (!sel) return;
+  const v = sel.value;
+  // Otro
+  const wOtro = document.getElementById('wrap-resultado-otro');
+  if (wOtro) wOtro.style.display = v === 'OTRO' ? '' : 'none';
+  // Fechas: ocultar todas primero
+  ['fecha_1ra_busqueda','fecha_2da_busqueda','fecha_requerimiento','fecha_diligencia','fecha_bp','fecha_np_rpp'].forEach(f => {
+    const w = document.getElementById('wrap-' + f);
+    if (w) w.style.display = 'none';
+  });
+  // Mostrar según resultado
+  const esNOT44 = v.startsWith('BP+BP2+NOT44');
+  if (esNOT44) {
+    _showWrap('fecha_1ra_busqueda');
+    _showWrap('fecha_2da_busqueda');
+    if (v !== 'BP+BP2+NOT44') _showWrap('fecha_requerimiento');
+  } else if (v === 'BP+NP+RPP') {
+    _showWrap('fecha_bp');
+    _showWrap('fecha_np_rpp');
+  } else if (v && v !== 'OTRO' || v === 'OTRO') {
+    _showWrap('fecha_diligencia');
+  }
+}
+function _showWrap(f) { const w = document.getElementById('wrap-' + f); if (w) w.style.display = ''; }
+function _syncFechaDiligencia() {
+  const src = document.getElementById('edit-fecha_2da_busqueda');
+  const dst = document.getElementById('edit-fecha_diligencia');
+  if (src && dst) dst.value = src.value;
+}
+function _syncFechaDiligenciaNP() {
+  const src = document.getElementById('edit-fecha_np_rpp');
+  const dst = document.getElementById('edit-fecha_diligencia');
+  if (src && dst) dst.value = src.value;
 }
 
 // Toggle fecha ruta en modal edición
@@ -3934,7 +3974,7 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   });
 
   // Fechas de diligencia (solo Darth)
-  ['fecha_1ra_busqueda', 'fecha_2da_busqueda', 'fecha_requerimiento', 'fecha_diligencia'].forEach(campo => {
+  ['fecha_1ra_busqueda', 'fecha_2da_busqueda', 'fecha_requerimiento', 'fecha_diligencia', 'fecha_bp', 'fecha_np_rpp'].forEach(campo => {
     const el = document.getElementById('edit-' + campo);
     if (!el) return;
     const nuevo = el.value || '';
