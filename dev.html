@@ -3725,7 +3725,12 @@ async function editarCausa(hex) {
     const estadoOpts = estados.map(([v,l]) =>
       `<option value="${v}" ${v === (c.estado||'') ? 'selected':''}>${l}</option>`
     ).join('');
-    html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}">${estadoOpts}</select></div>`;
+    html += `<div><label style="${lbl}">Estado</label><select id="edit-estado" style="${inp}" onchange="_toggleFechaRutaEdit()">${estadoOpts}</select></div>`;
+    // Fecha ruta (visible solo si estado es en_ruta o gestion_directa_receptora)
+    const frVal = c.fecha_ruta || c._causa_json?.datos?.fecha_ruta || '';
+    const esRuta = (c.estado === 'en_ruta' || c.estado === 'gestion_directa_receptora');
+    const hoy = new Date().toISOString().slice(0, 10);
+    html += `<div id="wrap-fecha-ruta-edit" style="${esRuta ? '' : 'display:none;'}"><label style="${lbl}">Fecha ruta</label><input type="date" id="edit-fecha_ruta" value="${frVal || hoy}" style="${inp}"></div>`;
     // Resultado, Derechos, Boleta (solo Darth)
     const resVal = (c.resultado || c._causa_json?.datos?.resultado || '').replace(/"/g,'&quot;');
     const derVal = (c.derechos || c._causa_json?.datos?.derechos || '').replace(/"/g,'&quot;');
@@ -3768,35 +3773,16 @@ async function editarCausa(hex) {
   `;
 }
 
-// Fecha ruta pendiente — se setea desde el prompt y se consume en guardarEdicion
-let _fechaRutaPendiente = null;
-
-function _pedirFechaRuta(hex, nuevoEstadoForzado) {
-  const hoy = new Date().toISOString().slice(0, 10);
-  document.getElementById('modal-title').textContent = 'Fecha de ruta';
-  document.getElementById('modal-body').innerHTML = `
-    <p style="font-size:13px; margin-bottom:.75rem;">¿Para qué fecha se pone en ruta esta causa?</p>
-    <div class="field">
-      <label>Fecha ruta</label>
-      <input type="date" id="prompt-fecha-ruta" value="${hoy}" style="width:100%; font-size:14px; padding:.5rem;">
-    </div>
-  `;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="_cancelarFechaRuta('${hex}')">Cancelar</button>
-    <button class="btn btn-success btn-sm" onclick="_confirmarFechaRuta('${hex}', ${nuevoEstadoForzado ? `'${nuevoEstadoForzado}'` : 'null'})">Confirmar</button>
-  `;
-}
-
-function _cancelarFechaRuta(hex) {
-  _fechaRutaPendiente = null;
-  editarCausa(hex);
-}
-
-function _confirmarFechaRuta(hex, nuevoEstadoForzado) {
-  const fecha = document.getElementById('prompt-fecha-ruta').value;
-  if (!fecha) { showToast('Selecciona una fecha', 'warn'); return; }
-  _fechaRutaPendiente = fecha;
-  guardarEdicion(hex, nuevoEstadoForzado);
+// Toggle fecha ruta en modal edición
+function _toggleFechaRutaEdit() {
+  const est = document.getElementById('edit-estado')?.value;
+  const wrap = document.getElementById('wrap-fecha-ruta-edit');
+  if (!wrap) return;
+  const necesita = (est === 'en_ruta' || est === 'gestion_directa_receptora');
+  wrap.style.display = necesita ? '' : 'none';
+  if (necesita && !document.getElementById('edit-fecha_ruta').value) {
+    document.getElementById('edit-fecha_ruta').value = new Date().toISOString().slice(0, 10);
+  }
 }
 
 async function guardarEdicion(hex, nuevoEstadoForzado) {
@@ -3832,12 +3818,6 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   if (editEstadoEl) {
     const nuevoEstado = editEstadoEl.value;
     if (nuevoEstado !== payload.estado) {
-      // Si cambia a en_ruta o gestion_directa, pedir fecha_ruta
-      const necesitaFecha = (nuevoEstado === 'en_ruta' || nuevoEstado === 'gestion_directa_receptora');
-      if (necesitaFecha && !_fechaRutaPendiente) {
-        _pedirFechaRuta(hex, nuevoEstadoForzado);
-        return;
-      }
       const estadoAnterior = payload.estado;
       payload.estado = nuevoEstado;
       c.estado = nuevoEstado;
@@ -3849,12 +3829,14 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
         fecha: new Date().toISOString(),
         usuario: currentUser.nombre
       });
-      // Guardar fecha_ruta si viene del prompt
-      if (necesitaFecha && _fechaRutaPendiente) {
-        payload.datos.fecha_ruta = _fechaRutaPendiente;
-        c.fecha_ruta = _fechaRutaPendiente;
-        modificados.push('fecha_ruta');
-        _fechaRutaPendiente = null;
+      // Guardar fecha_ruta si se cambió a en_ruta o gestion_directa
+      if (nuevoEstado === 'en_ruta' || nuevoEstado === 'gestion_directa_receptora') {
+        const fechaRutaEl = document.getElementById('edit-fecha_ruta');
+        if (fechaRutaEl && fechaRutaEl.value) {
+          payload.datos.fecha_ruta = fechaRutaEl.value;
+          c.fecha_ruta = fechaRutaEl.value;
+          modificados.push('fecha_ruta');
+        }
       }
     }
   }
