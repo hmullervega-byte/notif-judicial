@@ -2158,9 +2158,6 @@ function buildDashboard() {
     </div>
   `;
 
-  // Verificación de integridad: comparar causas en memoria vs archivos en Dropbox
-  _verificarIntegridad();
-
   if (causas.length === 0) {
     document.getElementById('dash-empty').style.display = 'block';
     document.getElementById('dash-recent').style.display = 'none';
@@ -2181,7 +2178,7 @@ function buildDashboard() {
 }
 
 async function _verificarIntegridad() {
-  if (!DBX.isConfigured()) return;
+  if (!DBX.isConfigured() || causas.length === 0) return;
   const alertId = 'integridad-alert';
   const existente = document.getElementById(alertId);
   if (existente) existente.remove();
@@ -3235,6 +3232,7 @@ async function cargarCausasDropbox(forzar = false) {
     _causasCargadas = true;
     renderCausas();
     buildDashboard();
+    _verificarIntegridad();
     renderNotificaciones();
 
   } catch(err) {
