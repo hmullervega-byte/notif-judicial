@@ -4958,7 +4958,7 @@ async function regenerarIndexRespaldo() {
         const data = await DBX.download(`/causas-dev/${entry.name}`);
         if (!data) return null;
         const datos = data.datos || {};
-        return {
+        const entrada = {
           id_hex:             data.id_hex || '',
           estado:             data.estado || '',
           rol:                datos.rol || '',
@@ -4977,16 +4977,19 @@ async function regenerarIndexRespaldo() {
           notificar_a:        datos.notificar_a || datos.notif_a || '',
           piezas:             datos.piezas || '',
           monto_mandamiento:  datos.monto_mandamiento || '',
+          derechos:           datos.derechos || '',
           nro_pagare:         datos.nro_pagare || datos.n_pagare || '',
           observacion:        datos.observacion || datos.comentario || '',
           comentario:         datos.comentario || '',
           fecha_diligencia:   datos.fecha_diligencia || data.fecha_diligencia || '',
-          fecha_ruta:         data.fecha_ruta || '',
+          fecha_ruta:         datos.fecha_ruta || '',
           ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
           resultado:          datos.resultado || data.resultado || '',
           boleta:             datos.boleta || data.boleta || '',
           historial:          data.historial || [],
         };
+        if (data.facturacion) entrada.facturacion = data.facturacion;
+        return entrada;
       } catch(e) { console.warn(`Error ${entry.name}:`, e); return null; }
     }));
     respaldo.push(...resultados.filter(Boolean));
@@ -4997,6 +5000,7 @@ async function regenerarIndexRespaldo() {
 
   respaldo.sort((a, b) => (b.ts_ingreso || '').localeCompare(a.ts_ingreso || ''));
 
+  // 1) INDEX_RESPALDO.json — todas las causas, todos los campos + facturacion + historial
   try {
     await DBX.upload('/causas-dev/INDEX_RESPALDO.json', respaldo);
   } catch(e) {
@@ -5004,47 +5008,101 @@ async function regenerarIndexRespaldo() {
     return;
   }
 
-  // También regenerar INDEX.json con resultado y boleta
+  // 2) INDEX_COMPLETO.json — idéntico a INDEX_RESPALDO.json
+  try {
+    await DBX.upload('/causas-dev/INDEX_COMPLETO.json', respaldo);
+  } catch(e) {
+    console.warn('Error subiendo INDEX_COMPLETO.json:', e);
+  }
+
+  // 3) INDEX.json — todas las causas, campos básicos sin historial ni facturacion
   const index = respaldo.map(r => ({
-    id_hex:           r.id_hex,
-    estado:           r.estado,
-    rol:              r.rol,
-    tribunal:         r.tribunal,
-    nro_solicitud:    r.nro_solicitud,
-    demandado:        r.demandado,
-    rut:              r.rut,
-    direccion:        r.direccion,
-    tipo_diligencia:  r.tipo_diligencia,
-    fecha_solicitud:  r.fecha_solicitud,
-    estudio_juridico: r.estudio_juridico,
-    notificar_a:      r.notificar_a,
-    demandante:       r.demandante,
-    ciudad:           r.ciudad || 'Antofagasta',
-    fecha_diligencia: r.fecha_diligencia || '',
-    fecha_ruta:       r.fecha_ruta || '',
-    ts_ingreso:       r.ts_ingreso || '',
-    resultado:        r.resultado || '',
-    boleta:           r.boleta || '',
+    id_hex:             r.id_hex,
+    estado:             r.estado,
+    rol:                r.rol,
+    tribunal:           r.tribunal,
+    nro_solicitud:      r.nro_solicitud,
+    demandado:          r.demandado,
+    rut:                r.rut,
+    direccion:          r.direccion,
+    tipo_diligencia:    r.tipo_diligencia,
+    fecha_solicitud:    r.fecha_solicitud,
+    estudio_juridico:   r.estudio_juridico,
+    notificar_a:        r.notificar_a,
+    demandante:         r.demandante,
+    ciudad:             r.ciudad || 'Antofagasta',
+    fecha_diligencia:   r.fecha_diligencia || '',
+    fecha_ruta:         r.fecha_ruta || '',
+    ts_ingreso:         r.ts_ingreso || '',
+    resultado:          r.resultado || '',
+    boleta:             r.boleta || '',
+    derechos:           r.derechos || '',
+    observacion:        r.observacion || '',
+    abogado_procurador: r.abogado_procurador || '',
+    monto_mandamiento:  r.monto_mandamiento || '',
+    nro_pagare:         r.nro_pagare || '',
+    banco_representado: r.banco_representado || '',
   }));
   try {
     await DBX.upload('/causas-dev/INDEX.json', index);
   } catch(e) {
-    showToast('⚠ INDEX_RESPALDO ok pero error en INDEX.json: ' + e.message, 'warn');
+    showToast('⚠ Respaldo ok pero error en INDEX.json: ' + e.message, 'warn');
     return;
   }
 
-  // Actualizar causas en memoria con resultado/boleta del respaldo
-  for (const r of respaldo) {
-    const c = causas.find(x => x.id_hex === r.id_hex);
-    if (c) {
-      c.resultado = r.resultado || c.resultado || '';
-      c.boleta = r.boleta || c.boleta || '';
-      c.fecha_diligencia = r.fecha_diligencia || c.fecha_diligencia || '';
-      c.fecha_ruta = r.fecha_ruta || c.fecha_ruta || '';
-    }
+  // 4) INDEX_RUTA.json — solo causas en_ruta o gestion_directa_receptora
+  const enRutaList = respaldo.filter(r => r.estado === 'en_ruta' || r.estado === 'gestion_directa_receptora');
+  const indexRuta = enRutaList.map(r => ({
+    id_hex:          r.id_hex,
+    rol:             r.rol,
+    tribunal:        r.tribunal,
+    demandado:       r.demandado,
+    notificar_a:     r.notificar_a,
+    rut:             r.rut,
+    direccion:       r.direccion,
+    ciudad:          r.ciudad || 'Antofagasta',
+    tipo_diligencia: r.tipo_diligencia,
+    estado:          r.estado,
+    piezas:          r.piezas || '',
+    monto_mandamiento: r.monto_mandamiento || '',
+    observacion:     r.observacion || '',
+  }));
+  try {
+    await DBX.upload('/causas-dev/INDEX_RUTA.json', indexRuta);
+  } catch(e) {
+    console.warn('Error subiendo INDEX_RUTA.json:', e);
   }
+
+  // Recargar causas en memoria desde el INDEX.json recién generado
+  causas = index.map(c => ({
+    id_hex:           c.id_hex,
+    estado:           c.estado,
+    rol:              c.rol,
+    tribunal:         c.tribunal,
+    n_solicitud:      c.nro_solicitud,
+    nro_solicitud:    c.nro_solicitud,
+    demandado:        c.demandado,
+    rut:              c.rut,
+    direccion:        c.direccion,
+    tipo_diligencia:  c.tipo_diligencia,
+    fecha_solicitud:  c.fecha_solicitud,
+    estudio:          c.estudio_juridico,
+    estudio_juridico: c.estudio_juridico,
+    notificar_a:      c.notificar_a,
+    demandante:       c.demandante,
+    ciudad:           c.ciudad || 'Antofagasta',
+    fecha_ruta:       c.fecha_ruta || '',
+    fecha_diligencia: c.fecha_diligencia || '',
+    fecha_2da_positiva: c.fecha_2da_positiva || '',
+    ts_ingreso:       c.ts_ingreso || '',
+    resultado:        c.resultado || '',
+    boleta:           c.boleta || '',
+    derechos:         c.derechos || '',
+    _causa_json:      null,
+  }));
+  _causasCargadas = true;
   renderCausas();
-  showToast(`✅ INDEX + INDEX_RESPALDO regenerados: ${respaldo.length} causas`, 'success');
+  showToast(`✅ 4 índices regenerados: ${respaldo.length} causas totales, ${enRutaList.length} en ruta`, 'success');
 }
 
 // ══════════════════════════════════════════════
