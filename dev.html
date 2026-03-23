@@ -3868,6 +3868,14 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
     });
   }
 
+  // Facturación: si el estado final es "cerrada", crear bloque si no existe
+  if (payload.estado === 'cerrada') {
+    if (!payload.datos) payload.datos = {};
+    if (!payload.datos.facturacion) {
+      payload.datos.facturacion = { estado: 'pendiente', id_estado_pago: null };
+    }
+  }
+
   if (modificados.length === 0 && !cambioEstado) {
     showToast('Sin cambios', 'info');
     verCausa(hex);
@@ -5508,6 +5516,12 @@ async function confirmarCierreGestion(hex) {
     fecha: new Date().toISOString(),
     usuario: currentUser.nombre || currentUser.username
   });
+
+  // Facturación: crear bloque si no existe
+  if (!json.datos) json.datos = {};
+  if (!json.datos.facturacion) {
+    json.datos.facturacion = { estado: 'pendiente', id_estado_pago: null };
+  }
 
   try {
     if (DBX.isConfigured()) await DBX.upload(`/causas-dev/${hex}_CAUSA.json`, json);
