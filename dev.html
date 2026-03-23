@@ -3720,6 +3720,7 @@ async function editarCausa(hex) {
     ['rut', 'RUT', c.rut],
     ['estudio', 'Estudio', c.estudio || c.estudio_juridico],
     ['abogado_procurador', 'Abogado/Procurador', c.abogado_procurador],
+    ['banco_representado', 'Banco Representado', c.banco_representado || c._causa_json?.datos?.banco_representado],
     ['direccion', 'Dirección', c.direccion, true],
     ['notificar_a', 'Notificar a', c.notificar_a, true],
     ['piezas', 'Piezas', c.piezas, true],
@@ -3893,7 +3894,7 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   if (!c) return;
 
   const camposEditables = ['fecha_solicitud','rol','n_solicitud','tribunal','demandante','demandado','rut',
-    'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
+    'estudio','abogado_procurador','banco_representado','direccion','notificar_a','tipo_diligencia','piezas','observacion'];
   const modificados = [];
   const payload = c._causa_json;
 
