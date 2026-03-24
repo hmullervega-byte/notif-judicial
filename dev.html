@@ -592,7 +592,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .alert-danger { background: var(--red-lt); border: 1px solid #fca5a5; color: #991b1b; }
 
 /* FILTROS */
-.filters-sticky { position: sticky; top: 0; z-index: 10; background: #fff; padding: .5rem 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 1rem; }
+.causas-sticky-header { position: sticky; top: 0; z-index: 10; background: #fff; padding-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
 .filter-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
 .filter-bar select, .filter-bar input { width: auto; font-size: 13px; padding: .35rem .6rem; }
 
@@ -1183,6 +1183,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
       <!-- ── LISTADO CAUSAS ── -->
       <div class="view" id="view-causas">
+        <div class="causas-sticky-header">
         <div class="page-header">
           <div>
             <div class="page-title">Causas Ingresadas</div>
@@ -1194,8 +1195,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
           </div>
         </div>
-
-        <div class="filters-sticky">
         <div class="filter-bar">
           <div class="search-bar" style="flex:1; min-width:200px;">
             <span class="search-icon">🔍</span>
@@ -1264,7 +1263,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <button class="btn btn-sm darth-only" id="btn-ids-duplicados" onclick="verificarIdsDuplicados()" style="display:none; white-space:nowrap; background:#7c3aed; color:#fff; font-weight:600;">🔍 IDs duplicados</button>
           <button class="btn btn-sm" id="btn-suspender-causa" onclick="iniciarSuspension()" style="display:none; background:#ef4444; color:#fff; font-weight:600; white-space:nowrap;">Suspender</button>
         </div>
-        </div><!-- /filters-sticky -->
+        </div><!-- /causas-sticky-header -->
 
         <div id="banner-ids-dup">
           <span>⚠</span>
@@ -1341,6 +1340,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
       <!-- ── VALIDACIÓN JEDI ── -->
       <div class="view" id="view-validacion">
+        <div class="causas-sticky-header">
         <div class="page-header">
           <div>
             <div class="page-title">Validar Causas</div>
@@ -1348,6 +1348,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
           <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarValidacion()">🔄 Recargar</button>
         </div>
+        </div><!-- /causas-sticky-header -->
 
         <div class="card">
           <div class="table-wrap">
@@ -1382,6 +1383,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
       <!-- ── SELECCIÓN DE RUTA ── -->
       <div class="view" id="view-ruta">
+        <div class="causas-sticky-header">
         <div class="page-header">
           <div>
             <div class="page-title">Ruta</div>
@@ -1391,12 +1393,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarRuta()">🔄 Recargar</button>
           </div>
         </div>
-
         <!-- Tabs: Asignar / Ver rutas -->
         <div class="ruta-tabs">
           <div class="ruta-tab active" id="tab-asignar" onclick="switchRutaTab('asignar')">Asignar a ruta</div>
           <div class="ruta-tab" id="tab-ver" onclick="switchRutaTab('ver')">Ver rutas por día</div>
         </div>
+        </div><!-- /causas-sticky-header -->
 
         <div class="ruta-layout">
           <!-- SIDEBAR: Calendario -->
@@ -1501,6 +1503,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
       <!-- ── GESTIÓN DIRECTA ── -->
       <div class="view" id="view-gestion">
+        <div class="causas-sticky-header">
         <div class="page-header">
           <div>
             <div class="page-title">Gestión Directa</div>
@@ -1510,12 +1513,12 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <button class="btn btn-secondary btn-sm" onclick="_causasCargadas=false; cargarGestion()">🔄 Recargar</button>
           </div>
         </div>
-
         <!-- Tabs: Pendientes / Terminadas -->
         <div class="ruta-tabs">
           <div class="ruta-tab active" id="tab-gestion-pend" onclick="switchGestionTab('pendientes')">Pendientes</div>
           <div class="ruta-tab" id="tab-gestion-term" onclick="switchGestionTab('terminadas')">Terminadas</div>
         </div>
+        </div><!-- /causas-sticky-header -->
 
         <!-- Panel PENDIENTES -->
         <div id="panel-gestion-pend">
