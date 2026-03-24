@@ -2965,9 +2965,12 @@ function poblarFormularioFisico(causa) {
   const tribMap = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
   const tribCorto = tribMatch ? (tribMap[tribMatch[0].toLowerCase()] || tribMatch[0]) : d.tribunal.split(' ')[0];
 
-  // Hoja 3 (citación/requerimiento) se imprime si es demanda ejecutiva
+  // Hoja 3 (citación/requerimiento) se imprime si es demanda ejecutiva o cédula
   // Tipos ejecutivos: NOT-DEMANDA-EJE-GENERAL, NOT-DEMANDA-EJE-HIPOTECARIA, etc.
+  // Tipos cédula: NOT-CEDULA, NOT-CEDULA-ART52
   const esEjecutiva = /EJE/i.test(d.tipo_diligencia);
+  const esCedula = /CEDULA/i.test(d.tipo_diligencia);
+  const mostrarHojaCitacion = esEjecutiva || esCedula;
 
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
@@ -3084,7 +3087,7 @@ function poblarFormularioFisico(causa) {
   <!-- HOJA 3 — CITACIÓN / REQUERIMIENTO      -->
   <!-- Solo si tipo_diligencia es ejecutiva    -->
   <!-- ════════════════════════════════════════ -->
-  ${esEjecutiva ? `<div class="pf-page" style="page-break-inside:avoid; overflow:hidden;">
+  ${mostrarHojaCitacion ? `<div class="pf-page" style="page-break-inside:avoid; overflow:hidden;">
     <div style="font-family:'Times New Roman',Times,serif; font-size:clamp(9pt,2.5vw,11pt); line-height:1.45; text-align:justify;">
 
       <p style="margin:0 0 2px;">
