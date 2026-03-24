@@ -3591,48 +3591,82 @@ async function verCausa(hex) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
   document.getElementById('modal-title').textContent = 'Causa — ' + (c.rol || hex.slice(0,8));
+  const _l = 'color:#888; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;';
+  const _v = 'color:#111; font-size:14px;';
+  const _vm = 'color:#111; font-size:14px; font-family:var(--mono);';
+  const _sep = 'border-bottom:1px solid #e5e7eb; padding-bottom:16px; margin-bottom:16px;';
+  const _sec = 'color:#888; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:8px;';
+  const _empty = (v) => v ? `<span style="${_v}">${v}</span>` : `<span style="color:#ccc; font-size:14px;">—</span>`;
+  const _emptyM = (v) => v ? `<span style="${_vm}">${v}</span>` : `<span style="color:#ccc; font-size:14px;">—</span>`;
+  const _drs = (c.derechos || c._causa_json?.datos?.derechos || '');
+  const _drsFmt = _drs ? ('$' + parseInt(String(_drs).replace(/\D/g,'') || '0').toLocaleString('es-CL')) : '';
+  const _obs = c.observacion || c.comentario || '';
+  const _abog = c.abogado_procurador || '';
+  const _banco = c.banco_representado || c._causa_json?.datos?.banco_representado || '';
+
   document.getElementById('modal-body').innerHTML = `
-    <div style="display:flex; gap:1rem; align-items:flex-start;">
-      <div style="flex:1;">
-        <div id="modal-campos" style="display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; font-size:13px;">
-          <div><span style="color:var(--muted); font-size:11px;">ROL</span><br><strong class="mono">${c.rol || '—'}</strong></div>
-          <div><span style="color:var(--muted); font-size:11px;">FECHA SOLICITUD</span><br><span class="mono">${fmtFecha(c.fecha_solicitud)}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">N° SOLICITUD</span><br><span class="mono">${c.n_solicitud || c.nro_solicitud || '—'}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">TRIBUNAL</span><br>${c.tribunal || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">TIPO</span><br>${tipoBadge(c.tipo_diligencia)}</div>
-          <div><span style="color:var(--muted); font-size:11px;">ESTADO</span><br>${estadoBadge(c.estado)}</div>
-          <div><span style="color:var(--muted); font-size:11px;">DEMANDANTE</span><br>${c.demandante || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">DEMANDADO</span><br>${c.demandado || '—'}</div>
-          <div><span style="color:var(--muted); font-size:11px;">RUT</span><br><span class="mono">${c.rut || '—'}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">ESTUDIO</span><br>${c.estudio || c.estudio_juridico || '—'}</div>
-          ${c.abogado_procurador ? `<div><span style="color:var(--muted); font-size:11px;">ABOGADO / PROCURADOR</span><br>${c.abogado_procurador}</div>` : ''}
-          <div><span style="color:var(--muted); font-size:11px;">F. DILIGENCIA</span><br><span class="mono">${fmtFecha(c.fecha_diligencia || c._causa_json?.datos?.fecha_diligencia || '')}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">F. RUTA</span><br><span class="mono">${c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '—'}</span></div>
-          <div class="span2"><span style="color:var(--muted); font-size:11px;">NOTIFICAR A</span><br>${c.notificar_a || '—'}</div>
-          <div class="span2"><span style="color:var(--muted); font-size:11px;">DIRECCIÓN</span><br>${c.direccion || '—'}</div>
-          <div class="span2"><span style="color:var(--muted); font-size:11px;">PIEZAS</span><br><div style="word-wrap:break-word; white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">${c.piezas || '—'}</div></div>
-          <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">RESULTADO</span><br>${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || c._causa_json?.resultado || '')}</div>
-          <div><span style="color:var(--muted); font-size:11px;">N° BOLETA</span><br><span class="mono">${c.boleta || c._causa_json?.datos?.boleta || c._causa_json?.boleta || '—'}</span></div>
-          <div><span style="color:var(--muted); font-size:11px;">N° PAGARÉ/OPERACIÓN</span><br><span class="mono">${c.nro_pagare || c._causa_json?.datos?.nro_pagare || '—'}</span></div>
+    <div id="modal-campos" style="max-width:700px;">
+      <!-- S1: Encabezado -->
+      <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:12px; ${_sep}">
+        <div style="grid-column:1/3; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><div style="${_l}">ROL</div><strong style="${_vm}">${c.rol || '—'}</strong></div>
+          <div><div style="${_l}">TRIBUNAL</div>${_empty(normalizarTribunalLetras(c.tribunal))}</div>
+          <div><div style="${_l}">N° SOLICITUD</div>${_emptyM(c.n_solicitud || c.nro_solicitud)}</div>
+          <div><div style="${_l}">TIPO</div>${tipoBadge(c.tipo_diligencia)}</div>
+          <div><div style="${_l}">ESTADO</div>${estadoBadge(c.estado)}</div>
+          <div><div style="${_l}">FECHA SOLICITUD</div>${_emptyM(fmtFecha(c.fecha_solicitud))}</div>
         </div>
-        ${(() => {
-          const hist = c._causa_json?.historial || [];
-          const msgs = [];
-          if (c.estado === 'devuelta') {
-            const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
-            if (dev) msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`);
-          }
-          // Mostrar último mensaje de reenvío (Marco → Receptora)
-          const reenvio = [...hist].reverse().find(h => h.accion === 'corregida_reenviada' && h.comentario);
-          if (reenvio && c.estado === 'pendiente_validacion') {
-            msgs.push(`<div style="margin-top:.75rem; padding:.5rem .75rem; background:#dbeafe; border:1px solid #bfdbfe; border-radius:4px; font-size:12px; color:#1e40af;"><strong>📤 Reenviada por ${reenvio.usuario || 'Marco'}:</strong> ${reenvio.comentario}</div>`);
-          }
-          return msgs.join('');
-        })()}
-        ${c.observacion || c.comentario ? `<div style="margin-top:.75rem; padding:.5rem; background:#f8fafc; border-radius:4px; font-size:12px;"><strong>Obs:</strong> ${c.observacion || c.comentario}</div>` : ''}
+        <div id="modal-qr" style="width:100px; height:100px; flex-shrink:0;"></div>
       </div>
-      <div id="modal-qr" style="width:100px; height:100px; flex-shrink:0;"></div>
+      <!-- S2: Partes -->
+      <div style="${_sep}">
+        <div style="${_sec}">PARTES</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><div style="${_l}">DEMANDANTE</div>${_empty(c.demandante)}</div>
+          <div><div style="${_l}">DEMANDADO</div>${_empty(c.demandado)}</div>
+          <div><div style="${_l}">RUT</div>${_emptyM(c.rut)}</div>
+          <div><div style="${_l}">ESTUDIO</div>${_empty(c.estudio || c.estudio_juridico)}</div>
+          ${_abog ? `<div><div style="${_l}">ABOGADO / PROCURADOR</div>${_empty(_abog)}</div>` : ''}
+          ${_banco ? `<div><div style="${_l}">BANCO REPRESENTADO</div>${_empty(_banco)}</div>` : ''}
+        </div>
+      </div>
+      <!-- S3: Diligencia -->
+      <div style="${_sep}">
+        <div style="${_sec}">DILIGENCIA</div>
+        <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+          <div><div style="${_l}">NOTIFICAR A</div>${_empty(c.notificar_a)}</div>
+          <div><div style="${_l}">DIRECCIÓN</div>${_empty(c.direccion)}</div>
+          <div><div style="${_l}">PIEZAS</div><div style="color:#111; font-size:12px; max-height:80px; overflow-y:auto; word-wrap:break-word; white-space:pre-wrap;">${c.piezas || '<span style="color:#ccc">—</span>'}</div></div>
+        </div>
+      </div>
+      <!-- S4: Resultado -->
+      <div style="${_obs ? _sep : ''}">
+        <div style="${_sec}">RESULTADO</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><div style="${_l}">RESULTADO</div>${_empty(resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || c._causa_json?.resultado || ''))}</div>
+          <div><div style="${_l}">DERECHOS</div>${_emptyM(_drsFmt)}</div>
+          <div><div style="${_l}">F. DILIGENCIA</div>${_emptyM(fmtFecha(c.fecha_diligencia || c._causa_json?.datos?.fecha_diligencia || ''))}</div>
+          <div><div style="${_l}">F. RUTA</div>${_emptyM(c.fecha_ruta ? fmtFecha(c.fecha_ruta) : '')}</div>
+          <div><div style="${_l}">N° BOLETA</div>${_emptyM(c.boleta || c._causa_json?.datos?.boleta || c._causa_json?.boleta)}</div>
+          <div><div style="${_l}">N° PAGARÉ/OPERACIÓN</div>${_emptyM(c.nro_pagare || c._causa_json?.datos?.nro_pagare)}</div>
+          <div style="grid-column:1/-1;"><div style="${_l}">ID HEX</div><span style="font-family:var(--mono); font-size:11px; color:#666;">${c.id_hex}</span></div>
+        </div>
+      </div>
+      <!-- S5: Observación -->
+      ${_obs ? `<div><div style="${_sec}">OBSERVACIÓN</div><div style="color:#111; font-size:13px; background:#f8fafc; padding:8px 10px; border-radius:4px;">${_obs}</div></div>` : ''}
+      ${(() => {
+        const hist = c._causa_json?.historial || [];
+        const msgs = [];
+        if (c.estado === 'devuelta') {
+          const dev = [...hist].reverse().find(h => h.accion === 'devuelta');
+          if (dev) msgs.push(`<div style="margin-top:12px; padding:8px 10px; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; font-size:12px; color:#9a3412;"><strong>↩ Devuelta por ${dev.usuario || 'Receptora'}:</strong> ${dev.comentario}</div>`);
+        }
+        const reenvio = [...hist].reverse().find(h => h.accion === 'corregida_reenviada' && h.comentario);
+        if (reenvio && c.estado === 'pendiente_validacion') {
+          msgs.push(`<div style="margin-top:12px; padding:8px 10px; background:#dbeafe; border:1px solid #bfdbfe; border-radius:4px; font-size:12px; color:#1e40af;"><strong>📤 Reenviada por ${reenvio.usuario || 'Marco'}:</strong> ${reenvio.comentario}</div>`);
+        }
+        return msgs.join('');
+      })()}
     </div>
   `;
   // Generar QR en el modal
@@ -3712,32 +3746,21 @@ async function editarCausa(hex) {
     }
   }
 
-  const lbl = 'font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase;';
-  const inp = 'font-size:13px; margin-top:2px; width:100%;';
-
-  const camposTexto = [
-    ['rol', 'ROL', c.rol],
-    ['n_solicitud', 'N° Solicitud', c.n_solicitud || c.nro_solicitud],
-    ['demandante', 'Demandante', c.demandante],
-    ['demandado', 'Demandado', c.demandado],
-    ['rut', 'RUT', c.rut],
-    ['estudio', 'Estudio', c.estudio || c.estudio_juridico],
-    ['abogado_procurador', 'Abogado/Procurador', c.abogado_procurador],
-    ['banco_representado', 'Banco Representado', c.banco_representado || c._causa_json?.datos?.banco_representado],
-    ['direccion', 'Dirección', c.direccion, true],
-    ['notificar_a', 'Notificar a', c.notificar_a, true],
-    ['piezas', 'Piezas', c.piezas, true],
-    ['observacion', 'Observación', c.observacion || c.comentario, true],
-  ];
+  const lbl = 'font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em;';
+  const inp = 'font-size:14px; margin-top:2px; width:100%;';
+  const _sep = 'border-bottom:1px solid #e5e7eb; padding-bottom:16px; margin-bottom:16px;';
+  const _sec = 'color:#888; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:8px;';
+  const _esc = (v) => (v||'').replace(/"/g,'&quot;');
 
   let html = '';
-  // Fecha solicitud
-  html += `<div><label style="${lbl}">Fecha Solicitud</label><input type="date" id="edit-fecha_solicitud" value="${c.fecha_solicitud || ''}" style="${inp}"></div>`;
-  // Tribunal select
+
+  // S1: Encabezado
+  html += `<div style="${_sep}"><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
+  html += `<div><label style="${lbl}">ROL</label><input type="text" id="edit-rol" value="${_esc(c.rol)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
-  // Tipo diligencia select
+  html += `<div><label style="${lbl}">N° Solicitud</label><input type="text" id="edit-n_solicitud" value="${_esc(c.n_solicitud || c.nro_solicitud)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
-  // Estado select (solo Darth)
+  // Estado + Fecha solicitud
   if (currentUser?.perfil === 'darth') {
     const estados = [
       ['ingresada','Ingresada'],
@@ -3812,19 +3835,28 @@ async function editarCausa(hex) {
   } else {
     html += `<div><label style="${lbl}">Estado</label><div style="${inp} color:var(--muted);">${estadoBadge(c.estado)}</div></div>`;
   }
-  // Campos texto
-  html += camposTexto.map(([key, label, val, span]) => {
-    if (key === 'piezas') {
-      return `<div class="span2">
-        <label style="${lbl}">${label}</label>
-        <textarea id="edit-${key}" style="${inp}; min-height:80px; resize:vertical; width:100%;" oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">${(val||'').replace(/</g,'&lt;')}</textarea>
-      </div>`;
-    }
-    return `<div class="${span ? 'span2' : ''}">
-      <label style="${lbl}">${label}</label>
-      <input type="text" id="edit-${key}" value="${(val||'').replace(/"/g,'&quot;')}" style="${inp}">
-    </div>`;
-  }).join('');
+  html += `<div><label style="${lbl}">Fecha Solicitud</label><input type="date" id="edit-fecha_solicitud" value="${c.fecha_solicitud || ''}" style="${inp}"></div>`;
+  html += `</div></div>`;
+
+  // S2: Partes
+  html += `<div style="${_sep}"><div style="${_sec}">PARTES</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
+  html += `<div><label style="${lbl}">Demandante</label><input type="text" id="edit-demandante" value="${_esc(c.demandante)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Demandado</label><input type="text" id="edit-demandado" value="${_esc(c.demandado)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">RUT</label><input type="text" id="edit-rut" value="${_esc(c.rut)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Estudio</label><input type="text" id="edit-estudio" value="${_esc(c.estudio || c.estudio_juridico)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Abogado/Procurador</label><input type="text" id="edit-abogado_procurador" value="${_esc(c.abogado_procurador)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Banco Representado</label><input type="text" id="edit-banco_representado" value="${_esc(c.banco_representado || c._causa_json?.datos?.banco_representado)}" style="${inp}"></div>`;
+  html += `</div></div>`;
+
+  // S3: Diligencia
+  html += `<div style="${_sep}"><div style="${_sec}">DILIGENCIA</div><div style="display:grid; grid-template-columns:1fr; gap:12px;">`;
+  html += `<div><label style="${lbl}">Notificar a</label><input type="text" id="edit-notificar_a" value="${_esc(c.notificar_a)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Dirección</label><input type="text" id="edit-direccion" value="${_esc(c.direccion)}" style="${inp}"></div>`;
+  html += `<div><label style="${lbl}">Piezas</label><textarea id="edit-piezas" style="${inp}; min-height:80px; resize:vertical;" oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">${(c.piezas||'').replace(/</g,'&lt;')}</textarea></div>`;
+  html += `</div></div>`;
+
+  // S4: Observación
+  html += `<div><label style="${lbl}">Observación</label><input type="text" id="edit-observacion" value="${_esc(c.observacion || c.comentario)}" style="${inp}"></div>`;
 
   // Aviso modo corrección de duplicados
   if (_filtroIdsDup && currentUser?.perfil === 'darth') {
@@ -5457,6 +5489,21 @@ function normalizarTribunal(str) {
   if (/protección|proteccion/.test(low)) return 'Apel.(Prot.)';
   if (/apelaciones/.test(low)) return 'C. Apelaciones';
   return s;
+}
+
+function normalizarTribunalLetras(t) {
+  if (!t) return '—';
+  const MAP = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','5':'Quinto'};
+  const m = t.match(/(\d)/);
+  if (m && MAP[m[1]]) {
+    const idx = t.toLowerCase().indexOf('juzgado');
+    if (idx > 0) return MAP[m[1]] + ' ' + t.substring(idx);
+  }
+  const low = t.toLowerCase();
+  for (const ord of ['primer','segundo','tercer','cuarto','quinto']) {
+    if (low.includes(ord)) return t;
+  }
+  return t;
 }
 
 function tipoBadge(tipo) {
