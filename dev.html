@@ -1191,7 +1191,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
           <div style="display:flex; gap:.5rem;">
             <button class="btn btn-secondary btn-sm" onclick="cargarCausasDropbox(true)" title="Recargar desde Dropbox">🔄 Recargar</button>
-            <button class="btn btn-secondary btn-sm darth-only" id="btn-regen-respaldo" onclick="regenerarIndexRespaldo()" title="Regenerar INDEX_RESPALDO.json desde todas las causas" style="display:none;">🔄 Regenerar respaldo</button>
             <button class="btn btn-primary btn-sm" onclick="showView('view-ingreso')">+ Nueva causa</button>
           </div>
         </div>
@@ -2210,7 +2209,7 @@ async function _verificarIntegridad() {
       const alert = document.createElement('div');
       alert.id = alertId;
       alert.style.cssText = 'background:#fef2f2; border:2px solid #dc2626; border-radius:8px; padding:12px 16px; margin-bottom:1rem; font-size:13px; color:#991b1b; font-weight:600;';
-      alert.innerHTML = `⚠ <strong>Alerta de integridad:</strong> Dropbox tiene <strong>${nDropbox}</strong> causas pero se cargaron <strong>${nMemoria}</strong>. Diferencia: <strong>${diff}</strong> causas. Ejecutar <strong>"Regenerar respaldo"</strong> para corregir.`;
+      alert.innerHTML = `⚠ <strong>Alerta de integridad:</strong> Dropbox tiene <strong>${nDropbox}</strong> causas pero se cargaron <strong>${nMemoria}</strong>. Diferencia: <strong>${diff}</strong> causas. Ejecutar <strong>python generar_index.py</strong> desde la terminal para corregir.`;
       statsGrid.parentNode.insertBefore(alert, statsGrid);
     }
   } catch (e) {
@@ -5155,180 +5154,6 @@ async function exportarCorrespondencia() {
   showToast(`✅ Exportado: ${filename} (${resultados.length} causas)`, 'success');
 }
 
-// Regenerar INDEX_RESPALDO.json desde el navegador (Darth)
-async function regenerarIndexRespaldo() {
-  if (!DBX.isConfigured()) { showToast('❌ Dropbox no configurado', 'error'); return; }
-  showToast('⏳ Descargando todas las causas...', 'info');
-
-  // Listar todos los _CAUSA.json
-  let archivos = [];
-  try {
-    const entries = await DBX.listFolder('/causas-dev');
-    console.log(`[regenerarIndexRespaldo] listFolder retornó ${entries.length} entries totales`);
-    archivos = entries.filter(e => e.name.endsWith('_CAUSA.json') && e.name !== 'INDEX.json' && e.name !== 'INDEX_RESPALDO.json');
-    console.log(`[regenerarIndexRespaldo] ${archivos.length} archivos _CAUSA.json encontrados`);
-  } catch(e) {
-    showToast('❌ Error listando causas: ' + e.message, 'error');
-    return;
-  }
-
-  showToast(`⏳ Procesando ${archivos.length} causas (${archivos.length} listadas de Dropbox)...`, 'info');
-
-  // Descargar en lotes de 20
-  const respaldo = [];
-  for (let i = 0; i < archivos.length; i += 20) {
-    const lote = archivos.slice(i, i + 20);
-    const resultados = await Promise.all(lote.map(async (entry) => {
-      try {
-        const data = await DBX.download(`/causas-dev/${entry.name}`);
-        if (!data) return null;
-        const datos = data.datos || {};
-        const entrada = {
-          id_hex:             data.id_hex || '',
-          estado:             data.estado || '',
-          rol:                datos.rol || '',
-          tribunal:           datos.tribunal || '',
-          demandante:         datos.demandante || '',
-          demandado:          datos.demandado || '',
-          rut:                datos.rut || '',
-          direccion:          datos.direccion || '',
-          ciudad:             datos.ciudad || 'Antofagasta',
-          tipo_diligencia:    datos.tipo_diligencia || '',
-          fecha_solicitud:    datos.fecha_solicitud || '',
-          nro_solicitud:      datos.nro_solicitud || datos.n_solicitud || '',
-          estudio_juridico:   datos.estudio_juridico || datos.estudio || '',
-          abogado_procurador: datos.abogado_procurador || '',
-          banco_representado: datos.banco_representado || '',
-          notificar_a:        datos.notificar_a || datos.notif_a || '',
-          piezas:             datos.piezas || '',
-          monto_mandamiento:  datos.monto_mandamiento || '',
-          derechos:           datos.derechos || '',
-          nro_pagare:         datos.nro_pagare || datos.n_pagare || '',
-          observacion:        datos.observacion || datos.comentario || '',
-          comentario:         datos.comentario || '',
-          fecha_diligencia:   datos.fecha_diligencia || data.fecha_diligencia || '',
-          fecha_ruta:         datos.fecha_ruta || '',
-          ts_ingreso:         (data.historial || [{}])[0]?.fecha || '',
-          resultado:          datos.resultado || data.resultado || '',
-          boleta:             datos.boleta || data.boleta || '',
-          historial:          data.historial || [],
-        };
-        if (data.facturacion) entrada.facturacion = data.facturacion;
-        return entrada;
-      } catch(e) { console.warn(`Error ${entry.name}:`, e); return null; }
-    }));
-    respaldo.push(...resultados.filter(Boolean));
-    if ((i + 20) % 100 === 0 || i + 20 >= archivos.length) {
-      showToast(`⏳ ${Math.min(i + 20, archivos.length)}/${archivos.length} procesadas...`, 'info');
-    }
-  }
-
-  respaldo.sort((a, b) => (b.ts_ingreso || '').localeCompare(a.ts_ingreso || ''));
-
-  // 1) INDEX_RESPALDO.json — todas las causas, todos los campos + facturacion + historial
-  try {
-    await DBX.upload('/causas-dev/INDEX_RESPALDO.json', respaldo);
-  } catch(e) {
-    showToast('❌ Error subiendo INDEX_RESPALDO.json: ' + e.message, 'error');
-    return;
-  }
-
-  // 2) INDEX_COMPLETO.json — idéntico a INDEX_RESPALDO.json
-  try {
-    await DBX.upload('/causas-dev/INDEX_COMPLETO.json', respaldo);
-  } catch(e) {
-    console.warn('Error subiendo INDEX_COMPLETO.json:', e);
-  }
-
-  // 3) INDEX.json — todas las causas, campos básicos sin historial ni facturacion
-  const index = respaldo.map(r => ({
-    id_hex:             r.id_hex,
-    estado:             r.estado,
-    rol:                r.rol,
-    tribunal:           r.tribunal,
-    nro_solicitud:      r.nro_solicitud,
-    demandado:          r.demandado,
-    rut:                r.rut,
-    direccion:          r.direccion,
-    tipo_diligencia:    r.tipo_diligencia,
-    fecha_solicitud:    r.fecha_solicitud,
-    estudio_juridico:   r.estudio_juridico,
-    notificar_a:        r.notificar_a,
-    demandante:         r.demandante,
-    ciudad:             r.ciudad || 'Antofagasta',
-    fecha_diligencia:   r.fecha_diligencia || '',
-    fecha_ruta:         r.fecha_ruta || '',
-    ts_ingreso:         r.ts_ingreso || '',
-    resultado:          r.resultado || '',
-    boleta:             r.boleta || '',
-    derechos:           r.derechos || '',
-    observacion:        r.observacion || '',
-    abogado_procurador: r.abogado_procurador || '',
-    monto_mandamiento:  r.monto_mandamiento || '',
-    nro_pagare:         r.nro_pagare || '',
-    banco_representado: r.banco_representado || '',
-  }));
-  try {
-    await DBX.upload('/causas-dev/INDEX.json', index);
-  } catch(e) {
-    showToast('⚠ Respaldo ok pero error en INDEX.json: ' + e.message, 'warn');
-    return;
-  }
-
-  // 4) INDEX_RUTA.json — solo causas en_ruta o gestion_directa_receptora
-  const enRutaList = respaldo.filter(r => r.estado === 'en_ruta' || r.estado === 'gestion_directa_receptora');
-  const indexRuta = enRutaList.map(r => ({
-    id_hex:          r.id_hex,
-    rol:             r.rol,
-    tribunal:        r.tribunal,
-    demandado:       r.demandado,
-    notificar_a:     r.notificar_a,
-    rut:             r.rut,
-    direccion:       r.direccion,
-    ciudad:          r.ciudad || 'Antofagasta',
-    tipo_diligencia: r.tipo_diligencia,
-    estado:          r.estado,
-    piezas:          r.piezas || '',
-    monto_mandamiento: r.monto_mandamiento || '',
-    observacion:     r.observacion || '',
-  }));
-  try {
-    await DBX.upload('/causas-dev/INDEX_RUTA.json', indexRuta);
-  } catch(e) {
-    console.warn('Error subiendo INDEX_RUTA.json:', e);
-  }
-
-  // Recargar causas en memoria desde el INDEX.json recién generado
-  causas = index.map(c => ({
-    id_hex:           c.id_hex,
-    estado:           c.estado,
-    rol:              c.rol,
-    tribunal:         c.tribunal,
-    n_solicitud:      c.nro_solicitud,
-    nro_solicitud:    c.nro_solicitud,
-    demandado:        c.demandado,
-    rut:              c.rut,
-    direccion:        c.direccion,
-    tipo_diligencia:  c.tipo_diligencia,
-    fecha_solicitud:  c.fecha_solicitud,
-    estudio:          c.estudio_juridico,
-    estudio_juridico: c.estudio_juridico,
-    notificar_a:      c.notificar_a,
-    demandante:       c.demandante,
-    ciudad:           c.ciudad || 'Antofagasta',
-    fecha_ruta:       c.fecha_ruta || '',
-    fecha_diligencia: c.fecha_diligencia || '',
-    fecha_2da_positiva: c.fecha_2da_positiva || '',
-    ts_ingreso:       c.ts_ingreso || '',
-    resultado:        c.resultado || '',
-    boleta:           c.boleta || '',
-    derechos:         c.derechos || '',
-    _causa_json:      null,
-  }));
-  _causasCargadas = true;
-  renderCausas();
-  showToast(`✅ 4 índices regenerados: ${respaldo.length} causas totales, ${enRutaList.length} en ruta`, 'success');
-}
 
 // ══════════════════════════════════════════════
 // CAUSAS DEVUELTAS
