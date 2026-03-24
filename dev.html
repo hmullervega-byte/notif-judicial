@@ -4973,8 +4973,8 @@ function limpiarDireccionOptiroute(dir) {
   let d = dir.trim();
   d = d.replace(/^calle\s+/i, '');
   d = d.replace(/N[°º]\s*/gi, ' ');
-  d = d.replace(/\s+(departamento|depto|dept|dpto|local|casa|oficina|block|torre|piso|of\.|of|villa|sector|poblaci[oó]n)\b.*/i, '');
-  d = d.replace(/#/g, '');
+  d = d.replace(/\s+(departamento|depto|dept|dpto|local|casa|oficina|block|torre|piso|of\.|of|villa|sector|poblaci[oó]n|del\s+conjunto|conjunto|condominio|ampliaci[oó]n|etapa|ubicado)\b.*/i, '');
+  d = d.replace(/[#"']/g, '');
   d = d.replace(/,/g, '');
   d = d.replace(/\s{2,}/g, ' ');
   return d.trim();
