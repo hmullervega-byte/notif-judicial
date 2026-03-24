@@ -4968,9 +4968,19 @@ function _calleNumero(dir) {
 }
 
 function _numTribunal(t) { const m = (t||'').match(/(\d)/); return m ? m[1] : ''; }
+function limpiarDireccionOptiroute(dir) {
+  if (!dir) return '';
+  let d = dir.trim();
+  d = d.replace(/^calle\s+/i, '');
+  d = d.replace(/N[°º]\s*/gi, ' ');
+  d = d.replace(/\s+(departamento|depto|dept|dpto|local|casa|oficina|block|torre|piso|of\.|of|villa|sector|poblaci[oó]n)\b.*/i, '');
+  d = d.replace(/#/g, '');
+  d = d.replace(/\s{2,}/g, ' ');
+  return d.trim();
+}
 function _buildOptiroute(lista) {
   const headers = ['nombre','dirección','departamento','extra','comuna','correo','teléfono','demanda','referencia_pedido','proveedor'];
-  const rows = lista.map(c => { const nt = _numTribunal(c.tribunal); const nombre = (c.rol||'') + (nt ? '-' + nt : ''); return [nombre, _calleNumero(c.direccion), '', '', 'Antofagasta', '', '', '', '', '']; });
+  const rows = lista.map(c => { const nt = _numTribunal(c.tribunal); const nombre = (c.rol||'') + (nt ? '-' + nt : ''); return [nombre, limpiarDireccionOptiroute(c.direccion), '', '', 'Antofagasta', '', '', '', '', '']; });
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
