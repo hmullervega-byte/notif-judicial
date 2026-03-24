@@ -3610,8 +3610,8 @@ async function verCausa(hex) {
         <div style="grid-column:1/3; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div><div style="${_l}">ROL</div><strong style="${_vm}">${c.rol || '—'}</strong></div>
           <div><div style="${_l}">TRIBUNAL</div>${_empty(normalizarTribunalLetras(c.tribunal))}</div>
-          <div><div style="${_l}">N° SOLICITUD</div>${_emptyM(c.n_solicitud || c.nro_solicitud)}</div>
           <div><div style="${_l}">TIPO</div>${tipoBadge(c.tipo_diligencia)}</div>
+          <div><div style="${_l}">N° SOLICITUD</div>${_emptyM(c.n_solicitud || c.nro_solicitud)}</div>
           <div><div style="${_l}">ESTADO</div>${estadoBadge(c.estado)}</div>
           <div><div style="${_l}">FECHA SOLICITUD</div>${_emptyM(fmtFecha(c.fecha_solicitud))}</div>
         </div>
@@ -3757,8 +3757,8 @@ async function editarCausa(hex) {
   html += `<div style="${_sep}"><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
   html += `<div><label style="${lbl}">ROL</label><input type="text" id="edit-rol" value="${_esc(c.rol)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
-  html += `<div><label style="${lbl}">N° Solicitud</label><input type="text" id="edit-n_solicitud" value="${_esc(c.n_solicitud || c.nro_solicitud)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
+  html += `<div><label style="${lbl}">N° Solicitud</label><input type="text" id="edit-n_solicitud" value="${_esc(c.n_solicitud || c.nro_solicitud)}" style="${inp}"></div>`;
   // Estado + Fecha solicitud
   if (currentUser?.perfil === 'darth') {
     const estados = [
