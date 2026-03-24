@@ -4972,6 +4972,7 @@ function limpiarDireccionOptiroute(dir) {
   d = d.replace(/N[°º]\s*/gi, ' ');
   d = d.replace(/\s+(departamento|depto|dept|dpto|local|casa|oficina|block|torre|piso|of\.|of|villa|sector|poblaci[oó]n)\b.*/i, '');
   d = d.replace(/#/g, '');
+  d = d.replace(/,/g, '');
   d = d.replace(/\s{2,}/g, ' ');
   return d.trim();
 }
