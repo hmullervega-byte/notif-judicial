@@ -1698,7 +1698,7 @@ const DBX = {
         : 'https://api.dropboxapi.com/2/files/list_folder';
       const body = cursor
         ? JSON.stringify({ cursor })
-        : JSON.stringify({ path, limit: 2000 });
+        : JSON.stringify({ path, limit: 500 });
 
       const resp = await fetch(url, {
         method: 'POST',
@@ -5165,13 +5165,15 @@ async function regenerarIndexRespaldo() {
   let archivos = [];
   try {
     const entries = await DBX.listFolder('/causas-dev');
+    console.log(`[regenerarIndexRespaldo] listFolder retornó ${entries.length} entries totales`);
     archivos = entries.filter(e => e.name.endsWith('_CAUSA.json') && e.name !== 'INDEX.json' && e.name !== 'INDEX_RESPALDO.json');
+    console.log(`[regenerarIndexRespaldo] ${archivos.length} archivos _CAUSA.json encontrados`);
   } catch(e) {
     showToast('❌ Error listando causas: ' + e.message, 'error');
     return;
   }
 
-  showToast(`⏳ Procesando ${archivos.length} causas...`, 'info');
+  showToast(`⏳ Procesando ${archivos.length} causas (${archivos.length} listadas de Dropbox)...`, 'info');
 
   // Descargar en lotes de 20
   const respaldo = [];
