@@ -4964,9 +4964,10 @@ function _calleNumero(dir) {
   return limpia.trim();
 }
 
+function _numTribunal(t) { const m = (t||'').match(/(\d)/); return m ? m[1] : ''; }
 function _buildOptiroute(lista) {
   const headers = ['nombre','dirección','departamento','extra','comuna','correo','teléfono','demanda','referencia_pedido','proveedor'];
-  const rows = lista.map(c => [c.rol||'', _calleNumero(c.direccion), '', '', 'Antofagasta', '', '', '', '', '']);
+  const rows = lista.map(c => { const nt = _numTribunal(c.tribunal); const nombre = (c.rol||'') + (nt ? '-' + nt : ''); return [nombre, _calleNumero(c.direccion), '', '', 'Antofagasta', '', '', '', '', '']; });
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
