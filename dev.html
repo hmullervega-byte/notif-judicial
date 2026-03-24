@@ -2965,12 +2965,8 @@ function poblarFormularioFisico(causa) {
   const tribMap = { primer:'Primer', segund:'Segundo', tercer:'Tercer', cuart:'Cuarto', quint:'Quinto' };
   const tribCorto = tribMatch ? (tribMap[tribMatch[0].toLowerCase()] || tribMatch[0]) : d.tribunal.split(' ')[0];
 
-  // Hoja 3 (citación/requerimiento) se imprime si es demanda ejecutiva o cédula
-  // Tipos ejecutivos: NOT-DEMANDA-EJE-GENERAL, NOT-DEMANDA-EJE-HIPOTECARIA, etc.
-  // Tipos cédula: NOT-CEDULA, NOT-CEDULA-ART52
-  const esEjecutiva = /EJE/i.test(d.tipo_diligencia);
-  const esCedula = /CEDULA/i.test(d.tipo_diligencia);
-  const mostrarHojaCitacion = esEjecutiva || esCedula;
+  // Hoja 3 (citación/requerimiento): ejecutivas, cédulas, cumplimiento incidental, juicio sumario
+  const mostrarHojaCitacion = /EJE|CEDULA|CUMPLIMIENTO-INCIDENTAL|JUICIO-SUMARIO/i.test(d.tipo_diligencia);
 
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
