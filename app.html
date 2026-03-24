@@ -2974,7 +2974,7 @@ function poblarFormularioFisico(causa) {
   };
 
   // Tribunal en letras: "Tercer Juzgado de Letras de Antofagasta"
-  const tribLetras = normalizarTribunalLetras(d.tribunal);
+  const tribLetras = tribunalOrdinalCompleto(d.tribunal);
 
   // Hoja 3 (citación/requerimiento): ejecutivas, cédulas, cumplimiento incidental, juicio sumario
   const mostrarHojaCitacion = /EJE|CEDULA|CUMPLIMIENTO-INCIDENTAL|JUICIO-SUMARIO/i.test(d.tipo_diligencia);
@@ -3058,7 +3058,7 @@ function poblarFormularioFisico(causa) {
     <!-- PIEZAS + ESTAMPADO/INFORMADO -->
     <div style="margin-top:6px; padding:4px 0; border-top:1px solid #000;">
       <div style="font-size:9pt; font-weight:700; margin-bottom:1px;">${d.tipo_diligencia || 'Notificar demanda'}</div>
-      ${!/CEDULA/i.test(d.tipo_diligencia) ? `<div style="font-size:9pt; margin-bottom:4px;">${d.piezas || 'de la demanda ejecutiva y la resolución que recae sobre ella, conjuntamente con los demás antecedentes necesarios para su acertada inteligencia'}</div>` : ''}
+      ${(d.piezas && d.piezas !== '—') ? `<div style="font-size:9pt; margin-bottom:4px;">${d.piezas}</div>` : ''}
     </div>
 
     <div style="border-top:1px solid #000; margin-top:6px;"></div>
@@ -5342,6 +5342,22 @@ function normalizarTribunal(str) {
   if (/protección|proteccion/.test(low)) return 'Apel.(Prot.)';
   if (/apelaciones/.test(low)) return 'C. Apelaciones';
   return s;
+}
+
+function tribunalOrdinalCompleto(t) {
+  if (!t) return '—';
+  const MAP = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','5':'Quinto'};
+  const m = t.match(/(\d)/);
+  if (m && MAP[m[1]]) {
+    const idx = t.toLowerCase().indexOf('juzgado');
+    if (idx > 0) return MAP[m[1]] + ' ' + t.substring(idx);
+    return MAP[m[1]] + ' Juzgado de Letras de Antofagasta';
+  }
+  const low = t.toLowerCase();
+  for (const ord of ['primer','segundo','tercer','cuarto','quinto']) {
+    if (low.includes(ord)) return t;
+  }
+  return t;
 }
 
 function normalizarTribunalLetras(t) {
