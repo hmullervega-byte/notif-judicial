@@ -2959,6 +2959,9 @@ function poblarFormularioFisico(causa) {
     comuna:          'ANTOFAGASTA',
   };
 
+  // DEBUG: verificar piezas y tribunal
+  console.log('PIEZAS:', JSON.stringify(d.piezas), '| tipo:', d.tipo_diligencia, '| tribunal:', d.tribunal);
+
   // Tribunal en letras: "Tercer Juzgado de Letras de Antofagasta"
   const tribLetras = tribunalOrdinalCompleto(d.tribunal);
 
