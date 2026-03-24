@@ -3613,6 +3613,7 @@ async function verCausa(hex) {
           <div><span style="color:var(--muted); font-size:11px;">ID HEX</span><br><span class="mono" style="font-size:11px;">${c.id_hex}</span></div>
           <div><span style="color:var(--muted); font-size:11px;">RESULTADO</span><br>${resultadoTexto(c.resultado || c._causa_json?.datos?.resultado || c._causa_json?.resultado || '')}</div>
           <div><span style="color:var(--muted); font-size:11px;">N° BOLETA</span><br><span class="mono">${c.boleta || c._causa_json?.datos?.boleta || c._causa_json?.boleta || '—'}</span></div>
+          <div><span style="color:var(--muted); font-size:11px;">N° PAGARÉ/OPERACIÓN</span><br><span class="mono">${c.nro_pagare || c._causa_json?.datos?.nro_pagare || '—'}</span></div>
         </div>
         ${(() => {
           const hist = c._causa_json?.historial || [];
@@ -3787,8 +3788,10 @@ async function editarCausa(hex) {
     }
     const derVal = (c.derechos || c._causa_json?.datos?.derechos || '').replace(/"/g,'&quot;');
     const bolVal = (c.boleta || c._causa_json?.datos?.boleta || '').replace(/"/g,'&quot;');
+    const pagVal = (c.nro_pagare || c._causa_json?.datos?.nro_pagare || '').replace(/"/g,'&quot;');
     html += `<div><label style="${lbl}">Derechos ($)</label><input type="text" id="edit-derechos" value="${derVal}" style="${inp}" placeholder="Monto derechos"></div>`;
     html += `<div><label style="${lbl}">N° Boleta</label><input type="text" id="edit-boleta" value="${bolVal}" style="${inp}" placeholder="N° boleta(s)"></div>`;
+    html += `<div><label style="${lbl}">N° Pagaré/Operación</label><input type="text" id="edit-nro_pagare" value="${pagVal}" style="${inp}" placeholder="N° pagaré u operación"></div>`;
     // Fechas de diligencia (solo Darth) — se muestran/ocultan según resultado
     const datos = c._causa_json?.datos || {};
     const fd1 = datos.fecha_1ra_busqueda || '';
@@ -4012,7 +4015,7 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
       c.resultado = nuevoRes;
     }
   }
-  ['derechos', 'boleta'].forEach(campo => {
+  ['derechos', 'boleta', 'nro_pagare'].forEach(campo => {
     const el = document.getElementById('edit-' + campo);
     if (!el) return;
     const nuevo = el.value.trim();
