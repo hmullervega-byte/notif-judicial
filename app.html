@@ -592,7 +592,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 .alert-danger { background: var(--red-lt); border: 1px solid #fca5a5; color: #991b1b; }
 
 /* FILTROS */
-.filter-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; position: sticky; top: 0; z-index: 10; background: #fff; padding: .5rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.filters-sticky { position: sticky; top: 0; z-index: 10; background: #fff; padding: .5rem 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 1rem; }
+.filter-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
 .filter-bar select, .filter-bar input { width: auto; font-size: 13px; padding: .35rem .6rem; }
 
 /* RESPONSIVE */
@@ -1194,6 +1195,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
         </div>
 
+        <div class="filters-sticky">
         <div class="filter-bar">
           <div class="search-bar" style="flex:1; min-width:200px;">
             <span class="search-icon">🔍</span>
@@ -1262,6 +1264,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           <button class="btn btn-sm darth-only" id="btn-ids-duplicados" onclick="verificarIdsDuplicados()" style="display:none; white-space:nowrap; background:#7c3aed; color:#fff; font-weight:600;">🔍 IDs duplicados</button>
           <button class="btn btn-sm" id="btn-suspender-causa" onclick="iniciarSuspension()" style="display:none; background:#ef4444; color:#fff; font-weight:600; white-space:nowrap;">Suspender</button>
         </div>
+        </div><!-- /filters-sticky -->
 
         <div id="banner-ids-dup">
           <span>⚠</span>
