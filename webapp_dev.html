@@ -913,53 +913,24 @@
       </button>
       <button class="code-btn" data-family="1" data-code="D07" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D07</span>
-        <span class="code-desc">Falta número de departamento</span>
+        <span class="code-desc">Falta nomenclatura de torre</span>
       </button>
       <button class="code-btn" data-family="1" data-code="D08" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D08</span>
-        <span class="code-desc">Falta N° depto, sin conserje</span>
+        <span class="code-desc">Falta número de departamento</span>
       </button>
       <button class="code-btn" data-family="1" data-code="D09" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D09</span>
-        <span class="code-desc">Falta block y N° departamento</span>
+        <span class="code-desc">Falta torre y N° departamento</span>
       </button>
-      <button class="code-btn" data-family="1" data-code="D10" onclick="selectD(this)">
-        <span class="code-tag" style="color:var(--warning)">D10</span>
-        <span class="code-desc">Conserje sin información</span>
-      </button>
-      <button class="code-btn" data-family="1" data-code="D10b" onclick="selectD(this)">
-        <span class="code-tag" style="color:var(--warning)">D10b</span>
-        <span class="code-desc">Conserje con info adicional →</span>
-      </button>
-      <button class="code-btn" data-family="1" data-code="D10c" onclick="selectD(this)">
-        <span class="code-tag" style="color:var(--warning)">D10c</span>
-        <span class="code-desc">Conserje consulta registros, no figura →</span>
+      <button class="code-btn" data-family="1" data-code="D12" onclick="selectD(this)">
+        <span class="code-tag" style="color:var(--warning)">D12</span>
+        <span class="code-desc">Falta N° de oficina o local comercial</span>
       </button>
       <button class="code-btn" data-family="1" data-code="D11" onclick="selectD(this)">
         <span class="code-tag" style="color:var(--warning)">D11</span>
         <span class="code-desc">Depto/torre no existe en el edificio</span>
       </button>
-    </div>
-
-    <!-- Campo texto D10b: info adicional del conserje -->
-    <div id="campo-D10b" style="display:none" class="obs-box">
-      <div class="field-label" style="margin-bottom:6px">Información adicional del conserje</div>
-      <input type="text" id="texto-D10b" placeholder="Ej: el demandado se fue hace un mes" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-    </div>
-
-    <!-- Campo texto D10c: qué falta en la dirección + checkbox registros -->
-    <div id="campo-D10c" style="display:none">
-      <div class="obs-box">
-        <div class="field-label" style="margin-bottom:6px">¿Qué falta en la dirección?</div>
-        <input type="text" id="texto-D10c" placeholder="Ej: la nomenclatura de la torre" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:14px; width:100%; outline:none;">
-      </div>
-      <!-- Checkbox visible solo si Q01 también está seleccionado -->
-      <div id="campo-D10c-registros" style="display:none; margin-top:8px; padding:10px 14px; background:var(--surface2); border-radius:8px; border-left:3px solid var(--accent2);">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
-          <input type="checkbox" id="chk-D10c-registros" onchange="onD10cRegistrosChange()" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent2);">
-          <span>El conserje consultó sus registros (emite R06)</span>
-        </label>
-      </div>
     </div>
 
     <!-- FAMILIA 2: PERSONA INFORMA -->
