@@ -2977,7 +2977,7 @@ function poblarFormularioFisico(causa) {
   const tribLetras = tribunalOrdinalCompleto(d.tribunal);
 
   // Hoja 3 (citación/requerimiento): ejecutivas, cédulas, cumplimiento incidental, juicio sumario
-  const mostrarHojaCitacion = /EJE|CEDULA|CUMPLIMIENTO-INCIDENTAL|JUICIO-SUMARIO|SENTENCIA/i.test(d.tipo_diligencia);
+  const mostrarHojaCitacion = /EJE|CEDULA|CUMPLIMIENTO-INCIDENTAL|JUICIO-SUMARIO|SENTENCIA|PROTECCION/i.test(d.tipo_diligencia);
 
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
