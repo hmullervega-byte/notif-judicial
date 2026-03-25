@@ -1065,6 +1065,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                       <option value="OTRO" data-obs-required="1">Otro</option>
                     </optgroup>
                   </select>
+                  <input type="text" id="f-tipo_diligencia_otro" placeholder="Ej: Medida precautoria, Incautación..." style="display:none; margin-top:4px;" autocomplete="off">
                   <span class="error-msg">Seleccione tipo</span>
                 </div>
               </div>
@@ -2271,7 +2272,13 @@ function autocompletarCBR() {
   dirEl.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-document.getElementById('f-tipo_diligencia').addEventListener('change', () => { updateObsRequired(); autocompletarPiezas(); autocompletarCBR(); });
+document.getElementById('f-tipo_diligencia').addEventListener('change', () => {
+  updateObsRequired(); autocompletarPiezas(); autocompletarCBR();
+  const otroInput = document.getElementById('f-tipo_diligencia_otro');
+  if (fval('tipo_diligencia') === 'OTRO') { otroInput.style.display = ''; otroInput.focus(); }
+  else { otroInput.style.display = 'none'; otroInput.value = ''; }
+});
+document.getElementById('f-tipo_diligencia_otro').addEventListener('input', () => { recalcHex(); updateProgress(); });
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
 document.getElementById('f-rol').addEventListener('blur', autocompletarPiezas);
 
@@ -2560,7 +2567,12 @@ async function sha256hex16(str) {
 }
 
 async function recalcHex() {
-  const parts = HEX_FIELDS.map(fval);
+  const parts = HEX_FIELDS.map(id => {
+    if (id === 'tipo_diligencia' && fval('tipo_diligencia') === 'OTRO') {
+      return document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase();
+    }
+    return fval(id);
+  });
   const hexEl  = document.getElementById('hex-display');
   const statEl = document.getElementById('hex-status');
 
@@ -2648,6 +2660,16 @@ async function guardarCausa(estadoInicial) {
       wrapper.classList.remove('has-error');
     }
   });
+  // Validar campo "Otro" tipo diligencia
+  if (fval('tipo_diligencia') === 'OTRO') {
+    const otroVal = document.getElementById('f-tipo_diligencia_otro').value.trim();
+    if (!otroVal) {
+      ok = false;
+      const wrapper = document.getElementById('fw-tipo_diligencia');
+      if (wrapper) { wrapper.classList.add('has-error'); if (!primerError) primerError = wrapper; }
+    }
+  }
+
   if (!ok || !currentHex) {
     showToast('⚠ Completar campos obligatorios', 'warn');
     if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2698,7 +2720,7 @@ async function guardarCausa(estadoInicial) {
       estudio_juridico:  fval('estudio'),
       abogado_procurador: fval('abogado_procurador'),
       banco_representado: fval('banco_representado'),
-      tipo_diligencia:   fval('tipo_diligencia'),
+      tipo_diligencia:   fval('tipo_diligencia') === 'OTRO' ? document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase() : fval('tipo_diligencia'),
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
       demandante:        fval('demandante'),
@@ -2793,6 +2815,7 @@ function limpiarFormulario() {
       else el.value = '';
     });
   document.querySelectorAll('[id^="fw-"]').forEach(el => el.classList.remove('has-error'));
+  document.getElementById('f-tipo_diligencia_otro').style.display = 'none';
   document.getElementById('obs-req-mark').innerHTML = '';
   const obsEl = document.getElementById('f-observacion');
   obsEl.removeAttribute('data-obs-req');
@@ -2967,7 +2990,7 @@ function poblarFormularioFisico(causa) {
     direccion:       fval('direccion'),
     notificar_a:     fval('notificar_a') || fval('demandado'),
     mandamiento:     fval('mandamiento'),
-    tipo_diligencia: fval('tipo_diligencia'),
+    tipo_diligencia: fval('tipo_diligencia') === 'OTRO' ? document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase() : fval('tipo_diligencia'),
     piezas:          fval('piezas'),
     hex:             currentHex,
     comuna:          'ANTOFAGASTA',
