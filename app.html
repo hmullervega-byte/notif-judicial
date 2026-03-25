@@ -2572,7 +2572,6 @@ async function sha256hex16(str) {
 
 async function recalcHex() {
   const parts = HEX_FIELDS.map(id => id === 'tipo_diligencia' ? getTipoDiligenciaReal() : fval(id));
-  });
   const hexEl  = document.getElementById('hex-display');
   const statEl = document.getElementById('hex-status');
 
