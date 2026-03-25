@@ -3738,6 +3738,12 @@ async function verCausa(hex) {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div><label style="${lblStyle}">Monto del embargo ($)</label>
               <input type="text" id="emb-monto" value="${(d.monto_embargo||'').replace(/"/g,'&quot;')}" placeholder="Ej: 5000000" style="${inpStyle}" ${!esJediODarth?'disabled':''}></div>
+            <div><label style="${lblStyle}">Fecha del acta de embargo <span style="color:#ef4444">*</span></label>
+              <input type="date" id="emb-fecha-acta" value="${d.fecha_acta_embargo||''}" style="${inpStyle}" ${!esJediODarth?'disabled':''}></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div><label style="${lblStyle}">Fecha notificaciones de embargo (opcional)</label>
+              <input type="date" id="emb-fecha-notif" value="${d.fecha_notif_embargo||''}" style="${inpStyle}" ${!esJediODarth?'disabled':''}></div>
             <div></div>
           </div>
           <div style="margin-bottom:12px;"><label style="${lblStyle}">Texto de la traba de embargo</label>
@@ -4504,7 +4510,10 @@ async function guardarDatosEmbargo(hex) {
   if (!c) return;
   const monto = (document.getElementById('emb-monto').value || '').trim();
   const texto = (document.getElementById('emb-texto-traba').value || '').trim();
+  const fechaActa = (document.getElementById('emb-fecha-acta').value || '').trim();
+  const fechaNotif = (document.getElementById('emb-fecha-notif').value || '').trim();
   if (!monto) { showToast('Ingrese el monto del embargo', 'error'); return; }
+  if (!fechaActa) { showToast('Ingrese la fecha del acta de embargo', 'error'); return; }
   if (!texto) { showToast('Ingrese el texto de la traba', 'error'); return; }
   const filas = document.querySelectorAll('#emb-filas-container .emb-fila');
   if (filas.length === 0) { showToast('Agregue al menos 1 institución', 'error'); return; }
@@ -4523,6 +4532,8 @@ async function guardarDatosEmbargo(hex) {
   const payload = c._causa_json;
   if (!payload.datos) payload.datos = {};
   payload.datos.monto_embargo = monto;
+  payload.datos.fecha_acta_embargo = fechaActa;
+  payload.datos.fecha_notif_embargo = fechaNotif;
   payload.datos.texto_traba_embargo = texto;
   payload.datos.embargo_cuentas = cuentas;
   payload.historial.push({ accion: 'datos_embargo', fecha: new Date().toISOString(), usuario: currentUser.nombre });
