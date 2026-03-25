@@ -3847,7 +3847,8 @@ async function editarCausa(hex) {
       tipoOpts += '</optgroup>';
     }
   }
-  const _tipoEsOtro = _tipoActual && !_tipoEncontrado;
+  const _tipoEsCustom = _tipoActual && !_tipoEncontrado;
+  const _tipoEsOtro = _tipoEsCustom || _tipoActual === 'OTRO';
 
   const lbl = 'font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em;';
   const inp = 'font-size:14px; margin-top:2px; width:100%;';
@@ -3861,7 +3862,7 @@ async function editarCausa(hex) {
   html += `<div style="${_sep}"><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
   html += `<div><label style="${lbl}">ROL</label><input type="text" id="edit-rol" value="${_esc(c.rol)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
-  html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}" onchange="document.getElementById('edit-tipo_otro').style.display=this.value==='OTRO'?'':'none'">${tipoOpts}</select><input type="text" id="edit-tipo_otro" placeholder="Especifique tipo de diligencia" value="${_tipoEsOtro ? _tipoActual.replace(/"/g,'&quot;') : ''}" style="${inp} margin-top:4px; ${_tipoEsOtro ? '' : 'display:none;'}"></div>`;
+  html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}" onchange="document.getElementById('edit-tipo_otro').style.display=this.value==='OTRO'?'':'none'">${tipoOpts}</select><input type="text" id="edit-tipo_otro" placeholder="Especifique tipo de diligencia" value="${_tipoEsCustom ? _tipoActual.replace(/"/g,'&quot;') : ''}" style="${inp} margin-top:4px; ${_tipoEsOtro ? '' : 'display:none;'}"></div>`;
   html += `<div><label style="${lbl}">N° Solicitud</label><input type="text" id="edit-n_solicitud" value="${_esc(c.n_solicitud || c.nro_solicitud)}" style="${inp}"></div>`;
   // Estado + Fecha solicitud
   if (currentUser?.perfil === 'darth') {
