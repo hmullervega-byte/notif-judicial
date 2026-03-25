@@ -975,7 +975,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <option value="3° Juzgado de Letras de Antofagasta">3° Juzgado de Letras</option>
                     <option value="4° Juzgado de Letras de Antofagasta">4° Juzgado de Letras</option>
                     <option value="Corte de Apelaciones de Antofagasta">Corte de Apelaciones</option>
-                    <option value="Apelación (Protección) de Antofagasta">Apelación (Protección)</option>
+                    <option value="Juzgado de Garantía de Antofagasta">Juzgado de Garantía</option>
                   </select>
                   <span class="error-msg">Seleccione tribunal</span>
                 </div>
@@ -1250,7 +1250,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="3°">Tercer</option>
             <option value="4°">Cuarto</option>
             <option value="Corte de Apelaciones">C. Apelaciones</option>
-            <option value="Apelación (Protección)">Apel. (Protección)</option>
+            <option value="Juzgado de Garantía">J. Garantía</option>
           </select>
           <input type="text" id="filter-demandante" placeholder="Buscar demandante..." style="min-width:160px; max-width:200px;">
           <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Desde</label>
@@ -5346,7 +5346,7 @@ function normalizarTribunal(str) {
   if (/tercer/.test(low)) return '3°';
   if (/cuart/.test(low)) return '4°';
   if (/familia/.test(low)) return 'Familia';
-  if (/protección|proteccion/.test(low)) return 'Apel.(Prot.)';
+  if (/garant/.test(low)) return 'J. Garantía';
   if (/apelaciones/.test(low)) return 'C. Apelaciones';
   return s;
 }
