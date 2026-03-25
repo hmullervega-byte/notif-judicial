@@ -3831,18 +3831,23 @@ async function editarCausa(hex) {
 
   // Clonar opciones del select tipo_diligencia del formulario
   const tipoSelect = document.getElementById('f-tipo_diligencia');
+  const _tipoActual = (c.tipo_diligencia||'');
+  let _tipoEncontrado = false;
   let tipoOpts = '';
   for (const child of tipoSelect.children) {
     if (child.tagName === 'OPTION') {
-      tipoOpts += `<option value="${child.value}" ${child.value === (c.tipo_diligencia||'') ? 'selected':''}>${child.textContent}</option>`;
+      if (child.value === _tipoActual) _tipoEncontrado = true;
+      tipoOpts += `<option value="${child.value}" ${child.value === _tipoActual ? 'selected':''}>${child.textContent}</option>`;
     } else if (child.tagName === 'OPTGROUP') {
       tipoOpts += `<optgroup label="${child.label}">`;
       for (const o of child.children) {
-        tipoOpts += `<option value="${o.value}" ${o.value === (c.tipo_diligencia||'') ? 'selected':''}>${o.textContent}</option>`;
+        if (o.value === _tipoActual) _tipoEncontrado = true;
+        tipoOpts += `<option value="${o.value}" ${o.value === _tipoActual ? 'selected':''}>${o.textContent}</option>`;
       }
       tipoOpts += '</optgroup>';
     }
   }
+  const _tipoEsOtro = _tipoActual && !_tipoEncontrado;
 
   const lbl = 'font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em;';
   const inp = 'font-size:14px; margin-top:2px; width:100%;';
@@ -3856,7 +3861,7 @@ async function editarCausa(hex) {
   html += `<div style="${_sep}"><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
   html += `<div><label style="${lbl}">ROL</label><input type="text" id="edit-rol" value="${_esc(c.rol)}" style="${inp}"></div>`;
   html += `<div><label style="${lbl}">Tribunal</label><select id="edit-tribunal" style="${inp}">${tribOpts}</select></div>`;
-  html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}">${tipoOpts}</select></div>`;
+  html += `<div><label style="${lbl}">Tipo Diligencia</label><select id="edit-tipo_diligencia" style="${inp}" onchange="document.getElementById('edit-tipo_otro').style.display=this.value==='OTRO'?'':'none'">${tipoOpts}</select><input type="text" id="edit-tipo_otro" placeholder="Especifique tipo de diligencia" value="${_tipoEsOtro ? _tipoActual.replace(/"/g,'&quot;') : ''}" style="${inp} margin-top:4px; ${_tipoEsOtro ? '' : 'display:none;'}"></div>`;
   html += `<div><label style="${lbl}">N° Solicitud</label><input type="text" id="edit-n_solicitud" value="${_esc(c.n_solicitud || c.nro_solicitud)}" style="${inp}"></div>`;
   // Estado + Fecha solicitud
   if (currentUser?.perfil === 'darth') {
@@ -3965,6 +3970,11 @@ async function editarCausa(hex) {
   }
 
   document.getElementById('modal-campos').innerHTML = html;
+
+  // Preseleccionar OTRO si tipo custom (después de render)
+  if (_tipoEsOtro) {
+    setTimeout(() => { const ts = document.getElementById('edit-tipo_diligencia'); if (ts) ts.value = 'OTRO'; }, 30);
+  }
 
   const esDevuelta = c.estado === 'devuelta';
   const usarRecalculo = _filtroIdsDup && currentUser?.perfil === 'darth';
@@ -4080,10 +4090,23 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
   const modificados = [];
   const payload = c._causa_json;
 
+  // Validar tipo "Otro" obligatorio
+  const editTipoSel = document.getElementById('edit-tipo_diligencia');
+  const editTipoOtroEl = document.getElementById('edit-tipo_otro');
+  if (editTipoSel && editTipoSel.value === 'OTRO' && editTipoOtroEl && !editTipoOtroEl.value.trim()) {
+    showToast('Especifique el tipo de diligencia', 'error');
+    return;
+  }
+
   camposEditables.forEach(key => {
     const el = document.getElementById('edit-' + key);
     if (!el) return;
-    const nuevo = el.value.trim();
+    let nuevo = el.value.trim();
+    // Resolver "OTRO" → texto personalizado
+    if (key === 'tipo_diligencia' && nuevo === 'OTRO') {
+      const otroEl = document.getElementById('edit-tipo_otro');
+      nuevo = otroEl ? otroEl.value.trim().toUpperCase() : nuevo;
+    }
     // Mapear al nombre correcto en datos
     const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
                      key === 'estudio' ? 'estudio_juridico' : key;
@@ -6027,10 +6050,22 @@ async function guardarEdicionConRecalculo(hex) {
     'estudio','abogado_procurador','direccion','notificar_a','tipo_diligencia','piezas','observacion','fecha_solicitud'];
   const modificados = [];
 
+  // Validar tipo "Otro" obligatorio
+  const _editTipoSel2 = document.getElementById('edit-tipo_diligencia');
+  const _editTipoOtro2 = document.getElementById('edit-tipo_otro');
+  if (_editTipoSel2 && _editTipoSel2.value === 'OTRO' && _editTipoOtro2 && !_editTipoOtro2.value.trim()) {
+    showToast('Especifique el tipo de diligencia', 'error');
+    return;
+  }
+
   campos.forEach(key => {
     const el = document.getElementById('edit-' + key);
     if (!el) return;
-    const nuevo = el.value.trim();
+    let nuevo = el.value.trim();
+    if (key === 'tipo_diligencia' && nuevo === 'OTRO') {
+      const otroEl = document.getElementById('edit-tipo_otro');
+      nuevo = otroEl ? otroEl.value.trim().toUpperCase() : nuevo;
+    }
     const datosKey = key === 'n_solicitud' ? 'nro_solicitud' :
                      key === 'estudio' ? 'estudio_juridico' : key;
     const anterior = (payload.datos[datosKey] || '').toString();
