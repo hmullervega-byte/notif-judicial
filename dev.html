@@ -5595,8 +5595,10 @@ function tipoBadge(tipo) {
               tipo.startsWith('EMBARGO') ? 'tag-red' :
               tipo.startsWith('ALZAMIENTO') ? 'tag-purple' :
               tipo.startsWith('PRUEBA') ? 'tag-yellow' :
-              tipo.startsWith('REQ') ? 'tag-green' : 'tag-gray';
-  return `<span class="tag ${cls}">${tipo}</span>`;
+              tipo.startsWith('REQ') ? 'tag-green' :
+              tipo.startsWith('OPOS') ? 'tag-orange' : 'tag-gray';
+  const display = tipo.replace(/\s+/g, '-');
+  return `<span class="tag ${cls}">${display}</span>`;
 }
 
 function estadoBadge(estado) {
