@@ -1149,6 +1149,29 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
 
           </div><!-- /form-grid-3col -->
 
+          <!-- SECCIÓN EMBARGO CUENTA CORRIENTE (visible solo para ese tipo) -->
+          <div id="seccion-embargo" style="display:none; border:1px solid #d1d5db; border-radius:8px; background:#f9fafb; padding:16px; margin-top:12px;">
+            <div style="font-weight:700; font-size:14px; color:#111; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Datos del Embargo</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div class="field" id="fw-monto_embargo">
+                <label>Monto del embargo ($) <span class="req">*</span></label>
+                <input type="text" id="f-monto_embargo" placeholder="Ej: 5000000" autocomplete="off">
+                <span class="error-msg">Obligatorio</span>
+              </div>
+              <div></div>
+            </div>
+            <div class="field" style="margin-bottom:12px;" id="fw-texto_traba">
+              <label>Texto de la traba de embargo <span class="req">*</span></label>
+              <textarea id="f-texto_traba" placeholder="Ingrese el texto completo de la traba..." rows="3" style="width:100%;"></textarea>
+              <span class="error-msg">Obligatorio</span>
+            </div>
+            <div style="margin-bottom:8px;">
+              <label style="display:block; font-weight:600; font-size:12px; color:#374151; margin-bottom:6px;">Instituciones embargadas <span class="req">*</span></label>
+              <div id="emb-filas-container"></div>
+              <button type="button" onclick="embAgregarFila()" class="btn btn-secondary btn-sm" style="margin-top:4px;">+ Agregar institución</button>
+            </div>
+          </div>
+
           <!-- SIDEBAR -->
           <div class="form-sidebar">
             <div class="card">
@@ -2263,6 +2286,14 @@ document.getElementById('f-tipo_diligencia').addEventListener('change', () => {
   const otroInput = document.getElementById('f-tipo_diligencia_otro');
   if (fval('tipo_diligencia') === 'OTRO') { otroInput.style.display = ''; otroInput.focus(); }
   else { otroInput.style.display = 'none'; otroInput.value = ''; }
+  // Sección embargo cuenta corriente
+  const secEmb = document.getElementById('seccion-embargo');
+  if (fval('tipo_diligencia') === 'EMBARGO-CUENTA-CORRIENTE') {
+    secEmb.style.display = '';
+    if (!document.querySelectorAll('#emb-filas-container .emb-fila').length) embAgregarFila();
+  } else {
+    secEmb.style.display = 'none';
+  }
 });
 document.getElementById('f-tipo_diligencia_otro').addEventListener('input', () => { recalcHex(); updateProgress(); });
 document.getElementById('f-rol').addEventListener('change', autocompletarPiezas);
@@ -2655,6 +2686,10 @@ async function guardarCausa(estadoInicial) {
       if (wrapper) { wrapper.classList.add('has-error'); if (!primerError) primerError = wrapper; }
     }
   }
+  // Validar embargo cuenta corriente
+  if (fval('tipo_diligencia') === 'EMBARGO-CUENTA-CORRIENTE') {
+    if (!validarEmbargoCtaCte()) ok = false;
+  }
 
   if (!ok || !currentHex) {
     showToast('⚠ Completar campos obligatorios', 'warn');
@@ -2733,6 +2768,10 @@ async function guardarCausa(estadoInicial) {
       }
     ]
   };
+  // Agregar datos de embargo si corresponde
+  if (fval('tipo_diligencia') === 'EMBARGO-CUENTA-CORRIENTE') {
+    Object.assign(payload.datos, recogerEmbargoCtaCte());
+  }
 
   // Subir a Dropbox /causas-dev/{id_hex}_CAUSA.json
   const dbxPath = `/causas-dev/${currentHex}_CAUSA.json`;
@@ -2802,6 +2841,7 @@ function limpiarFormulario() {
     });
   document.querySelectorAll('[id^="fw-"]').forEach(el => el.classList.remove('has-error'));
   document.getElementById('f-tipo_diligencia_otro').style.display = 'none';
+  limpiarEmbargoCtaCte();
   document.getElementById('obs-req-mark').innerHTML = '';
   const obsEl = document.getElementById('f-observacion');
   obsEl.removeAttribute('data-obs-req');
@@ -4367,16 +4407,6 @@ async function validarCausa(hex) {
   const c = await asegurarCausaCompleta(hex);
   if (!c) return;
 
-  // ── EMBARGO-CUENTA-CORRIENTE: mostrar formulario especial ──────────
-  if ((c.tipo_diligencia || '').toUpperCase() === 'EMBARGO-CUENTA-CORRIENTE') {
-    mostrarFormularioEmbargo(hex, c);
-    return;
-  }
-
-  await _ejecutarValidacion(hex, c);
-}
-
-async function _ejecutarValidacion(hex, c) {
   const payload = c._causa_json;
   payload.estado = 'validada';
   payload.historial.push({
@@ -4408,73 +4438,12 @@ async function _ejecutarValidacion(hex, c) {
   }
 }
 
-// ── Formulario especial EMBARGO-CUENTA-CORRIENTE ─────────────────────
+// ── Embargo Cuenta Corriente — funciones de filas dinámicas ──────────
 const BANCOS_EMBARGO = [
   'BANCO FALABELLA','BANCO DE CREDITO E INVERSIONES','BANCO SANTANDER DE CHILE',
   'BANCO DEL ESTADO DE CHILE','BANCO INTERNACIONAL','BANCO SCOTIABANK',
   'BANCO ITAU','COOPEUCH','BANCO DE CHILE','SCOTIABANK','OTROS'
 ];
-
-function mostrarFormularioEmbargo(hex, c) {
-  const d = c._causa_json?.datos || {};
-  const cuentas = d.embargo_cuentas || [{}];
-  const secStyle = 'border:1px solid #d1d5db; border-radius:8px; background:#f9fafb; padding:16px; margin-bottom:16px;';
-  const lblStyle = 'display:block; font-weight:600; font-size:12px; color:#374151; margin-bottom:4px;';
-  const inpStyle = 'width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;';
-
-  function buildBancoOpts(sel) {
-    return '<option value="">— Seleccionar banco —</option>' +
-      BANCOS_EMBARGO.map(b => `<option value="${b}"${b===sel?' selected':''}>${b}</option>`).join('');
-  }
-
-  function buildFila(item, idx) {
-    const banco = item.banco || '';
-    const bancoNombre = item.banco_nombre || '';
-    const numCta = item.numero_cuenta || '';
-    const showOtros = banco === 'OTROS' ? '' : 'display:none;';
-    return `<div class="emb-fila" data-idx="${idx}" style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
-      <div>
-        ${idx===0?`<label style="${lblStyle}">Banco</label>`:''}
-        <select class="emb-banco" style="${inpStyle}" onchange="embBancoChange(this)">
-          ${buildBancoOpts(banco)}
-        </select>
-        <input type="text" class="emb-banco-nombre" placeholder="Nombre de la institución" value="${bancoNombre.replace(/"/g,'&quot;')}" style="${inpStyle} margin-top:4px; ${showOtros}">
-      </div>
-      <div>
-        ${idx===0?`<label style="${lblStyle}">N° de cuenta</label>`:''}
-        <input type="text" class="emb-num-cuenta" placeholder="Ingrese número de cuenta" value="${numCta.replace(/"/g,'&quot;')}" style="${inpStyle}">
-      </div>
-      <div style="padding-bottom:2px;">
-        <button type="button" onclick="embEliminarFila(this)" class="btn btn-danger btn-sm" style="padding:6px 10px;" title="Eliminar">✕</button>
-      </div>
-    </div>`;
-  }
-
-  let filasHtml = cuentas.map((item, i) => buildFila(item, i)).join('');
-
-  document.getElementById('modal-title').textContent = 'Datos del Embargo — ' + (c.rol || hex.slice(0,8));
-  document.getElementById('modal-body').innerHTML = `
-    <div style="${secStyle}">
-      <div style="font-weight:700; font-size:14px; color:#111; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Datos del Embargo</div>
-      <div style="margin-bottom:12px;">
-        <label style="${lblStyle}">Monto del embargo ($)</label>
-        <input type="text" id="emb-monto" placeholder="Ej: 5000000" value="${(d.monto_embargo||'').replace(/"/g,'&quot;')}" style="${inpStyle}">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="${lblStyle}">Texto de la traba de embargo</label>
-        <textarea id="emb-texto-traba" placeholder="Ingrese el texto completo de la traba..." rows="4" style="${inpStyle} resize:vertical;">${(d.texto_traba_embargo||'').replace(/</g,'&lt;')}</textarea>
-      </div>
-      <div style="margin-bottom:8px;">
-        <label style="${lblStyle}">Instituciones embargadas</label>
-        <div id="emb-filas-container">${filasHtml}</div>
-        <button type="button" onclick="embAgregarFila()" class="btn btn-secondary btn-sm" style="margin-top:4px;">+ Agregar institución</button>
-      </div>
-    </div>`;
-  document.getElementById('modal-footer').innerHTML =
-    `<button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
-     <button class="btn btn-success btn-sm" onclick="confirmarValidarEmbargo('${hex}')">✓ Validar con datos de embargo</button>`;
-  document.getElementById('modal-overlay').classList.add('active');
-}
 
 function embBancoChange(sel) {
   const nombre = sel.parentElement.querySelector('.emb-banco-nombre');
@@ -4517,41 +4486,45 @@ function embEliminarFila(btn) {
   fila.remove();
 }
 
-async function confirmarValidarEmbargo(hex) {
-  const monto = (document.getElementById('emb-monto').value || '').trim();
-  const textoTraba = (document.getElementById('emb-texto-traba').value || '').trim();
-
-  // Validaciones
-  if (!monto) { showToast('Ingrese el monto del embargo', 'error'); return; }
-  if (!textoTraba) { showToast('Ingrese el texto de la traba de embargo', 'error'); return; }
-
+function validarEmbargoCtaCte() {
+  const monto = (document.getElementById('f-monto_embargo').value || '').trim();
+  const texto = (document.getElementById('f-texto_traba').value || '').trim();
+  let ok = true;
+  if (!monto) { document.getElementById('fw-monto_embargo').classList.add('has-error'); ok = false; }
+  else { document.getElementById('fw-monto_embargo').classList.remove('has-error'); }
+  if (!texto) { document.getElementById('fw-texto_traba').classList.add('has-error'); ok = false; }
+  else { document.getElementById('fw-texto_traba').classList.remove('has-error'); }
   const filas = document.querySelectorAll('#emb-filas-container .emb-fila');
-  if (filas.length === 0) { showToast('Agregue al menos 1 institución', 'error'); return; }
-
-  const cuentas = [];
+  if (filas.length === 0) { showToast('Agregue al menos 1 institución', 'error'); return false; }
   for (const fila of filas) {
-    const banco = fila.querySelector('.emb-banco').value;
-    const bancoNombre = fila.querySelector('.emb-banco-nombre').value.trim();
-    const numCta = fila.querySelector('.emb-num-cuenta').value.trim();
-    if (!banco) { showToast('Seleccione banco en todas las líneas', 'error'); return; }
-    if (!numCta) { showToast('Ingrese número de cuenta en todas las líneas', 'error'); return; }
-    if (banco === 'OTROS' && !bancoNombre) { showToast('Ingrese nombre de la institución para "OTROS"', 'error'); return; }
-    const entry = { banco, numero_cuenta: numCta };
-    if (banco === 'OTROS') entry.banco_nombre = bancoNombre;
+    if (!fila.querySelector('.emb-banco').value) { showToast('Seleccione banco en todas las líneas', 'error'); return false; }
+    if (!fila.querySelector('.emb-num-cuenta').value.trim()) { showToast('Ingrese número de cuenta en todas las líneas', 'error'); return false; }
+    if (fila.querySelector('.emb-banco').value === 'OTROS' && !fila.querySelector('.emb-banco-nombre').value.trim()) {
+      showToast('Ingrese nombre de la institución para "OTROS"', 'error'); return false;
+    }
+  }
+  return ok;
+}
+
+function recogerEmbargoCtaCte() {
+  const cuentas = [];
+  for (const fila of document.querySelectorAll('#emb-filas-container .emb-fila')) {
+    const entry = { banco: fila.querySelector('.emb-banco').value, numero_cuenta: fila.querySelector('.emb-num-cuenta').value.trim() };
+    if (entry.banco === 'OTROS') entry.banco_nombre = fila.querySelector('.emb-banco-nombre').value.trim();
     cuentas.push(entry);
   }
+  return {
+    monto_embargo: document.getElementById('f-monto_embargo').value.trim(),
+    texto_traba_embargo: document.getElementById('f-texto_traba').value.trim(),
+    embargo_cuentas: cuentas
+  };
+}
 
-  // Guardar datos en el payload
-  const c = causas.find(x => x.id_hex === hex);
-  if (!c) return;
-  const payload = c._causa_json;
-  if (!payload.datos) payload.datos = {};
-  payload.datos.monto_embargo = monto;
-  payload.datos.texto_traba_embargo = textoTraba;
-  payload.datos.embargo_cuentas = cuentas;
-
-  closeModal();
-  await _ejecutarValidacion(hex, c);
+function limpiarEmbargoCtaCte() {
+  document.getElementById('f-monto_embargo').value = '';
+  document.getElementById('f-texto_traba').value = '';
+  document.getElementById('emb-filas-container').innerHTML = '';
+  document.getElementById('seccion-embargo').style.display = 'none';
 }
 
 function mostrarDevolver(hex) {
