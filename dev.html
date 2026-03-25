@@ -1944,6 +1944,10 @@ const TIPOS_GESTION_DIRECTA = new Set([
   'REQ-PAGO-TRIBUNAL'
 ]);
 function esGestionDirecta(tipo) { return TIPOS_GESTION_DIRECTA.has((tipo||'').toUpperCase()); }
+function getTipoDiligenciaReal() {
+  if (fval('tipo_diligencia') === 'OTRO') return document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase();
+  return fval('tipo_diligencia');
+}
 
 // ══════════════════════════════════════════════
 // LOGIN
@@ -2553,12 +2557,7 @@ async function sha256hex16(str) {
 }
 
 async function recalcHex() {
-  const parts = HEX_FIELDS.map(id => {
-    if (id === 'tipo_diligencia' && fval('tipo_diligencia') === 'OTRO') {
-      return document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase();
-    }
-    return fval(id);
-  });
+  const parts = HEX_FIELDS.map(id => id === 'tipo_diligencia' ? getTipoDiligenciaReal() : fval(id));
   const hexEl  = document.getElementById('hex-display');
   const statEl = document.getElementById('hex-status');
 
@@ -2705,7 +2704,7 @@ async function guardarCausa(estadoInicial) {
       estudio_juridico:  fval('estudio'),
       abogado_procurador: fval('abogado_procurador'),
       banco_representado: fval('banco_representado'),
-      tipo_diligencia:   fval('tipo_diligencia') === 'OTRO' ? document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase() : fval('tipo_diligencia'),
+      tipo_diligencia:   getTipoDiligenciaReal(),
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
       demandante:        fval('demandante'),
@@ -2975,7 +2974,7 @@ function poblarFormularioFisico(causa) {
     direccion:       fval('direccion'),
     notificar_a:     fval('notificar_a') || fval('demandado'),
     mandamiento:     fval('mandamiento'),
-    tipo_diligencia: fval('tipo_diligencia') === 'OTRO' ? document.getElementById('f-tipo_diligencia_otro').value.trim().toUpperCase() : fval('tipo_diligencia'),
+    tipo_diligencia: getTipoDiligenciaReal(),
     piezas:          fval('piezas'),
     hex:             currentHex,
     comuna:          'ANTOFAGASTA',
@@ -2985,7 +2984,8 @@ function poblarFormularioFisico(causa) {
   const tribLetras = tribunalOrdinalCompleto(d.tribunal);
 
   // Hoja 3 (citación/requerimiento): ejecutivas, cédulas, cumplimiento incidental, juicio sumario
-  const mostrarHojaCitacion = /EJE|CEDULA|CUMPLIMIENTO-INCIDENTAL|JUICIO-SUMARIO|SENTENCIA|PROTECCION/i.test(d.tipo_diligencia);
+  const sinHojaCitacion = /ALZAMIENTO|EMBARGO-FRUSTRADO|EMBARGO-CBR|EMBARGO-RVM|EMBARGO-TESORERIA|EMBARGO-CUENTA-CORRIENTE|OPOS-RETIRO/i.test(d.tipo_diligencia);
+  const mostrarHojaCitacion = d.tipo_diligencia && !sinHojaCitacion;
 
   // ════════════════════════════════════════
   // HOJA 1 — FORMULARIO PRINCIPAL (siempre)
@@ -6234,7 +6234,7 @@ async function guardarDuplicadoParaRevision(hexExistente, estadoInicial) {
   const partes = HEX_FIELDS.map(fval).join('') + ts;
   const nuevoHex = await sha256hex16(partes);
 
-  const tipoDigSel = fval('tipo_diligencia');
+  const tipoDigSel = getTipoDiligenciaReal();
   const payload = {
     id_hex:  nuevoHex,
     estado:  'revision_darth',
