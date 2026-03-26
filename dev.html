@@ -3141,7 +3141,7 @@ function poblarFormularioFisico(causa) {
     <div style="font-family:'Times New Roman',Times,serif; font-size:clamp(9pt,2.5vw,11pt); line-height:1.45; text-align:justify;">
 
       <p style="margin:0 0 2px;">
-        DON(ÑA) <b>${(d.notificar_a || '').toUpperCase()}</b>
+        DON(ÑA) <b>${extraerSoloNombre(d.notificar_a || '').toUpperCase()}</b>
       </p>
       <p style="margin:0 0 6px;">
         DOMICILIO: <b>${(d.direccion || '').toUpperCase()}</b>, ${(d.comuna || 'ANTOFAGASTA').toUpperCase()}
@@ -5662,6 +5662,12 @@ function normalizarTribunal(str) {
   if (/garant/.test(low)) return 'J. Garantía';
   if (/apelaciones/.test(low)) return 'C. Apelaciones';
   return s;
+}
+
+function extraerSoloNombre(s) {
+  if (!s) return '';
+  const idx = s.search(/,\s*en su calidad|,\s*en representaci[oó]n/i);
+  return idx > 0 ? s.substring(0, idx).trim() : s;
 }
 
 function tribunalOrdinalCompleto(t) {
