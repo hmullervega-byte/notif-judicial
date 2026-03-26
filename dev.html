@@ -1217,6 +1217,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="en_ruta">En ruta</option>
             <option value="resultado_registrado">Resultado registrado</option>
             <option value="cerrada">Cerrada</option>
+            <option value="boleta_emitida">Boleta emitida</option>
             <option value="devuelta">Devuelta</option>
             <option value="suspendida">Suspendida</option>
             <option value="id_repetida">ID repetida</option>
@@ -3178,7 +3179,7 @@ function poblarFormularioFisico(causa) {
 // ══════════════════════════════════════════════
 // ── CARGAR CAUSAS DESDE DROPBOX ──
 // Estados no activos (filtro "Solo activas")
-const ESTADOS_NO_ACTIVOS = new Set(['cerrada', 'suspendida', 'id_repetida']);
+const ESTADOS_NO_ACTIVOS = new Set(['cerrada', 'boleta_emitida', 'suspendida', 'id_repetida']);
 
 // Guard anti-concurrencia + caché
 let _cargando = false;
@@ -3245,7 +3246,7 @@ async function cargarCausasDropbox(forzar = false) {
     }));
 
     // Auto-migración: estados obsoletos → pendiente_estado
-    const ESTADOS_OBSOLETOS = ['lista_para_estampe', 'estampada', 'boleta_emitida'];
+    const ESTADOS_OBSOLETOS = ['lista_para_estampe', 'estampada'];
     const migrar = causas.filter(c => ESTADOS_OBSOLETOS.includes(c.estado));
     for (const c of migrar) {
       c.estado = 'pendiente_estado';
@@ -3940,6 +3941,7 @@ async function editarCausa(hex) {
       ['gestion_directa_receptora','Gestión Directa'],
       ['resultado_registrado','Resultado registrado'],
       ['cerrada','Cerrada'],
+      ['boleta_emitida','Boleta emitida'],
       ['suspendida','Suspendida'],
       ['pendiente_estado','Pendiente estado'],
     ];
@@ -5680,6 +5682,7 @@ function estadoBadge(estado) {
     'id_repetida':          ['tag-orange','ID repetida'],
     'revision_darth':       ['tag-yellow','Revisión Darth'],
     'gestion_directa_receptora': ['tag-purple','Gestión Directa'],
+    'boleta_emitida':           ['tag-blue','Boleta emitida'],
   };
   const [cls, label] = map[estado] || ['tag-gray', estado || '—'];
   return `<span class="tag ${cls}">${label}</span>`;
