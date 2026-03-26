@@ -3162,7 +3162,7 @@ function poblarFormularioFisico(causa) {
       </p>
 
       <p style="margin:50px 0 4px 0;">
-        En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${d.notificar_a}</b>,
+        En Antofagasta, a ____/____/ 2026, notifiqué a don(a): <b>${extraerSoloNombre(d.notificar_a)}</b>,
         en su domicilio ubicado en <b>${d.direccion}</b>, de la ciudad de Antofagasta,
         los antecedentes que obran en la causa rol <b>${d.rol}</b> del
         <b>${tribLetras}</b>.
@@ -3190,7 +3190,7 @@ function poblarFormularioFisico(causa) {
       </div>
 
       <p style="margin:0 0 4px;">
-        Señor(a) <b>${d.notificar_a}</b>, queda citado para el
+        Señor(a) <b>${extraerSoloNombre(d.notificar_a)}</b>, queda citado para el
         día __________ 2026, a las ___:___ horas,
         para que concurra a mi oficio de receptora judicial ubicado en
         <b>Calle Baquedano #239, oficina N° 716, Antofagasta</b>,
