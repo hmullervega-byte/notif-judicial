@@ -3984,7 +3984,9 @@ async function editarCausa(hex) {
       ['CED','CED — Cédula'],['CED52','CED52 — Cédula Art. 52'],
       ['EF','EF — Embargo Frustrado'],
       ['ALZ_CBR','ALZ_CBR — Alzamiento CBR'],['ALZ_RVM','ALZ_RVM — Alzamiento RVM'],
-      ['OPO_RETIRO','OPO_RETIRO — Oposición al Retiro'],['OTRO','OTRO — Otro']
+      ['OPO_RETIRO','OPO_RETIRO — Oposición al Retiro'],
+      ['NOT_MED_PRECAUTORIA_CBR','NOT_MED_PRECAUTORIA_CBR — Not. Med. Precautoria CBR'],
+      ['OTRO','OTRO — Otro']
     ];
     const _resSelHtml = _resOpts.map(([v,l]) => `<option value="${v}"${v === resVal ? ' selected' : ''}>${l}</option>`).join('');
     html += `<div><label style="${lbl}">Resultado</label><select id="edit-resultado" style="${inp}" onchange="_toggleResultadoCampos()">${_resSelHtml}</select></div>`;
@@ -4102,7 +4104,7 @@ function _autocompletarDerechos(resultado) {
   const demData = estudioData[demandante] || estudioData['_default'];
   if (!demData) return;
   let clave = resultado;
-  if (['BN','BP','BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPF','BP+BP2+NOT44','NP+RPP','BP+NP+RPP','CED','CED52','EF','ALZ_CBR','ALZ_RVM','OPO_RETIRO'].includes(resultado)) {
+  if (['BN','BP','BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPF','BP+BP2+NOT44','NP+RPP','BP+NP+RPP','CED','CED52','EF','ALZ_CBR','ALZ_RVM','OPO_RETIRO','NOT_MED_PRECAUTORIA_CBR'].includes(resultado)) {
     clave = 'BN';
   }
   const tarifa = demData[clave];
@@ -4242,8 +4244,8 @@ async function guardarEdicion(hex, nuevoEstadoForzado) {
     let nuevoRes = resEl.value;
     if (nuevoRes === 'OTRO') {
       const otroEl = document.getElementById('edit-resultado-otro');
-      nuevoRes = otroEl ? otroEl.value.trim() : '';
-      if (!nuevoRes) nuevoRes = 'OTRO';
+      nuevoRes = otroEl ? otroEl.value.trim().toUpperCase() : '';
+      if (!nuevoRes) { showToast('Especifique el resultado', 'error'); return; }
     }
     const anteriorRes = (payload.datos.resultado || '').toString();
     if (nuevoRes !== anteriorRes) {
