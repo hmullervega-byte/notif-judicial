@@ -2501,6 +2501,14 @@ function autocompletarPiezas() {
   else if (rol.startsWith('E-')) { piezas.value = PIEZAS_EJE_E; piezas.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 
+function _normalizarDemandante(s) {
+  if (!s) return s;
+  s = s.trim();
+  if (/S\.A\s*$/i.test(s)) s = s.replace(/S\.A\s*$/i, 'S.A.');
+  if (/LTDA\s*$/i.test(s)) s = s.replace(/LTDA\s*$/i, 'LTDA.');
+  return s;
+}
+
 function fval(name) {
   if (name === 'demandante') {
     const sel = document.getElementById('f-demandante-select');
@@ -2751,7 +2759,7 @@ async function guardarCausa(estadoInicial) {
       tipo_diligencia:   getTipoDiligenciaReal(),
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
-      demandante:        fval('demandante'),
+      demandante:        _normalizarDemandante(fval('demandante')),
       demandado:         fval('demandado'),
       rut:               fval('rut'),
       direccion:         fval('direccion'),
@@ -6432,7 +6440,7 @@ async function guardarDuplicadoParaRevision(hexExistente, estadoInicial) {
       tipo_diligencia:   tipoDigSel,
       rol:               fval('rol'),
       tribunal:          fval('tribunal'),
-      demandante:        fval('demandante'),
+      demandante:        _normalizarDemandante(fval('demandante')),
       demandado:         fval('demandado'),
       rut:               fval('rut'),
       direccion:         fval('direccion'),
