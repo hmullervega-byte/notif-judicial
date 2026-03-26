@@ -1274,7 +1274,9 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="Corte de Apelaciones">C. Apelaciones</option>
             <option value="Juzgado de Garantía">J. Garantía</option>
           </select>
-          <input type="text" id="filter-demandante" placeholder="Buscar demandante..." style="min-width:160px; max-width:200px;">
+          <select id="filter-demandante" style="min-width:160px; max-width:220px;">
+            <option value="">Todos los demandantes</option>
+          </select>
           <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Desde</label>
           <input type="date" id="filter-fecha-desde" style="max-width:140px;">
           <label style="font-size:11px; color:var(--muted); white-space:nowrap;">Hasta</label>
@@ -3312,6 +3314,7 @@ async function cargarCausasDropbox(forzar = false) {
     }
 
     _causasCargadas = true;
+    _poblarFilterDemandante();
     renderCausas();
     buildDashboard();
     _verificarIntegridad();
@@ -3593,7 +3596,7 @@ function renderCausas() {
   const fEstado = document.getElementById('filter-estado').value;
   const fEstudio = document.getElementById('filter-estudio').value;
   const fTribunal = document.getElementById('filter-tribunal').value;
-  const fDemandante = document.getElementById('filter-demandante').value.toLowerCase();
+  const fDemandante = document.getElementById('filter-demandante').value;
   const fDesde  = document.getElementById('filter-fecha-desde').value;
   const fHasta  = document.getElementById('filter-fecha-hasta').value;
   const estadosVisibles = currentUser ? ESTADOS_POR_PERFIL[currentUser.perfil] : null;
@@ -3624,7 +3627,7 @@ function renderCausas() {
     const est = (c.estudio || c.estudio_juridico || '');
     const matchEstudio = !fEstudio || est === fEstudio;
     const matchTribunal = !fTribunal || (c.tribunal || '').includes(fTribunal);
-    const matchDemandante = !fDemandante || (c.demandante || '').toLowerCase().includes(fDemandante);
+    const matchDemandante = !fDemandante || (c.demandante || '') === fDemandante;
     const fs = c.fecha_solicitud || '';
     const matchDesde = !fDesde || fs >= fDesde;
     const matchHasta = !fHasta || fs <= fHasta;
@@ -3713,9 +3716,19 @@ document.getElementById('search-causas').addEventListener('input', renderCausas)
 document.getElementById('filter-tipo').addEventListener('change', renderCausas);
 document.getElementById('filter-resultado').addEventListener('change', renderCausas);
 document.getElementById('filter-estado').addEventListener('change', renderCausas);
-document.getElementById('filter-estudio').addEventListener('change', renderCausas);
+document.getElementById('filter-estudio').addEventListener('change', () => { _poblarFilterDemandante(); renderCausas(); });
 document.getElementById('filter-tribunal').addEventListener('change', renderCausas);
-document.getElementById('filter-demandante').addEventListener('input', renderCausas);
+document.getElementById('filter-demandante').addEventListener('change', renderCausas);
+
+function _poblarFilterDemandante() {
+  const fEstudio = document.getElementById('filter-estudio').value;
+  const sel = document.getElementById('filter-demandante');
+  const src = fEstudio
+    ? causas.filter(c => (c.estudio || c.estudio_juridico || '') === fEstudio)
+    : causas;
+  const demandantes = [...new Set(src.map(c => c.demandante || '').filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos los demandantes</option>' + demandantes.map(d => `<option value="${d}">${d}</option>`).join('');
+}
 document.getElementById('filter-fecha-desde').addEventListener('change', renderCausas);
 document.getElementById('filter-fecha-hasta').addEventListener('change', renderCausas);
 
@@ -3728,6 +3741,7 @@ document.getElementById('btn-limpiar-filtros').addEventListener('click', () => {
   document.getElementById('filter-estudio').value = '';
   document.getElementById('filter-tribunal').value = '';
   document.getElementById('filter-demandante').value = '';
+  _poblarFilterDemandante();
   document.getElementById('filter-fecha-desde').value = '';
   document.getElementById('filter-fecha-hasta').value = '';
   renderCausas();
