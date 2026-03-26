@@ -3335,6 +3335,7 @@ function _causaToCompletoEntry(c) {
 
 // Actualiza INDEX_COMPLETO.json con upsert por hex (para que Panel Darth vea cambios en tiempo real)
 async function _actualizarIndexCompleto(hexes) {
+  console.log('_actualizarIndexCompleto llamada para', hexes);
   if (!DBX.isConfigured() || !hexes.length) return;
   const carpeta = '/causas';
   try {
@@ -3351,6 +3352,7 @@ async function _actualizarIndexCompleto(hexes) {
       }
     }
     await DBX.upload(carpeta + '/INDEX_COMPLETO.json', completo);
+    console.log('INDEX_COMPLETO.json actualizado OK');
   } catch (e) {
     console.warn('Error actualizando INDEX_COMPLETO.json:', e);
   }
