@@ -3294,6 +3294,68 @@ async function cargarCausasDropbox(forzar = false) {
 // Estados no activos (filtro "Solo activas")
 const ESTADOS_NO_ACTIVOS = new Set(['cerrada', 'suspendida', 'id_repetida']);
 
+// Extrae campos de INDEX_COMPLETO.json desde una causa en memoria (incluye facturacion + historial)
+function _causaToCompletoEntry(c) {
+  const datos = c._causa_json?.datos || {};
+  const entry = {
+    id_hex:             c.id_hex,
+    estado:             c.estado,
+    rol:                datos.rol               || c.rol               || '',
+    tribunal:           datos.tribunal          || c.tribunal          || '',
+    demandante:         datos.demandante        || c.demandante        || '',
+    demandado:          datos.demandado         || c.demandado         || '',
+    rut:                datos.rut               || c.rut               || '',
+    direccion:          datos.direccion         || c.direccion         || '',
+    ciudad:             datos.ciudad            || c.ciudad            || 'Antofagasta',
+    tipo_diligencia:    datos.tipo_diligencia   || c.tipo_diligencia   || '',
+    fecha_solicitud:    datos.fecha_solicitud   || c.fecha_solicitud   || '',
+    nro_solicitud:      datos.nro_solicitud     || c.nro_solicitud     || '',
+    estudio_juridico:   datos.estudio_juridico  || c.estudio_juridico  || datos.estudio || c.estudio || '',
+    abogado_procurador: datos.abogado_procurador || c.abogado_procurador || '',
+    banco_representado: datos.banco_representado || c.banco_representado || '',
+    notificar_a:        datos.notificar_a       || c.notificar_a       || '',
+    piezas:             datos.piezas            || c.piezas            || '',
+    monto_mandamiento:  datos.monto_mandamiento || c.monto_mandamiento || '',
+    nro_pagare:         datos.nro_pagare        || datos.n_pagare      || c.nro_pagare || '',
+    derechos:           datos.derechos          || c.derechos          || '',
+    observacion:        datos.observacion       || datos.comentario    || c.observacion || '',
+    comentario:         datos.comentario        || c.comentario        || '',
+    fecha_ruta:         c.fecha_ruta || '',
+    fecha_diligencia:   datos.fecha_diligencia  || c._causa_json?.fecha_diligencia || c.fecha_diligencia || '',
+    fecha_2da_positiva: datos.fecha_2da_positiva || c.fecha_2da_positiva || '',
+    ts_ingreso:         c.ts_ingreso            || '',
+    resultado:          datos.resultado         || c._causa_json?.resultado || c.resultado || '',
+    boleta:             datos.boleta            || c._causa_json?.boleta    || c.boleta    || '',
+    historial:          c._causa_json?.historial || [],
+  };
+  const fac = c._causa_json?.facturacion || datos.facturacion;
+  if (fac) entry.facturacion = fac;
+  return entry;
+}
+
+// Actualiza INDEX_COMPLETO.json con upsert por hex (para que Panel Darth vea cambios en tiempo real)
+async function _actualizarIndexCompleto(hexes) {
+  if (!DBX.isConfigured() || !hexes.length) return;
+  const carpeta = '/causas';
+  try {
+    const completo = await DBX.download(carpeta + '/INDEX_COMPLETO.json') || [];
+    for (const hex of hexes) {
+      const c = causas.find(x => x.id_hex === hex);
+      const idx = completo.findIndex(x => x.id_hex === hex);
+      if (!c) {
+        if (idx >= 0) completo.splice(idx, 1);
+      } else {
+        const entry = _causaToCompletoEntry(c);
+        if (idx >= 0) Object.assign(completo[idx], entry);
+        else completo.push(entry);
+      }
+    }
+    await DBX.upload(carpeta + '/INDEX_COMPLETO.json', completo);
+  } catch (e) {
+    console.warn('Error actualizando INDEX_COMPLETO.json:', e);
+  }
+}
+
 // Actualiza INDEX.json en Dropbox con el estado actual de causas[]
 function _causaToIndexEntry(c) {
   return {
@@ -3330,6 +3392,7 @@ async function actualizarIndex(hexOrHexes) {
       if (!index || !rev) {
         const nuevoIndex = causas.map(c => _causaToIndexEntry(c));
         await DBX.upload(carpeta + '/INDEX.json', nuevoIndex);
+        _actualizarIndexCompleto(hexes);
         return;
       }
 
@@ -3346,6 +3409,7 @@ async function actualizarIndex(hexOrHexes) {
       }
 
       await DBX.uploadWithRev(carpeta + '/INDEX.json', index, rev);
+      _actualizarIndexCompleto(hexes);
       return;
 
     } catch (error) {
@@ -3373,6 +3437,7 @@ async function actualizarIndex(hexOrHexes) {
         } catch (e) {
           console.error('INDEX.json overwrite fallback failed:', e);
         }
+        _actualizarIndexCompleto(hexes);
         return;
       }
       throw error;
