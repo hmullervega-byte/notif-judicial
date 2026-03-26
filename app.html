@@ -5781,10 +5781,13 @@ function _gestionRow(c, esTerminada) {
   const notifA = c.notificar_a || c.demandado || '—';
   const piezas = c.piezas || '—';
   const fechaIng = _fechaIngreso(c);
-  const acciones = esTerminada
-    ? `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>`
-    : `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>
-       <button class="btn btn-success btn-sm btn-icon" title="Marcar terminada" onclick="marcarGestionTerminada('${c.id_hex}')">✓</button>`;
+  let acciones = `<button class="btn btn-secondary btn-sm btn-icon" title="Ver detalle" onclick="verCausa('${c.id_hex}')">🔍</button>`;
+  if (!esTerminada) {
+    if (currentUser?.perfil === 'darth') {
+      acciones += ` <button class="btn btn-success btn-sm btn-icon" title="Marcar terminada" onclick="marcarGestionTerminada('${c.id_hex}')">✓</button>`;
+    }
+    acciones += ` <button class="btn btn-sm btn-icon" style="background:#ef4444; color:#fff;" title="Suspender" onclick="iniciarSuspensionGestion('${c.id_hex}')">⏸</button>`;
+  }
   return `<tr>
     <td class="mono" style="white-space:nowrap; font-size:12px;">${c.rol || '—'}</td>
     <td style="text-align:center; font-size:11px;" title="${c.tribunal || ''}">${normalizarTribunal(c.tribunal)}</td>
@@ -5829,6 +5832,29 @@ function iniciarSuspension() {
     return;
   }
   const hex = [...causasSeleccionadas][0];
+  const c = causas.find(x => x.id_hex === hex);
+  if (!c) return;
+  document.getElementById('modal-title').textContent = 'Suspender causa ' + (c.rol || hex.slice(0,8));
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px; margin-bottom:.75rem;">
+      <strong>${c.demandado || '—'}</strong> — ${c.direccion || ''}
+    </p>
+    <div class="field">
+      <label>Motivo de la suspensión <span class="req">*</span></label>
+      <textarea id="suspension-motivo" rows="3" placeholder="Motivo de la suspensión (obligatorio)" oninput="document.getElementById('btn-confirmar-suspension').disabled = this.value.trim().length < 10"></textarea>
+    </div>
+    <p style="font-size:11px; color:var(--muted); margin-top:.25rem;">Mínimo 10 caracteres</p>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-sm" id="btn-confirmar-suspension" style="background:#ef4444; color:#fff; font-weight:600;" disabled onclick="confirmarSuspension('${hex}')">Confirmar suspensión</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('suspension-motivo').focus(), 100);
+}
+
+// Suspender desde vista Gestión Directa (acepta hex directamente)
+function iniciarSuspensionGestion(hex) {
   const c = causas.find(x => x.id_hex === hex);
   if (!c) return;
   document.getElementById('modal-title').textContent = 'Suspender causa ' + (c.rol || hex.slice(0,8));
