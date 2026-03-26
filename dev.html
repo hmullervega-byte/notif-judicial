@@ -4492,9 +4492,6 @@ async function asegurarCausaCompleta(hex) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
 }
-document.getElementById('modal-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-});
 
 // ══════════════════════════════════════════════
 // VALIDACIÓN JEDI
