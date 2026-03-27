@@ -1293,16 +1293,11 @@
     </div>
   </div><!-- /seccion-not44-n44 -->
 
-  <!-- ── NOT44: aviso citación + E08 hora cita ── -->
+  <!-- ── NOT44: aviso citación ── -->
   <div id="seccion-not44-cit" style="display:none">
     <div style="background:var(--surface2); border-radius:10px; padding:14px 16px; margin:12px 0; border-left:3px solid #6ee0a0;">
       <div style="font-family:var(--mono); font-size:12px; color:#6ee0a0; margin-bottom:4px;">NOTIFICACIÓN ART. 44 REGISTRADA</div>
       <div style="font-size:13px; color:var(--text2);">La fecha y hora de citación se ingresarán al escanear el QR para registrar el RPP o RPF.</div>
-    </div>
-    <!-- E08: hora_cita CE editable -->
-    <div class="obs-box" style="margin-top:8px">
-      <div class="field-label" style="margin-bottom:6px">Hora de cita CE (editable)</div>
-      <input type="text" id="texto-hora-cita" value="08:50" placeholder="08:50" style="background:none; border:none; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:600; width:100%; outline:none;">
     </div>
   </div><!-- /seccion-not44-cit -->
 
@@ -3258,11 +3253,7 @@ async function enviarResultado() {
     }
   };
 
-  // E08: hora_cita for NOT44
-  if (t === 'NOT44') {
-    const horaCita = document.getElementById('texto-hora-cita')?.value.trim();
-    if (horaCita) payload.hora_cita = horaCita;
-  }
+  // hora_cita se registra en RPF/RPP, no en NOT44
 
 
 
