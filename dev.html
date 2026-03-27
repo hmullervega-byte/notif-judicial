@@ -1027,7 +1027,6 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
                     <optgroup label="── Embargo ──">
                       <option value="EMBARGO-CBR">Embargo CBR</option>
                       <option value="EMBARGO-CUENTA-CORRIENTE">Embargo Cuenta Corriente</option>
-                      <option value="EMBARGO-FRUSTRADO">Embargo Frustrado</option>
                       <option value="EMBARGO-OTROS" data-obs-required="1">Embargo Otros</option>
                       <option value="EMBARGO-RVM">Embargo RVM</option>
                       <option value="EMBARGO-TESORERIA">Embargo Tesorería</option>
@@ -1963,7 +1962,7 @@ let causas = []; // array de causas en memoria (luego vendrá de Dropbox)
 // Tipos de gestión directa — NO van en ruta
 const TIPOS_GESTION_DIRECTA = new Set([
   'ALZAMIENTO-CBR','ALZAMIENTO-RVM','ALZAMIENTO-TESORERIA','ALZAMIENTO-OTROS',
-  'EMBARGO-CBR','EMBARGO-CUENTA-CORRIENTE','EMBARGO-FRUSTRADO','EMBARGO-OTROS',
+  'EMBARGO-CBR','EMBARGO-CUENTA-CORRIENTE','EMBARGO-OTROS',
   'EMBARGO-RVM','PRUEBA-CONFESIONAL','PRUEBA-TESTIMONIAL',
   'REQ-PAGO-TRIBUNAL'
 ]);
@@ -3031,7 +3030,7 @@ function poblarFormularioFisico(causa) {
   const tribLetras = tribunalOrdinalCompleto(d.tribunal);
 
   // Hoja 3 (citación/requerimiento): ejecutivas, cédulas, cumplimiento incidental, juicio sumario
-  const sinHojaCitacion = /ALZAMIENTO|EMBARGO-FRUSTRADO|EMBARGO-CBR|EMBARGO-RVM|EMBARGO-TESORERIA|EMBARGO-CUENTA-CORRIENTE|OPOS-RETIRO/i.test(d.tipo_diligencia);
+  const sinHojaCitacion = /ALZAMIENTO|EMBARGO-CBR|EMBARGO-RVM|EMBARGO-TESORERIA|EMBARGO-CUENTA-CORRIENTE|OPOS-RETIRO/i.test(d.tipo_diligencia);
   const mostrarHojaCitacion = d.tipo_diligencia && !sinHojaCitacion;
 
   // ════════════════════════════════════════
