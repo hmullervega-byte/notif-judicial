@@ -3495,7 +3495,12 @@ async function actualizarIndex(hexOrHexes) {
 // Regenera INDEX_RUTA.json completo (solo en_ruta + gestion_directa_receptora)
 async function regenerarIndexRuta() {
   if (!DBX.isConfigured()) return;
-  const enRuta = causas.filter(c => c.estado === 'en_ruta' || c.estado === 'gestion_directa_receptora');
+  const enRuta = causas.filter(c => {
+    if (c.estado !== 'en_ruta' && c.estado !== 'gestion_directa_receptora') return false;
+    const boleta = (c.boleta || c._causa_json?.datos?.boleta || '').trim();
+    if (boleta && boleta !== '—') return false;
+    return true;
+  });
   const indexRuta = enRuta.map(c => ({
     id_hex: c.id_hex, rol: c.rol || '', tribunal: c.tribunal || '',
     demandado: c.demandado || '',
