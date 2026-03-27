@@ -860,8 +860,8 @@
       <span class="code-desc">Requerimiento Pago Ficto — no concurrió</span>
     </button>
     <!-- E17: New tipo buttons -->
-    <button class="code-btn" data-group="tipo" data-code="CED" onclick="selectTipo(this)">
-      <span class="code-tag">CED</span>
+    <button class="code-btn" data-group="tipo" data-code="NC" onclick="selectTipo(this)">
+      <span class="code-tag">NC</span>
       <span class="code-desc">Notificación por Cédula</span>
     </button>
     <button class="code-btn" data-group="tipo" data-code="NP" onclick="selectTipo(this)">
@@ -2063,7 +2063,7 @@ function _mostrarCausa(idHex, causaData) {
 async function _verificarEtapasBackground(idHex) {
   if (!navigator.onLine) return;
   try {
-    const etapas = ['RPP','RPF','NOT44','BP','BN','CED','NP','EMB','EMBF','OPOS'];
+    const etapas = ['RPP','RPF','NOT44','BP','BN','NC','NP','EMB','EMBF','OPOS'];
     for (const etapa of etapas) {
       const existe = await dbxCheckExists('/resultados/' + idHex + '_' + etapa + '.json');
       if (existe) {
@@ -2350,7 +2350,7 @@ function updateTipoSections() {
   show('seccion-obs-acceso', t === 'BP' || t === 'NOT44');
 
   // E17: new sections
-  show('seccion-ced',  t === 'CED');
+  show('seccion-ced',  t === 'NC');
   show('seccion-np',   t === 'NP');
   show('seccion-embf', t === 'EMBF');
   show('seccion-opos', t === 'OPOS');
@@ -3103,7 +3103,7 @@ async function enviarResultado() {
     // Simple: solo fecha y hora
   }
 
-  else if (t === 'CED') {
+  else if (t === 'NC') {
     if (!state.selections.metodo_entrega) { showToast('Selecciona el método de entrega'); return; }
     codigos.push('metodo_entrega:' + state.selections.metodo_entrega);
     if (state.selections.metodo_entrega === 'fallida') {
@@ -3246,7 +3246,7 @@ async function enviarResultado() {
   if (state.selections.motivo_embf)     payload.motivo_embf = state.selections.motivo_embf;
 
   // CED: motivo_fallida
-  if (t === 'CED' && state.selections.metodo_entrega === 'fallida') {
+  if (t === 'NC' && state.selections.metodo_entrega === 'fallida') {
     const motivo = document.getElementById('texto-motivo-fallida')?.value.trim();
     if (motivo) payload.motivo_fallida = motivo;
   }

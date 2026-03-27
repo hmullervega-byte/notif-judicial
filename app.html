@@ -1219,7 +1219,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
             <option value="RPP">RPP</option>
             <option value="RPF">RPF</option>
             <option value="NP">NP</option>
-            <option value="CED">CED</option>
+            <option value="NC">NC</option>
             <option value="NOT_MED_PRECAUTORIA_CBR">NOT_MED_PRECAUTORIA_CBR</option>
             <option value="NOT_EMB_CBR">NOT_EMB_CBR</option>
             <option value="NOT_EMB_RVM">NOT_EMB_RVM</option>
@@ -3628,7 +3628,7 @@ function renderCausas() {
     const matchTipo   = !fTipo   || c.tipo_diligencia?.startsWith(fTipo);
     const res = c.resultado || '';
     const matchResultado = !fResultado || (fResultado === '_otro'
-      ? (res && !['BN','BP','NOT44','NOT44_RPP','RPP','RPF','NP','CED','NOT_MED_PRECAUTORIA_CBR','NOT_EMB_CBR','NOT_EMB_RVM','NOT_EMB_IMPTO','ALZAMIENTO-CBR','ALZAMIENTO-RVM','EMBARGO-RVM','OPOS-RETIRO'].some(r => res.includes(r)))
+      ? (res && !['BN','BP','NOT44','NOT44_RPP','RPP','RPF','NP','NC','NC52','NOT_MED_PRECAUTORIA_CBR','NOT_EMB_CBR','NOT_EMB_RVM','NOT_EMB_IMPTO','ALZAMIENTO-CBR','ALZAMIENTO-RVM','EMBARGO-RVM','OPOS-RETIRO'].some(r => res.includes(r)))
       : res.includes(fResultado));
     const matchEstado = fEstado === 'activas'
       ? !ESTADOS_NO_ACTIVOS.has(c.estado)
@@ -4030,7 +4030,7 @@ async function editarCausa(hex) {
       ['BP+BP2+NOT44','BP+BP2+NOT44 — NOT44 sin Requerimiento'],
       ['NP+RPP','NP+RPP — Not. Personal + Req. Pago'],
       ['BP+NP+RPP','BP+NP+RPP — BP + Not. Personal + Req. Pago'],
-      ['CED','CED — Cédula'],['CED52','CED52 — Cédula Art. 52'],
+      ['NC','NC — Notificación Cédula'],['NC52','NC52 — Not. Cédula Art. 52'],
       ['EF','EF — Embargo Frustrado'],
       ['ALZ_CBR','ALZ_CBR — Alzamiento CBR'],['ALZ_RVM','ALZ_RVM — Alzamiento RVM'],
       ['OPO_RETIRO','OPO_RETIRO — Oposición al Retiro'],
@@ -4156,7 +4156,7 @@ function _autocompletarDerechos(resultado) {
   const demData = estudioData[demandante] || estudioData['_default'];
   if (!demData) return;
   let clave = resultado;
-  if (['BN','BP','BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPF','BP+BP2+NOT44','NP+RPP','BP+NP+RPP','CED','CED52','EF','ALZ_CBR','ALZ_RVM','OPO_RETIRO','NOT_MED_PRECAUTORIA_CBR','NOT_EMB_CBR','NOT_EMB_RVM','NOT_EMB_IMPTO'].includes(resultado)) {
+  if (['BN','BP','BP+BP2+NOT44+RPP','BP+BP2+NOT44+RPF','BP+BP2+NOT44','NP+RPP','BP+NP+RPP','NC','NC52','EF','ALZ_CBR','ALZ_RVM','OPO_RETIRO','NOT_MED_PRECAUTORIA_CBR','NOT_EMB_CBR','NOT_EMB_RVM','NOT_EMB_IMPTO'].includes(resultado)) {
     clave = 'BN';
   }
   const tarifa = demData[clave];
