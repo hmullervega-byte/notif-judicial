@@ -576,7 +576,8 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
   transition: border-color .15s;
 }
 .search-bar:focus-within { border-color: var(--blue-lt); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
-.search-bar input { border: none; background: none; font-size: 13px; padding: 0; box-shadow: none; }
+.search-bar input { border: none; background: none; font-size: 13px; padding: 0; box-shadow: none; flex: 1; min-width: 0; }
+.search-bar { cursor: text; }
 .search-bar input:focus { box-shadow: none; }
 .search-icon { color: var(--muted); font-size: 14px; }
 
@@ -1196,7 +1197,7 @@ tbody td .mono { font-family: var(--mono); font-size: 12px; }
           </div>
         </div>
         <div class="filter-bar">
-          <div class="search-bar" style="flex:1; min-width:200px;">
+          <div class="search-bar" style="flex:1; min-width:200px;" onclick="this.querySelector('input').focus()">
             <span class="search-icon">🔍</span>
             <input type="text" id="search-causas" placeholder="Buscar por ROL, nombre, RUT o dirección...">
           </div>
