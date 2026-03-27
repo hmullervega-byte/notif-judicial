@@ -1313,12 +1313,21 @@
     <!-- Método de entrega -->
     <div class="section-title" style="margin-top:12px">Método de entrega</div>
     <div class="toggle-row" id="ced-metodo-row" style="flex-wrap:wrap;">
-      <button class="toggle-btn" onclick="selectCedMetodo(this,'notificacion_personal')">Notificación personal</button>
-      <button class="toggle-btn" onclick="selectCedMetodo(this,'procurador')">Procurador de Estudio Jurídico</button>
-      <button class="toggle-btn" onclick="selectCedMetodo(this,'trabajador')">Trabajador del lugar</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'puerta_domicilio')">Puerta domicilio</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'puerta_oficina')">Puerta oficina</button>
       <button class="toggle-btn" onclick="selectCedMetodo(this,'conserje')">Conserje</button>
-      <button class="toggle-btn" onclick="selectCedMetodo(this,'puerta')">Puerta</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'conserje_nombre')">Conserje con nombre</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'persona_adulta')">Persona adulta</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'procurador')">Procurador/a estudio</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'abogado')">Abogado/a estudio</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'secretario')">Secretario/a estudio</button>
+      <button class="toggle-btn" onclick="selectCedMetodo(this,'administrativo')">Administrativo/a estudio</button>
       <button class="toggle-btn" onclick="selectCedMetodo(this,'fallida')">Cédula fallida</button>
+    </div>
+    <!-- Nombre receptor (para métodos que lo requieren) -->
+    <div id="campo-ced-nombre" style="display:none" class="obs-box" style="margin-top:8px">
+      <div class="field-label" style="margin-bottom:6px">Nombre</div>
+      <input type="text" id="texto-nombre-receptor" placeholder="Nombre completo" style="background:none; border:none; color:var(--text); font-family:var(--sans); font-size:16px; width:100%; outline:none;">
     </div>
     <!-- Motivo cédula fallida -->
     <div id="campo-ced-fallida" style="display:none" class="obs-box" style="margin-top:8px">
@@ -2608,7 +2617,9 @@ function selectToggle(btn, groupName, value) {
   }
 }
 
-// ── CED: método de entrega con campo fallida ──
+// ── CED: método de entrega con campos condicionales ──
+const CED_METODOS_NOMBRE_OBL = new Set(['procurador','abogado','secretario','administrativo']);
+const CED_METODOS_NOMBRE_OPT = new Set(['conserje_nombre','persona_adulta']);
 function selectCedMetodo(btn, value) {
   const row = btn.parentElement;
   const wasSelected = btn.classList.contains('tgl-selected');
@@ -2619,7 +2630,13 @@ function selectCedMetodo(btn, value) {
     btn.classList.add('tgl-selected');
     state.selections.metodo_entrega = value;
   }
-  show('campo-ced-fallida', state.selections.metodo_entrega === 'fallida');
+  const m = state.selections.metodo_entrega;
+  show('campo-ced-nombre', CED_METODOS_NOMBRE_OBL.has(m) || CED_METODOS_NOMBRE_OPT.has(m));
+  show('campo-ced-fallida', m === 'fallida');
+  if (!CED_METODOS_NOMBRE_OBL.has(m) && !CED_METODOS_NOMBRE_OPT.has(m)) {
+    const inp = document.getElementById('texto-nombre-receptor');
+    if (inp) inp.value = '';
+  }
 }
 
 // ── OPOS-RETIRO: tipo oposición selection ──
@@ -3106,7 +3123,12 @@ async function enviarResultado() {
   else if (t === 'NC') {
     if (!state.selections.metodo_entrega) { showToast('Selecciona el método de entrega'); return; }
     codigos.push('metodo_entrega:' + state.selections.metodo_entrega);
-    if (state.selections.metodo_entrega === 'fallida') {
+    const me = state.selections.metodo_entrega;
+    if (CED_METODOS_NOMBRE_OBL.has(me)) {
+      const nom = document.getElementById('texto-nombre-receptor')?.value.trim();
+      if (!nom) { showToast('Ingresa el nombre'); return; }
+    }
+    if (me === 'fallida') {
       const motivo = document.getElementById('texto-motivo-fallida')?.value.trim();
       if (!motivo) { showToast('Ingresa el motivo de la cédula fallida'); return; }
     }
@@ -3245,10 +3267,17 @@ async function enviarResultado() {
   if (state.selections.metodo_entrega)  payload.metodo_entrega = state.selections.metodo_entrega;
   if (state.selections.motivo_embf)     payload.motivo_embf = state.selections.motivo_embf;
 
-  // CED: motivo_fallida
-  if (t === 'NC' && state.selections.metodo_entrega === 'fallida') {
-    const motivo = document.getElementById('texto-motivo-fallida')?.value.trim();
-    if (motivo) payload.motivo_fallida = motivo;
+  // CED: nombre_receptor + motivo_fallida
+  if (t === 'NC') {
+    const me = state.selections.metodo_entrega;
+    if (CED_METODOS_NOMBRE_OBL.has(me) || CED_METODOS_NOMBRE_OPT.has(me)) {
+      const nom = document.getElementById('texto-nombre-receptor')?.value.trim();
+      if (nom) payload.nombre_receptor = nom;
+    }
+    if (me === 'fallida') {
+      const motivo = document.getElementById('texto-motivo-fallida')?.value.trim();
+      if (motivo) payload.motivo_fallida = motivo;
+    }
   }
 
   // E03: domicilio_laboral flag
